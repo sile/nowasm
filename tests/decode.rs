@@ -1,10 +1,16 @@
 use self::testcase::Testcase;
 use orfail::OrFail;
+use testcase::Command;
 
 mod testcase;
 
 #[test]
 pub fn decode_address() -> orfail::Result<()> {
     let testcase = Testcase::load("address.json").or_fail()?;
+    for command in &testcase.commands {
+        let Command::Module { filename } = command else {
+            continue;
+        };
+    }
     Ok(())
 }
