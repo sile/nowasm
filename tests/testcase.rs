@@ -1,4 +1,4 @@
-use nowasm::module::{Allocator, Module};
+use nowasm::module::{Allocator, ByteReader, Module};
 use orfail::{Failure, OrFail};
 use serde::Deserialize;
 use std::path::{Path, PathBuf};
@@ -64,6 +64,13 @@ impl ModuleCommand {
             .join("testdata/")
             .join(&self.filename);
         let bytes = std::fs::read(&path).or_fail()?;
+
+        // debug
+        let mut reader = ByteReader::new(&bytes);
+        let (id, reader) = reader.section_reader().unwrap();
+        {
+            dbg!((id, reader.len()));
+        }
         let module = Module::decode(&bytes)
             .map_err(|e| Failure::new(format!("{e:?}")))
             .or_fail()?;
