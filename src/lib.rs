@@ -1,5 +1,7 @@
 #![no_std]
 
+pub mod text_format;
+
 pub fn add(left: usize, right: usize) -> usize {
     left + right
 }
