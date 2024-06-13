@@ -3,6 +3,16 @@
 #[cfg(test)]
 mod tests {
     // use super::*;
+    // use std::path::Path;
+
+    // #[derive(Debug)]
+    // struct Testdata {}
+
+    // impl Testdata {
+    //     fn load<P: AsRef<Path>>(name: P) -> orfail::Result<()> {
+    //         todo!()
+    //     }
+    // }
 
     #[test]
     fn test_address() -> orfail::Result<()> {
