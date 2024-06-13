@@ -8,9 +8,10 @@ mod testcase;
 pub fn decode_address() -> orfail::Result<()> {
     let testcase = Testcase::load("address.json").or_fail()?;
     for command in &testcase.commands {
-        let Command::Module { filename } = command else {
+        let Command::Module(command) = command else {
             continue;
         };
+        command.decode_module().or_fail()?;
     }
     Ok(())
 }

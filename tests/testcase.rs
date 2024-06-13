@@ -24,9 +24,7 @@ impl Testcase {
 #[derive(Debug, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum Command {
-    Module {
-        filename: PathBuf,
-    },
+    Module(ModuleCommand),
     AssertReturn {
         action: Action,
         expected: Vec<Value>,
@@ -41,6 +39,26 @@ pub enum Command {
         text: String,
         module_type: String,
     },
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub struct ModuleCommand {
+    pub filename: PathBuf,
+}
+
+impl ModuleCommand {
+    pub fn decode_module(&self) -> orfail::Result<()> {
+        let path = Path::new(file!())
+            .parent()
+            .or_fail()?
+            .parent()
+            .or_fail()?
+            .join("testdata/")
+            .join(&self.filename);
+        let bytes = std::fs::read(&path).or_fail()?;
+        Ok(())
+    }
 }
 
 #[derive(Debug, Deserialize)]
