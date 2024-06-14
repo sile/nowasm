@@ -67,9 +67,12 @@ impl ModuleCommand {
 
         // debug
         let mut reader = ByteReader::new(&bytes);
-        let (id, reader) = reader.section_reader().unwrap();
-        {
-            dbg!((id, reader.len()));
+        reader.validate_preamble().unwrap();
+        while !reader.is_empty() {
+            let (id, reader) = reader.read_section_reader().unwrap();
+            {
+                dbg!((id, reader.len()));
+            }
         }
         let module = Module::decode(&bytes)
             .map_err(|e| Failure::new(format!("{e:?}")))
