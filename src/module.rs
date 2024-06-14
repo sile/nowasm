@@ -8,9 +8,17 @@ pub enum DecodeError {
     TooLargeSize { size: usize },
     MalformedSectiondata,
     MalformedData,
+    MalformedInstr,
     InvalidMemorySectionSize { size: usize },
     InvalidU32,
     InvalidValueType { value: u8 },
+    InvalidInstrOpcode { opcode: u8 },
+}
+
+impl DecodeError {
+    fn end_of_bytes() -> Self {
+        DecodeError::EndOfBytes
+    }
 }
 
 #[derive(Debug)]
@@ -56,7 +64,7 @@ impl<'a> ByteReader<'a> {
             self.position += 1;
             Ok(b)
         } else {
-            Err(DecodeError::EndOfBytes)
+            Err(DecodeError::end_of_bytes())
         }
     }
 
@@ -81,7 +89,7 @@ impl<'a> ByteReader<'a> {
 
     pub fn read_bytes(&mut self, n: usize) -> Result<&'a [u8], DecodeError> {
         if n > self.len() {
-            return Err(DecodeError::EndOfBytes);
+            return Err(DecodeError::end_of_bytes());
         }
 
         let start = self.position;
@@ -92,7 +100,7 @@ impl<'a> ByteReader<'a> {
     pub fn read_exact(&mut self, buf: &mut [u8]) -> Result<(), DecodeError> {
         let n = buf.len();
         if n > self.len() {
-            return Err(DecodeError::EndOfBytes);
+            return Err(DecodeError::end_of_bytes());
         }
 
         buf.copy_from_slice(&self.data[self.position..][..n]);
@@ -126,7 +134,143 @@ impl<'a> ByteReader<'a> {
 
         Ok((section_id, reader))
     }
+
+    pub fn read_instr(&mut self) -> Result<Option<Instr>, DecodeError> {
+        let opcode = self.read_u8()?;
+        match opcode {
+            // Control Instructions
+            0x00 => Ok(Some(Instr::Unreachable)),
+            0x01 => Ok(Some(Instr::Nop)),
+            0x0b => Ok(None),
+
+            // Parametric Instructions
+            0x1a => Ok(Some(Instr::Drop)),
+            0x1b => Ok(Some(Instr::Select)),
+
+            // Variable Instructions
+            0x20 => Ok(Some(Instr::LocalGet(LocalIdx(self.read_u32()?)))),
+            0x21 => Ok(Some(Instr::LocalSet(LocalIdx(self.read_u32()?)))),
+            0x22 => Ok(Some(Instr::LocalTee(LocalIdx(self.read_u32()?)))),
+            0x23 => Ok(Some(Instr::GlobalGet(GlobalIdx(self.read_u32()?)))),
+            0x24 => Ok(Some(Instr::GlobalSet(GlobalIdx(self.read_u32()?)))),
+
+            // Memory Instructions
+            0x28 => Ok(Some(Instr::I32Load(MemArg::new(self)?))),
+            0x29 => Ok(Some(Instr::I64Load(MemArg::new(self)?))),
+            0x2a => Ok(Some(Instr::F32Load(MemArg::new(self)?))),
+            0x2b => Ok(Some(Instr::F64Load(MemArg::new(self)?))),
+            0x2c => Ok(Some(Instr::I32Load8S(MemArg::new(self)?))),
+            0x2d => Ok(Some(Instr::I32Load8U(MemArg::new(self)?))),
+            0x2e => Ok(Some(Instr::I32Load16S(MemArg::new(self)?))),
+            0x2f => Ok(Some(Instr::I32Load16U(MemArg::new(self)?))),
+            0x30 => Ok(Some(Instr::I64Load8S(MemArg::new(self)?))),
+            0x31 => Ok(Some(Instr::I64Load8U(MemArg::new(self)?))),
+            0x32 => Ok(Some(Instr::I64Load16S(MemArg::new(self)?))),
+            0x33 => Ok(Some(Instr::I64Load16U(MemArg::new(self)?))),
+            0x34 => Ok(Some(Instr::I64Load32S(MemArg::new(self)?))),
+            0x35 => Ok(Some(Instr::I64Load32U(MemArg::new(self)?))),
+            0x36 => Ok(Some(Instr::I32Store(MemArg::new(self)?))),
+            0x37 => Ok(Some(Instr::I64Store(MemArg::new(self)?))),
+            0x38 => Ok(Some(Instr::F32Store(MemArg::new(self)?))),
+            0x39 => Ok(Some(Instr::F64Store(MemArg::new(self)?))),
+            0x3a => Ok(Some(Instr::I32Store8(MemArg::new(self)?))),
+            0x3b => Ok(Some(Instr::I32Store16(MemArg::new(self)?))),
+            0x3c => Ok(Some(Instr::I64Store8(MemArg::new(self)?))),
+            0x3d => Ok(Some(Instr::I64Store16(MemArg::new(self)?))),
+            0x3e => Ok(Some(Instr::I64Store32(MemArg::new(self)?))),
+            0x3f => {
+                if self.read_u8()? != 0 {
+                    return Err(DecodeError::MalformedInstr);
+                }
+                Ok(Some(Instr::MemorySize))
+            }
+            0x40 => {
+                if self.read_u8()? != 0 {
+                    return Err(DecodeError::MalformedInstr);
+                }
+                Ok(Some(Instr::MemoryGrow))
+            }
+
+            // End
+            _ => Err(DecodeError::InvalidInstrOpcode { opcode }),
+        }
+    }
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Instr {
+    // Control Instructions
+    Unreachable,
+    Nop,
+
+    // Parametric Instructions
+    Drop,
+    Select,
+
+    // Variable Instructions
+    LocalGet(LocalIdx),
+    LocalSet(LocalIdx),
+    LocalTee(LocalIdx),
+    GlobalGet(GlobalIdx),
+    GlobalSet(GlobalIdx),
+
+    // Memory Instructions
+    I32Load(MemArg),
+    I64Load(MemArg),
+    F32Load(MemArg),
+    F64Load(MemArg),
+    I32Load8S(MemArg),
+    I32Load8U(MemArg),
+    I32Load16S(MemArg),
+    I32Load16U(MemArg),
+    I64Load8S(MemArg),
+    I64Load8U(MemArg),
+    I64Load16S(MemArg),
+    I64Load16U(MemArg),
+    I64Load32S(MemArg),
+    I64Load32U(MemArg),
+    I32Store(MemArg),
+    I64Store(MemArg),
+    F32Store(MemArg),
+    F64Store(MemArg),
+    I32Store8(MemArg),
+    I32Store16(MemArg),
+    I64Store8(MemArg),
+    I64Store16(MemArg),
+    I64Store32(MemArg),
+    MemorySize,
+    MemoryGrow,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct MemArg {
+    pub align: u32,
+    pub offset: u32,
+}
+
+impl MemArg {
+    pub fn new(reader: &mut ByteReader) -> Result<Self, DecodeError> {
+        let align = reader.read_u32()?;
+        let offset = reader.read_u32()?;
+        Ok(Self { align, offset })
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct LocalIdx(pub u32);
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct GlobalIdx(pub u32);
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum BlockType {
+    Empty,
+    Val(ValType),
+    TypeIndex(S33),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct S33(pub i64);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum SectionId {
@@ -184,6 +328,7 @@ pub struct ModuleSpec {
     pub func_type_len: usize,
     pub idx_len: usize,
     pub export_len: usize,
+    pub instr_len: usize,
 }
 
 impl ModuleSpec {
@@ -195,6 +340,7 @@ impl ModuleSpec {
             func_type_len: 0,
             idx_len: 0,
             export_len: 0,
+            instr_len: 0,
         };
         while !reader.is_empty() {
             let (section_id, mut section_reader) = reader.read_section_reader()?;
@@ -232,32 +378,39 @@ impl ModuleSpec {
 
     fn handle_code_section(&mut self, mut reader: ByteReader) -> Result<(), DecodeError> {
         let code_count = reader.read_u32()?;
-        let mut code_reader = reader.block_reader()?;
+        dbg!(code_count);
         for _ in 0..code_count {
+            let mut code_reader = reader.block_reader()?;
             let locals_size = code_reader.read_u32()?;
+            dbg!(locals_size);
             for _ in 0..locals_size {
                 let n = code_reader.read_u32()?;
                 for _ in 0..n {
                     let v = code_reader.read_u8()?;
-                    let vt = ValueType::new(v)?;
+                    let _vt = ValType::new(v)?;
                 }
             }
-            // TODO
+
+            while let Some(i) = code_reader.read_instr()? {
+                dbg!(i);
+                self.instr_len += 1;
+            }
+            code_reader.assert_empty()?;
         }
-        code_reader.assert_empty()?;
+        reader.assert_empty()?;
         Ok(())
     }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum ValueType {
+pub enum ValType {
     I32,
     I64,
     F32,
     F64,
 }
 
-impl ValueType {
+impl ValType {
     pub fn new(v: u8) -> Result<Self, DecodeError> {
         match v {
             0x7f => Ok(Self::I32),
