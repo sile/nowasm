@@ -7,6 +7,7 @@ pub enum DecodeError {
     UnsupportedVersion,
     InvalidSectionId { value: u8 },
     TooLargeSectionSize { section_id: SectionId, size: usize },
+    MalformedSectiondata,
     InvalidU32,
 }
 
@@ -143,8 +144,18 @@ impl SectionId {
 }
 
 #[derive(Debug)]
+pub struct Type {}
+
+impl Type {
+    pub fn decode(reader: &mut ByteReader) -> Result<Self, DecodeError> {
+        todo!()
+    }
+}
+
+#[derive(Debug)]
 pub struct Module<A> {
-    allocator: A,
+    pub allocator: A,
+    pub ty: Option<Type>,
 }
 
 impl<A: Allocator> Module<A> {
@@ -152,8 +163,26 @@ impl<A: Allocator> Module<A> {
         let mut reader = ByteReader::new(wasm);
         reader.validate_preamble()?;
 
+        let mut ty = None;
         while !reader.is_empty() {
-            let (_id, _section_reader) = reader.read_section_reader()?;
+            let (section_id, mut section_reader) = reader.read_section_reader()?;
+            match section_id {
+                SectionId::Custom => todo!(),
+                SectionId::Type => ty = Some(Type::decode(&mut section_reader)?),
+                SectionId::Import => todo!(),
+                SectionId::Function => todo!(),
+                SectionId::Table => todo!(),
+                SectionId::Memory => todo!(),
+                SectionId::Global => todo!(),
+                SectionId::Export => todo!(),
+                SectionId::Start => todo!(),
+                SectionId::Element => todo!(),
+                SectionId::Code => todo!(),
+                SectionId::Data => todo!(),
+            }
+            if !section_reader.is_empty() {
+                return Err(DecodeError::MalformedSectiondata);
+            }
         }
 
         todo!()
