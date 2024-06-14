@@ -462,12 +462,11 @@ impl ModuleSpec {
         for _ in 0..code_count {
             let mut code_reader = reader.block_reader()?;
             let locals_size = code_reader.read_u32()?;
+
             for _ in 0..locals_size {
-                let n = code_reader.read_u32()?;
-                for _ in 0..n {
-                    let v = code_reader.read_u8()?;
-                    let _vt = ValType::new(v)?;
-                }
+                let _n = code_reader.read_u32()?;
+                let v = code_reader.read_u8()?;
+                let _vt = ValType::new(v)?;
             }
 
             self.handle_expr(&mut code_reader)?;
