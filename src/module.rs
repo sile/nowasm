@@ -1,5 +1,3 @@
-pub trait Allocator {}
-
 #[derive(Debug, Clone, Copy)]
 pub enum DecodeError {
     EndOfBytes,
@@ -144,21 +142,61 @@ impl SectionId {
 }
 
 #[derive(Debug)]
-pub struct Type {}
+pub struct TypeSection {}
 
-impl Type {
+impl TypeSection {
     pub fn decode(reader: &mut ByteReader) -> Result<Self, DecodeError> {
         todo!()
     }
 }
 
 #[derive(Debug)]
-pub struct Module<A> {
-    pub allocator: A,
-    pub ty: Option<Type>,
+pub struct Type {}
+
+#[derive(Debug)]
+pub struct FuncType {}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ModuleSpec {
+    pub func_type_len: usize,
 }
 
-impl<A: Allocator> Module<A> {
+impl ModuleSpec {
+    pub fn new(wasm_bytes: &[u8]) -> Result<Self, DecodeError> {
+        let mut reader = ByteReader::new(wasm_bytes);
+        reader.validate_preamble()?;
+
+        let mut func_type_len = 0;
+        while !reader.is_empty() {
+            let (section_id, mut section_reader) = reader.read_section_reader()?;
+            match section_id {
+                SectionId::Custom => {}
+                SectionId::Type => {
+                    func_type_len = section_reader.read_u32()? as usize;
+                }
+                SectionId::Import => todo!(),
+                SectionId::Function => todo!(),
+                SectionId::Table => todo!(),
+                SectionId::Memory => todo!(),
+                SectionId::Global => todo!(),
+                SectionId::Export => todo!(),
+                SectionId::Start => todo!(),
+                SectionId::Element => todo!(),
+                SectionId::Code => todo!(),
+                SectionId::Data => todo!(),
+            }
+        }
+
+        Ok(Self { func_type_len })
+    }
+}
+
+#[derive(Debug)]
+pub struct ModuleDecoder<'a> {
+    pub type_section: &'a mut [FuncType],
+}
+
+impl<'a> ModuleDecoder<'a> {
     pub fn decode(wasm: &[u8]) -> Result<Self, DecodeError> {
         let mut reader = ByteReader::new(wasm);
         reader.validate_preamble()?;
@@ -168,7 +206,7 @@ impl<A: Allocator> Module<A> {
             let (section_id, mut section_reader) = reader.read_section_reader()?;
             match section_id {
                 SectionId::Custom => todo!(),
-                SectionId::Type => ty = Some(Type::decode(&mut section_reader)?),
+                SectionId::Type => ty = Some(TypeSection::decode(&mut section_reader)?),
                 SectionId::Import => todo!(),
                 SectionId::Function => todo!(),
                 SectionId::Table => todo!(),
@@ -184,7 +222,6 @@ impl<A: Allocator> Module<A> {
                 return Err(DecodeError::MalformedSectiondata);
             }
         }
-
         todo!()
     }
 }

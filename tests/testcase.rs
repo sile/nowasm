@@ -1,13 +1,7 @@
-use nowasm::module::{Allocator, ByteReader, Module};
+use nowasm::module::{ByteReader, ModuleSpec};
 use orfail::{Failure, OrFail};
 use serde::Deserialize;
 use std::path::{Path, PathBuf};
-
-// TODO: move
-#[derive(Debug)]
-pub struct StdAllocator {}
-
-impl Allocator for StdAllocator {}
 
 #[derive(Debug, Deserialize)]
 pub struct Testcase {
@@ -55,7 +49,7 @@ pub struct ModuleCommand {
 }
 
 impl ModuleCommand {
-    pub fn decode_module(&self) -> orfail::Result<Module<StdAllocator>> {
+    pub fn decode_module(&self) -> orfail::Result<ModuleSpec> {
         let path = Path::new(file!())
             .parent()
             .or_fail()?
@@ -74,9 +68,10 @@ impl ModuleCommand {
                 dbg!((id, reader.len()));
             }
         }
-        let module = Module::decode(&bytes)
+        let module = ModuleSpec::new(&bytes)
             .map_err(|e| Failure::new(format!("{e:?}")))
             .or_fail()?;
+        dbg!(&module);
         Ok(module)
     }
 }
