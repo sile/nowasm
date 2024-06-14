@@ -5,9 +5,12 @@ pub enum DecodeError {
     UnsupportedVersion,
     InvalidSectionId { value: u8 },
     TooLargeSectionSize { section_id: SectionId, size: usize },
+    TooLargeSize { size: usize },
     MalformedSectiondata,
+    MalformedData,
     InvalidMemorySectionSize { size: usize },
     InvalidU32,
+    InvalidValueType { value: u8 },
 }
 
 #[derive(Debug)]
@@ -27,6 +30,25 @@ impl<'a> ByteReader<'a> {
 
     pub fn len(&self) -> usize {
         self.data.len().saturating_sub(self.position)
+    }
+
+    pub fn block_reader(&mut self) -> Result<Self, DecodeError> {
+        let size = self.read_u32()? as usize;
+        if size > self.len() {
+            // TODO: Change reason
+            return Err(DecodeError::TooLargeSize { size });
+        }
+        let reader = Self::new(&self.data[self.position..][..size]);
+        self.position += size;
+        Ok(reader)
+    }
+
+    pub fn assert_empty(&self) -> Result<(), DecodeError> {
+        if self.is_empty() {
+            Ok(())
+        } else {
+            Err(DecodeError::MalformedData)
+        }
     }
 
     pub fn read_u8(&mut self) -> Result<u8, DecodeError> {
@@ -169,19 +191,21 @@ impl ModuleSpec {
         let mut reader = ByteReader::new(wasm_bytes);
         reader.validate_preamble()?;
 
-        let mut func_type_len = 0;
-        let mut idx_len = 0;
-        let mut export_len = 0;
+        let mut this = Self {
+            func_type_len: 0,
+            idx_len: 0,
+            export_len: 0,
+        };
         while !reader.is_empty() {
             let (section_id, mut section_reader) = reader.read_section_reader()?;
             match section_id {
                 SectionId::Custom => {}
                 SectionId::Type => {
-                    func_type_len = section_reader.read_u32()? as usize;
+                    this.func_type_len = section_reader.read_u32()? as usize;
                 }
                 SectionId::Import => todo!(),
                 SectionId::Function => {
-                    idx_len += section_reader.read_u32()? as usize;
+                    this.idx_len += section_reader.read_u32()? as usize;
                 }
                 SectionId::Table => todo!(),
                 SectionId::Memory => {
@@ -192,20 +216,56 @@ impl ModuleSpec {
                 }
                 SectionId::Global => todo!(),
                 SectionId::Export => {
-                    export_len = section_reader.read_u32()? as usize;
+                    this.export_len = section_reader.read_u32()? as usize;
                 }
                 SectionId::Start => {}
                 SectionId::Element => todo!(),
-                SectionId::Code => todo!(),
+                SectionId::Code => {
+                    this.handle_code_section(section_reader)?;
+                }
                 SectionId::Data => todo!(),
             }
         }
 
-        Ok(Self {
-            func_type_len,
-            idx_len,
-            export_len,
-        })
+        Ok(this)
+    }
+
+    fn handle_code_section(&mut self, mut reader: ByteReader) -> Result<(), DecodeError> {
+        let code_count = reader.read_u32()?;
+        let mut code_reader = reader.block_reader()?;
+        for _ in 0..code_count {
+            let locals_size = code_reader.read_u32()?;
+            for _ in 0..locals_size {
+                let n = code_reader.read_u32()?;
+                for _ in 0..n {
+                    let v = code_reader.read_u8()?;
+                    let vt = ValueType::new(v)?;
+                }
+            }
+            // TODO
+        }
+        code_reader.assert_empty()?;
+        Ok(())
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum ValueType {
+    I32,
+    I64,
+    F32,
+    F64,
+}
+
+impl ValueType {
+    pub fn new(v: u8) -> Result<Self, DecodeError> {
+        match v {
+            0x7f => Ok(Self::I32),
+            0x7e => Ok(Self::I64),
+            0x7d => Ok(Self::F32),
+            0x7c => Ok(Self::F64),
+            _ => Err(DecodeError::InvalidValueType { value: v }),
+        }
     }
 }
 
