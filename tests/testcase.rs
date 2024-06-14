@@ -40,6 +40,11 @@ pub enum Command {
         text: String,
         module_type: String,
     },
+    AssertInvalid {
+        filename: PathBuf,
+        text: String,
+        module_type: String,
+    },
 }
 
 #[derive(Debug, Deserialize)]

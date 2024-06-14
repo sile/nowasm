@@ -77,7 +77,8 @@ impl<'a> ByteReader<'a> {
             let v = (b as u64 & 0b0111_1111) << offset;
 
             if b & 0b1000_0000 == 0 {
-                if (b as u64 & 0b0111_1111) >= (1 << (bits - offset)) {
+                let remaining_bits = bits - offset;
+                if remaining_bits < 7 && (b as u64 & 0b0111_1111) >= (1 << remaining_bits) {
                     return Err(DecodeError::InvalidInteger);
                 }
                 n += v;
@@ -361,7 +362,7 @@ impl SectionId {
 pub struct TypeSection {}
 
 impl TypeSection {
-    pub fn decode(reader: &mut ByteReader) -> Result<Self, DecodeError> {
+    pub fn decode(_reader: &mut ByteReader) -> Result<Self, DecodeError> {
         todo!()
     }
 }
@@ -528,6 +529,7 @@ impl<'a> ModuleDecoder<'a> {
                 return Err(DecodeError::MalformedSectiondata);
             }
         }
+        _ = ty;
         todo!()
     }
 }
