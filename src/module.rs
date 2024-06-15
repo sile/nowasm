@@ -73,6 +73,14 @@ impl<'a> ByteReader<'a> {
         }
     }
 
+    pub fn peek_u8(&self) -> Result<u8, DecodeError> {
+        if let Some(b) = self.data.get(self.position).copied() {
+            Ok(b)
+        } else {
+            Err(DecodeError::end_of_bytes())
+        }
+    }
+
     pub fn read_integer(&mut self, bits: usize) -> Result<u64, DecodeError> {
         let mut n = 0u64;
         let mut offset = 0;
@@ -181,6 +189,8 @@ impl<'a> ByteReader<'a> {
             0x00 => Ok(Some(Instr::Unreachable)),
             0x01 => Ok(Some(Instr::Nop)),
             0x02 => Ok(Some(Instr::Block(BlockInstr::new(self)?))),
+            0x03 => Ok(Some(Instr::Loop(LoopInstr::new(self)?))),
+            0x04 => Ok(Some(Instr::If(IfInstr::new(self)?))),
             0x0b => Ok(None),
             0x0c => Ok(Some(Instr::Br(LabelIdx(self.read_u32()?)))),
             0x0d => Ok(Some(Instr::BrIf(LabelIdx(self.read_u32()?)))),
@@ -382,6 +392,7 @@ impl BlockInstr {
         let mut n = 0;
         while let Some(i) = reader.read_instr()? {
             n += i.instr_len();
+            // TODO: increment idx_len
         }
         Ok(Self {
             block_type,
@@ -392,6 +403,90 @@ impl BlockInstr {
 
     pub fn len(self) -> usize {
         1 + self.instr_end - self.instr_start
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct LoopInstr {
+    pub block_type: BlockType,
+    pub instr_start: usize,
+    pub instr_end: usize,
+}
+
+impl LoopInstr {
+    pub fn new(reader: &mut ByteReader) -> Result<Self, DecodeError> {
+        let block_type = BlockType::new(reader)?;
+        let mut n = 0;
+        while let Some(i) = reader.read_instr()? {
+            n += i.instr_len();
+            // TODO: increment idx_len
+        }
+        Ok(Self {
+            block_type,
+            instr_start: 0,
+            instr_end: n,
+        })
+    }
+
+    pub fn len(self) -> usize {
+        1 + self.instr_end - self.instr_start
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct IfInstr {
+    pub block_type: BlockType,
+    pub then_instr_start: usize,
+    pub then_instr_end: usize,
+    pub else_instr_start: usize,
+    pub else_instr_end: usize,
+}
+
+impl IfInstr {
+    pub fn new(reader: &mut ByteReader) -> Result<Self, DecodeError> {
+        let block_type = BlockType::new(reader)?;
+        let mut then_instrs = 0;
+        let mut else_instrs = 0;
+
+        loop {
+            let b = reader.peek_u8()?;
+            if b == 0x0B {
+                reader.read_u8()?;
+                return Ok(Self {
+                    block_type,
+                    then_instr_start: 0,
+                    then_instr_end: then_instrs,
+                    else_instr_start: then_instrs,
+                    else_instr_end: then_instrs + else_instrs,
+                });
+            } else if b == 0x05 {
+                break;
+            }
+
+            let Some(i) = reader.read_instr()? else {
+                unreachable!();
+            };
+            then_instrs += i.instr_len();
+            // TODO: increment idx_len
+        }
+
+        while let Some(i) = reader.read_instr()? {
+            else_instrs += i.instr_len();
+            // TODO: increment idx_len
+        }
+
+        Ok(Self {
+            block_type,
+            then_instr_start: 0,
+            then_instr_end: then_instrs,
+            else_instr_start: then_instrs,
+            else_instr_end: then_instrs + else_instrs,
+        })
+    }
+
+    pub fn len(self) -> usize {
+        1 + self.then_instr_end - self.then_instr_start + self.else_instr_end
+            - self.else_instr_start
     }
 }
 
@@ -428,8 +523,8 @@ pub enum Instr {
     Unreachable,
     Nop,
     Block(BlockInstr),
-    // loop
-    // if
+    Loop(LoopInstr),
+    If(IfInstr),
     Br(LabelIdx),
     BrIf(LabelIdx),
     BrTable(BrTable),
@@ -607,6 +702,8 @@ impl Instr {
     pub fn instr_len(self) -> usize {
         match self {
             Self::Block(x) => x.len(),
+            Self::Loop(x) => x.len(),
+            Self::If(x) => x.len(),
             _ => 1,
         }
     }
