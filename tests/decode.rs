@@ -78,10 +78,31 @@ pub fn decode_call_indirect() -> orfail::Result<()> {
     decode("call_indirect.json").or_fail()
 }
 
-// ../testdata/comments.json
-// ../testdata/const.json
-// ../testdata/conversions.json
-// ../testdata/custom.json
+#[test]
+pub fn decode_comments() -> orfail::Result<()> {
+    decode("comments.json").or_fail()
+}
+
+#[test]
+pub fn decode_const() -> orfail::Result<()> {
+    decode("const.json").or_fail()
+}
+
+#[test]
+pub fn decode_conversions() -> orfail::Result<()> {
+    decode("conversions.json").or_fail()
+}
+
+#[test]
+pub fn decode_custom() -> orfail::Result<()> {
+    decode("custom.json").or_fail()
+}
+
+#[test]
+pub fn decode_data() -> orfail::Result<()> {
+    decode("data.json").or_fail()
+}
+
 // ../testdata/data.json
 // ../testdata/elem.json
 // ../testdata/endianness.json

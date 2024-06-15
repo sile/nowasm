@@ -54,6 +54,11 @@ pub enum Command {
         text: String,
         expected: Vec<Value>,
     },
+    AssertUninstantiable {
+        filename: PathBuf,
+        text: String,
+        module_type: String,
+    },
 }
 
 #[derive(Debug, Deserialize)]
