@@ -25,7 +25,11 @@ pub fn decode_align() -> orfail::Result<()> {
     decode("align.json").or_fail()
 }
 
-// ../testdata/binary-leb128.json
+#[test]
+pub fn decode_binary_leb128() -> orfail::Result<()> {
+    decode("binary-leb128.json").or_fail()
+}
+
 // ../testdata/binary.json
 // ../testdata/block.json
 // ../testdata/br.json
