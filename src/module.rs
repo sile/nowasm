@@ -232,7 +232,14 @@ impl<'a> ByteReader<'a> {
             0x0d => Ok(Some(Instr::BrIf(LabelIdx(self.read_u32()?)))),
             0x0e => Ok(Some(Instr::BrTable(BrTable::new(self)?))),
             0x0f => Ok(Some(Instr::Return)),
-
+            0x10 => Ok(Some(Instr::Call(FuncIdx(self.read_u32()?)))),
+            0x11 => {
+                let idx = self.read_u32()?;
+                if self.read_u8()? != 0 {
+                    return Err(DecodeError::MalformedData); //TODO
+                }
+                Ok(Some(Instr::CallIndirect(TypeIdx(idx))))
+            }
             // Parametric Instructions
             0x1a => Ok(Some(Instr::Drop)),
             0x1b => Ok(Some(Instr::Select)),
@@ -499,6 +506,7 @@ impl IfInstr {
                     else_instr_end: then_instrs + else_instrs,
                 });
             } else if b == 0x05 {
+                reader.read_u8()?;
                 break;
             }
 
@@ -568,6 +576,8 @@ pub enum Instr {
     BrIf(LabelIdx),
     BrTable(BrTable),
     Return,
+    Call(FuncIdx),
+    CallIndirect(TypeIdx),
 
     // Parametric Instructions
     Drop,
@@ -783,6 +793,9 @@ pub struct GlobalIdx(pub u32);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct TypeIdx(pub u32);
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct FuncIdx(pub u32);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum BlockType {
