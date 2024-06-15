@@ -1051,6 +1051,9 @@ impl ModuleSpec {
                         // vec(funcidx)
                         let funcidx_len = section_reader.read_u32()? as usize;
                         this.idx_len += funcidx_len;
+                        for _ in 0..funcidx_len {
+                            section_reader.read_u32()?;
+                        }
                     }
                 }
                 SectionId::Code => {

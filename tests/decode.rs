@@ -10,6 +10,11 @@ fn decode(testcase_name: &str) -> orfail::Result<()> {
         let Command::Module(command) = command else {
             continue;
         };
+        if command.filename.to_str() == Some("call_indirect.1.wasm") {
+            // Unsupported in 1.0
+            continue;
+        }
+
         // TODO: assert handling
         command.decode_module().or_fail()?;
     }
@@ -56,13 +61,23 @@ pub fn decode_br_table() -> orfail::Result<()> {
     decode("br_table.json").or_fail()
 }
 
+// Unsupported in 1.0
+//
+// #[test]
+// pub fn decode_bulk() -> orfail::Result<()> {
+//     decode("bulk.json").or_fail()
+// }
+
 #[test]
-pub fn decode_bulk() -> orfail::Result<()> {
-    decode("bulk.json").or_fail()
+pub fn decode_call() -> orfail::Result<()> {
+    decode("call.json").or_fail()
 }
 
-// ../testdata/call.json
-// ../testdata/call_indirect.json
+#[test]
+pub fn decode_call_indirect() -> orfail::Result<()> {
+    decode("call_indirect.json").or_fail()
+}
+
 // ../testdata/comments.json
 // ../testdata/const.json
 // ../testdata/conversions.json

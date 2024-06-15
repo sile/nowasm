@@ -49,6 +49,11 @@ pub enum Command {
         text: String,
         module_type: String,
     },
+    AssertExhaustion {
+        action: Action,
+        text: String,
+        expected: Vec<Value>,
+    },
 }
 
 #[derive(Debug, Deserialize)]
