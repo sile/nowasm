@@ -41,10 +41,26 @@ pub fn decode_block() -> orfail::Result<()> {
     decode("block.json").or_fail()
 }
 
-// ../testdata/br.json
-// ../testdata/br_if.json
-// ../testdata/br_table.json
-// ../testdata/bulk.json
+#[test]
+pub fn decode_br() -> orfail::Result<()> {
+    decode("br.json").or_fail()
+}
+
+#[test]
+pub fn decode_br_if() -> orfail::Result<()> {
+    decode("br_if.json").or_fail()
+}
+
+#[test]
+pub fn decode_br_table() -> orfail::Result<()> {
+    decode("br_table.json").or_fail()
+}
+
+#[test]
+pub fn decode_bulk() -> orfail::Result<()> {
+    decode("bulk.json").or_fail()
+}
+
 // ../testdata/call.json
 // ../testdata/call_indirect.json
 // ../testdata/comments.json

@@ -26,6 +26,10 @@ impl Testcase {
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum Command {
     Module(ModuleCommand),
+    Action {
+        action: Action,
+        expected: Vec<Value>,
+    },
     AssertReturn {
         action: Action,
         expected: Vec<Value>,
@@ -111,6 +115,10 @@ pub enum Value {
         value: Option<String>,
     },
     F64 {
+        #[serde(skip_serializing_if = "Option::is_none")]
+        value: Option<String>,
+    },
+    Externref {
         #[serde(skip_serializing_if = "Option::is_none")]
         value: Option<String>,
     },
