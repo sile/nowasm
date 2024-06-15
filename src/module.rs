@@ -182,6 +182,10 @@ impl<'a> ByteReader<'a> {
             0x01 => Ok(Some(Instr::Nop)),
             0x02 => Ok(Some(Instr::Block(BlockInstr::new(self)?))),
             0x0b => Ok(None),
+            0x0c => Ok(Some(Instr::Br(LabelIdx(self.read_u32()?)))),
+            0x0d => Ok(Some(Instr::BrIf(LabelIdx(self.read_u32()?)))),
+            0x0e => Ok(Some(Instr::BrTable(BrTable::new(self)?))),
+            0x0f => Ok(Some(Instr::Return)),
 
             // Parametric Instructions
             0x1a => Ok(Some(Instr::Drop)),
@@ -254,7 +258,7 @@ impl BlockInstr {
         let block_type = BlockType::new(reader)?;
         let mut n = 0;
         while let Some(i) = reader.read_instr()? {
-            n += i.len();
+            n += i.instr_len();
         }
         Ok(Self {
             block_type,
@@ -269,11 +273,44 @@ impl BlockInstr {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
+pub struct BrTable {
+    pub label_idx_start: usize,
+    pub label_idx_end: usize,
+
+    // TODO: rename
+    pub last_label_idx: LabelIdx,
+}
+
+impl BrTable {
+    pub fn new(reader: &mut ByteReader) -> Result<Self, DecodeError> {
+        let n = reader.read_u32()? as usize;
+        for _ in 0..n {
+            let _ = LabelIdx(reader.read_u32()?);
+        }
+        Ok(Self {
+            label_idx_start: 0,
+            label_idx_end: n,
+            last_label_idx: LabelIdx(reader.read_u32()?),
+        })
+    }
+
+    pub fn idx_len(self) -> usize {
+        self.label_idx_end - self.label_idx_start
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Instr {
     // Control Instructions
     Unreachable,
     Nop,
     Block(BlockInstr),
+    // loop
+    // if
+    Br(LabelIdx),
+    BrIf(LabelIdx),
+    BrTable(BrTable),
+    Return,
 
     // Parametric Instructions
     Drop,
@@ -318,13 +355,143 @@ pub enum Instr {
     I64Const(i64),
     F32Const(f32),
     F64Const(f64),
+    I32Eqz,
+    I32Eq,
+    I32Ne,
+    I32LtS,
+    I32LtU,
+    I32GtS,
+    I32GtU,
+    I32LeS,
+    I32LeU,
+    I32GeS,
+    I32GeU,
+    I64Eqz,
+    I64Eq,
+    I64Ne,
+    I64LtS,
+    I64LtU,
+    I64GtS,
+    I64GtU,
+    I64LeS,
+    I64LeU,
+    I64GeS,
+    I64GeU,
+    f32Eq,
+    f32Ne,
+    f32Lt,
+    f32Gt,
+    f32Le,
+    f32Ge,
+    f64Eq,
+    f64Ne,
+    f64Lt,
+    f64Gt,
+    f64Le,
+    f64Ge,
+    I32Clz,
+    I32Ctz,
+    I32Popcnt,
+    I32Add,
+    I32Sub,
+    I32Mul,
+    I32DivS,
+    I32DivU,
+    I32RemS,
+    I32RemU,
+    I32And,
+    I32Or,
+    I32Xor,
+    I32Shl,
+    I32ShrS,
+    I32ShrU,
+    I32Rotl,
+    I32Rotr,
+    I64Clz,
+    I64Ctz,
+    I64Popcnt,
+    I64Add,
+    I64Sub,
+    I64Mul,
+    I64DivS,
+    I64DivU,
+    I64RemS,
+    I64RemU,
+    I64And,
+    I64Or,
+    I64Xor,
+    I64Shl,
+    I64ShrS,
+    I64ShrU,
+    I64Rotl,
+    I64Rotr,
+    F32Abs,
+    F32Neg,
+    F32Ceil,
+    F32Floor,
+    F32Trunc,
+    F32Nearest,
+    F32Sqrt,
+    F32Add,
+    F32Sub,
+    F32Mul,
+    F32Div,
+    F32Min,
+    F32Max,
+    F32Copysign,
+    F64Abs,
+    F64Neg,
+    F64Ceil,
+    F64Floor,
+    F64Trunc,
+    F64Nearest,
+    F64Sqrt,
+    F64Add,
+    F64Sub,
+    F64Mul,
+    F64Div,
+    F64Min,
+    F64Max,
+    F64Copysign,
+    I32WrapI64,
+    I32TruncF32S,
+    I32TruncF32U,
+    I32TruncF64S,
+    I32TruncF64U,
+    I64ExtendI32S,
+    I64ExtendI32U,
+    I64TruncF32S,
+    I64TruncF32U,
+    I64TruncF64S,
+    I64TruncF64U,
+    F32ConvertI32S,
+    F32ConvertI32U,
+    F32ConvertI64S,
+    F32ConvertI64U,
+    F32DemoteF64,
+    F64ConvertI32S,
+    F64ConvertI32U,
+    F64ConvertI64S,
+    F64ConvertI64U,
+    F64PromoteF32,
+    I32ReinterpretF32,
+    I64ReinterpretF64,
+    F32ReinterpretI32,
+    F64ReinterpretI64,
 }
 
 impl Instr {
-    pub fn len(self) -> usize {
+    pub fn instr_len(self) -> usize {
         match self {
             Self::Block(x) => x.len(),
             _ => 1,
+        }
+    }
+
+    pub fn idx_len(self) -> usize {
+        match self {
+            Self::BrTable(x) => x.idx_len(),
+            _ => 0,
         }
     }
 }
@@ -342,6 +509,9 @@ impl MemArg {
         Ok(Self { align, offset })
     }
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct LabelIdx(pub u32);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct MemIdx(pub u32);
@@ -507,7 +677,8 @@ impl ModuleSpec {
 
     fn handle_expr(&mut self, reader: &mut ByteReader) -> Result<(), DecodeError> {
         while let Some(i) = reader.read_instr()? {
-            self.instr_len += i.len();
+            self.instr_len += i.instr_len();
+            self.idx_len += i.idx_len();
         }
         Ok(())
     }
