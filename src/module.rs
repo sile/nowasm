@@ -1,4 +1,4 @@
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DecodeError {
     EndOfBytes,
     InvalidMagicNumber,
@@ -14,6 +14,7 @@ pub enum DecodeError {
     InvalidInteger,
     InvalidValueType { value: u8 },
     InvalidInstrOpcode { opcode: u8 },
+    UnsupportedFcExtension,
 }
 
 impl DecodeError {
@@ -408,6 +409,7 @@ impl<'a> ByteReader<'a> {
             0xBE => Ok(Some(Instr::F32ReinterpretI32)),
             0xBF => Ok(Some(Instr::F64ReinterpretI64)),
 
+            0xFC => Err(DecodeError::UnsupportedFcExtension),
             _ => Err(DecodeError::InvalidInstrOpcode { opcode }),
         }
     }

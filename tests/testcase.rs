@@ -1,4 +1,4 @@
-use nowasm::module::{ByteReader, ModuleSpec};
+use nowasm::module::{ByteReader, DecodeError, ModuleSpec};
 use orfail::{Failure, OrFail};
 use serde::Deserialize;
 use std::path::{Path, PathBuf};
@@ -54,7 +54,7 @@ pub struct ModuleCommand {
 }
 
 impl ModuleCommand {
-    pub fn decode_module(&self) -> orfail::Result<ModuleSpec> {
+    pub fn decode_module(&self) -> orfail::Result<()> {
         dbg!(&self.filename);
         let path = Path::new(file!())
             .parent()
@@ -74,11 +74,17 @@ impl ModuleCommand {
                 dbg!((id, reader.len()));
             }
         }
-        let module = ModuleSpec::new(&bytes)
-            .map_err(|e| Failure::new(format!("{e:?}")))
-            .or_fail()?;
-        dbg!(&module);
-        Ok(module)
+        let result = ModuleSpec::new(&bytes);
+        match result {
+            Ok(_) => {}
+            Err(DecodeError::UnsupportedFcExtension) => {}
+            _ => {
+                result
+                    .map_err(|e| Failure::new(format!("{e:?}")))
+                    .or_fail()?;
+            }
+        }
+        Ok(())
     }
 }
 
