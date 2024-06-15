@@ -22,6 +22,10 @@ impl DecodeError {
     fn end_of_bytes() -> Self {
         DecodeError::EndOfBytes
     }
+
+    fn invalid_value_type(value: u8) -> Self {
+        DecodeError::InvalidValueType { value }
+    }
 }
 
 #[derive(Debug)]
@@ -1129,7 +1133,7 @@ impl ValType {
             0x7e => Ok(Self::I64),
             0x7d => Ok(Self::F32),
             0x7c => Ok(Self::F64),
-            _ => Err(DecodeError::InvalidValueType { value: v }),
+            _ => Err(DecodeError::invalid_value_type(v)),
         }
     }
 }

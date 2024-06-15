@@ -59,6 +59,10 @@ pub enum Command {
         text: String,
         module_type: String,
     },
+    Register {
+        name: String,
+        r#as: String,
+    },
 }
 
 #[derive(Debug, Deserialize)]
@@ -106,7 +110,15 @@ impl ModuleCommand {
 #[derive(Debug, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum Action {
-    Invoke { field: String, args: Vec<Value> },
+    Invoke {
+        field: String,
+        args: Vec<Value>,
+    },
+    Get {
+        field: String,
+        #[serde(default)]
+        module: Option<String>,
+    },
 }
 
 #[derive(Debug, Deserialize)]

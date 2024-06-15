@@ -10,7 +10,18 @@ fn decode(testcase_name: &str) -> orfail::Result<()> {
         let Command::Module(command) = command else {
             continue;
         };
-        if command.filename.to_str() == Some("call_indirect.1.wasm") {
+        if matches!(
+            command.filename.to_str(),
+            Some(
+                "call_indirect.1.wasm"
+                    | "elem.0.wasm"
+                    | "elem.35.wasm"
+                    | "elem.65.wasm"
+                    | "elem.66.wasm"
+                    | "elem.67.wasm"
+                    | "elem.68.wasm"
+            )
+        ) {
             // Unsupported in 1.0
             continue;
         }
@@ -103,27 +114,111 @@ pub fn decode_data() -> orfail::Result<()> {
     decode("data.json").or_fail()
 }
 
-// ../testdata/data.json
-// ../testdata/elem.json
-// ../testdata/endianness.json
-// ../testdata/exports.json
-// ../testdata/f32.json
-// ../testdata/f32_bitwise.json
-// ../testdata/f32_cmp.json
-// ../testdata/f64.json
-// ../testdata/f64_bitwise.json
-// ../testdata/f64_cmp.json
-// ../testdata/fac.json
-// ../testdata/float_exprs.json
-// ../testdata/float_literals.json
-// ../testdata/float_memory.json
-// ../testdata/float_misc.json
-// ../testdata/forward.json
-// ../testdata/func.json
-// ../testdata/func_ptrs.json
-// ../testdata/global.json
-// ../testdata/i32.json
-// ../testdata/i64.json
+#[test]
+pub fn decode_elem() -> orfail::Result<()> {
+    decode("elem.json").or_fail()
+}
+
+#[test]
+pub fn decode_endianness() -> orfail::Result<()> {
+    decode("endianness.json").or_fail()
+}
+
+#[test]
+pub fn decode_exports() -> orfail::Result<()> {
+    decode("exports.json").or_fail()
+}
+
+#[test]
+pub fn decode_f32() -> orfail::Result<()> {
+    decode("f32.json").or_fail()
+}
+
+#[test]
+pub fn decode_f32_bitwise() -> orfail::Result<()> {
+    decode("f32_bitwise.json").or_fail()
+}
+
+#[test]
+pub fn decode_f32_cmp() -> orfail::Result<()> {
+    decode("f32_cmp.json").or_fail()
+}
+
+#[test]
+pub fn decode_f64() -> orfail::Result<()> {
+    decode("f64.json").or_fail()
+}
+
+#[test]
+pub fn decode_f64_bitwise() -> orfail::Result<()> {
+    decode("f64_bitwise.json").or_fail()
+}
+
+#[test]
+pub fn decode_f64_cmp() -> orfail::Result<()> {
+    decode("f64_cmp.json").or_fail()
+}
+
+#[test]
+pub fn decode_fac() -> orfail::Result<()> {
+    decode("fac.json").or_fail()
+}
+
+#[test]
+pub fn decode_float_exprs() -> orfail::Result<()> {
+    decode("float_exprs.json").or_fail()
+}
+
+#[test]
+pub fn decode_float_literals() -> orfail::Result<()> {
+    decode("float_literals.json").or_fail()
+}
+
+#[test]
+pub fn decode_float_memory() -> orfail::Result<()> {
+    decode("float_memory.json").or_fail()
+}
+
+#[test]
+pub fn decode_float_misc() -> orfail::Result<()> {
+    decode("float_misc.json").or_fail()
+}
+
+#[test]
+pub fn decode_forward() -> orfail::Result<()> {
+    decode("forward.json").or_fail()
+}
+
+#[test]
+pub fn decode_func() -> orfail::Result<()> {
+    decode("func.json").or_fail()
+}
+
+#[test]
+pub fn decode_func_ptrs() -> orfail::Result<()> {
+    decode("func_ptrs.json").or_fail()
+}
+
+#[test]
+pub fn decode_global() -> orfail::Result<()> {
+    decode("global.json").or_fail()
+}
+
+#[test]
+pub fn decode_i32() -> orfail::Result<()> {
+    decode("i32.json").or_fail()
+}
+
+#[test]
+pub fn decode_i64() -> orfail::Result<()> {
+    decode("i64.json").or_fail()
+}
+
+#[test]
+pub fn decode_if() -> orfail::Result<()> {
+    decode("if.json").or_fail()
+}
+
 // ../testdata/if.json
 // ../testdata/imports.json
 // ../testdata/inline-module.json
