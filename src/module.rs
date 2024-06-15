@@ -742,6 +742,9 @@ pub struct LocalIdx(pub u32);
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct GlobalIdx(pub u32);
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct TypeIdx(pub u32);
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum BlockType {
     Empty,
@@ -766,6 +769,89 @@ impl BlockType {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct S33(pub i64);
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct MemType(pub Limits);
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct Limits {
+    pub min: u32,
+    pub max: Option<u32>,
+}
+
+impl Limits {
+    pub fn new(reader: &mut ByteReader) -> Result<Self, DecodeError> {
+        match reader.read_u8()? {
+            0x00 => {
+                let min = reader.read_u32()?;
+                Ok(Self { min, max: None })
+            }
+            0x01 => {
+                let min = reader.read_u32()?;
+                let max = Some(reader.read_u32()?);
+                Ok(Self { min, max })
+            }
+            _ => Err(DecodeError::MalformedData),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct TableType {
+    pub elem_type: ElemType,
+    pub limits: Limits,
+}
+
+impl TableType {
+    pub fn new(reader: &mut ByteReader) -> Result<Self, DecodeError> {
+        if reader.read_u8()? != 0x70 {
+            return Err(DecodeError::MalformedData);
+        }
+        let elem_type = ElemType;
+        let limits = Limits::new(reader)?;
+        Ok(Self { elem_type, limits })
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct ElemType;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum GlobalType {
+    Const(ValType),
+    Var(ValType),
+}
+
+impl GlobalType {
+    pub fn new(reader: &mut ByteReader) -> Result<Self, DecodeError> {
+        let t = ValType::new(reader.read_u8()?)?;
+        match reader.read_u8()? {
+            0x00 => Ok(Self::Const(t)),
+            0x01 => Ok(Self::Var(t)),
+            _ => Err(DecodeError::MalformedData),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum ImportDesc {
+    Func(TypeIdx),
+    Table(TableType),
+    Mem(MemType),
+    Global(GlobalType),
+}
+
+impl ImportDesc {
+    pub fn new(reader: &mut ByteReader) -> Result<Self, DecodeError> {
+        match reader.read_u8()? {
+            0x00 => Ok(Self::Func(TypeIdx(reader.read_u32()?))),
+            0x01 => Ok(Self::Table(TableType::new(reader)?)),
+            0x02 => Ok(Self::Mem(MemType(Limits::new(reader)?))),
+            0x03 => Ok(Self::Global(GlobalType::new(reader)?)),
+            _ => Err(DecodeError::MalformedData),
+        }
+    }
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum SectionId {
@@ -826,6 +912,9 @@ pub struct ModuleSpec {
     pub instr_len: usize,
     pub data_segments_len: usize,
     pub bytes_len: usize,
+    pub table_type_len: usize,
+    pub element_segments_len: usize,
+    pub global_len: usize,
 }
 
 impl ModuleSpec {
@@ -840,6 +929,9 @@ impl ModuleSpec {
             instr_len: 0,
             data_segments_len: 0,
             bytes_len: 0,
+            table_type_len: 0,
+            element_segments_len: 0,
+            global_len: 0,
         };
         while !reader.is_empty() {
             let (section_id, mut section_reader) = reader.read_section_reader()?;
@@ -848,23 +940,67 @@ impl ModuleSpec {
                 SectionId::Type => {
                     this.func_type_len = section_reader.read_u32()? as usize;
                 }
-                SectionId::Import => todo!(),
+                SectionId::Import => {
+                    let size = section_reader.read_u32()? as usize;
+
+                    for _ in 0..size {
+                        // module
+                        let size = section_reader.read_u32()? as usize;
+                        section_reader.read_bytes(size)?;
+
+                        // name
+                        let size = section_reader.read_u32()? as usize;
+                        section_reader.read_bytes(size)?;
+
+                        // importdesc
+                        ImportDesc::new(&mut section_reader)?;
+                    }
+                }
                 SectionId::Function => {
                     this.idx_len += section_reader.read_u32()? as usize;
                 }
-                SectionId::Table => todo!(),
+                SectionId::Table => {
+                    let size = section_reader.read_u32()? as usize;
+                    this.table_type_len = size;
+                }
                 SectionId::Memory => {
                     let size = section_reader.read_u32()? as usize;
                     if size != 1 {
                         return Err(DecodeError::InvalidMemorySectionSize { size });
                     }
                 }
-                SectionId::Global => todo!(),
+                SectionId::Global => {
+                    let size = section_reader.read_u32()? as usize;
+                    this.global_len = size;
+
+                    for _ in 0..size {
+                        // globaltype
+                        GlobalType::new(&mut section_reader)?;
+
+                        // expr
+                        this.handle_expr(&mut section_reader)?;
+                    }
+                }
                 SectionId::Export => {
                     this.export_len = section_reader.read_u32()? as usize;
                 }
                 SectionId::Start => {}
-                SectionId::Element => todo!(),
+                SectionId::Element => {
+                    let size = section_reader.read_u32()? as usize;
+                    this.element_segments_len = size;
+
+                    for _ in 0..size {
+                        // tableidx
+                        section_reader.read_u32()?;
+
+                        // expr
+                        this.handle_expr(&mut section_reader)?;
+
+                        // vec(funcidx)
+                        let funcidx_len = section_reader.read_u32()? as usize;
+                        this.idx_len += funcidx_len;
+                    }
+                }
                 SectionId::Code => {
                     this.handle_code_section(section_reader)?;
                 }
