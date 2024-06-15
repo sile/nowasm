@@ -60,6 +60,10 @@ impl<'a> ByteReader<'a> {
         }
     }
 
+    pub fn unread(&mut self) {
+        self.position = self.position.saturating_sub(1);
+    }
+
     pub fn read_u8(&mut self) -> Result<u8, DecodeError> {
         if let Some(b) = self.data.get(self.position).copied() {
             self.position += 1;
@@ -176,6 +180,7 @@ impl<'a> ByteReader<'a> {
             // Control Instructions
             0x00 => Ok(Some(Instr::Unreachable)),
             0x01 => Ok(Some(Instr::Nop)),
+            0x02 => Ok(Some(Instr::Block(BlockInstr::new(self)?))),
             0x0b => Ok(None),
 
             // Parametric Instructions
@@ -232,9 +237,34 @@ impl<'a> ByteReader<'a> {
             0x43 => Ok(Some(Instr::F32Const(self.read_f32()?))),
             0x44 => Ok(Some(Instr::F64Const(self.read_f64()?))),
 
-            // End
             _ => Err(DecodeError::InvalidInstrOpcode { opcode }),
         }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct BlockInstr {
+    pub block_type: BlockType,
+    pub instr_start: usize,
+    pub instr_end: usize,
+}
+
+impl BlockInstr {
+    pub fn new(reader: &mut ByteReader) -> Result<Self, DecodeError> {
+        let block_type = BlockType::new(reader)?;
+        let mut n = 0;
+        while let Some(i) = reader.read_instr()? {
+            n += i.len();
+        }
+        Ok(Self {
+            block_type,
+            instr_start: 0,
+            instr_end: n,
+        })
+    }
+
+    pub fn len(self) -> usize {
+        1 + self.instr_end - self.instr_start
     }
 }
 
@@ -243,6 +273,7 @@ pub enum Instr {
     // Control Instructions
     Unreachable,
     Nop,
+    Block(BlockInstr),
 
     // Parametric Instructions
     Drop,
@@ -289,6 +320,15 @@ pub enum Instr {
     F64Const(f64),
 }
 
+impl Instr {
+    pub fn len(self) -> usize {
+        match self {
+            Self::Block(x) => x.len(),
+            _ => 1,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct MemArg {
     pub align: u32,
@@ -317,6 +357,21 @@ pub enum BlockType {
     Empty,
     Val(ValType),
     TypeIndex(S33),
+}
+
+impl BlockType {
+    pub fn new(reader: &mut ByteReader) -> Result<Self, DecodeError> {
+        let v = reader.read_u8()?;
+        if v == 0x40 {
+            return Ok(Self::Empty);
+        }
+        if let Ok(t) = ValType::new(v) {
+            return Ok(Self::Val(t));
+        }
+
+        reader.unread();
+        Ok(Self::TypeIndex(S33(reader.read_integer(33)? as i64)))
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -451,8 +506,8 @@ impl ModuleSpec {
     }
 
     fn handle_expr(&mut self, reader: &mut ByteReader) -> Result<(), DecodeError> {
-        while let Some(_) = reader.read_instr()? {
-            self.instr_len += 1;
+        while let Some(i) = reader.read_instr()? {
+            self.instr_len += i.len();
         }
         Ok(())
     }
