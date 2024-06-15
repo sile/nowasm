@@ -55,6 +55,7 @@ pub struct ModuleCommand {
 
 impl ModuleCommand {
     pub fn decode_module(&self) -> orfail::Result<ModuleSpec> {
+        dbg!(&self.filename);
         let path = Path::new(file!())
             .parent()
             .or_fail()?
