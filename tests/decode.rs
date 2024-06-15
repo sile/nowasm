@@ -10,6 +10,7 @@ fn decode(testcase_name: &str) -> orfail::Result<()> {
         let Command::Module(command) = command else {
             continue;
         };
+        // TODO: assert handling
         command.decode_module().or_fail()?;
     }
     Ok(())
@@ -30,8 +31,16 @@ pub fn decode_binary_leb128() -> orfail::Result<()> {
     decode("binary-leb128.json").or_fail()
 }
 
-// ../testdata/binary.json
-// ../testdata/block.json
+#[test]
+pub fn decode_binary() -> orfail::Result<()> {
+    decode("binary.json").or_fail()
+}
+
+#[test]
+pub fn decode_block() -> orfail::Result<()> {
+    decode("block.json").or_fail()
+}
+
 // ../testdata/br.json
 // ../testdata/br_if.json
 // ../testdata/br_table.json

@@ -14,7 +14,8 @@ pub enum DecodeError {
     InvalidInteger,
     InvalidValueType { value: u8 },
     InvalidInstrOpcode { opcode: u8 },
-    UnsupportedFcExtension,
+    UnsupportedExtension { opcode: u8 },
+    UnsupportedProposal { opcode: u8 },
 }
 
 impl DecodeError {
@@ -409,7 +410,9 @@ impl<'a> ByteReader<'a> {
             0xBE => Ok(Some(Instr::F32ReinterpretI32)),
             0xBF => Ok(Some(Instr::F64ReinterpretI64)),
 
-            0xFC => Err(DecodeError::UnsupportedFcExtension),
+            0xD0 => Err(DecodeError::UnsupportedProposal { opcode }),
+            0xD2 => Err(DecodeError::UnsupportedProposal { opcode }),
+            0xFC => Err(DecodeError::UnsupportedExtension { opcode }),
             _ => Err(DecodeError::InvalidInstrOpcode { opcode }),
         }
     }
@@ -1001,7 +1004,7 @@ impl ModuleSpec {
                 }
                 SectionId::Memory => {
                     let size = section_reader.read_u32()? as usize;
-                    if size != 1 {
+                    if size > 1 {
                         return Err(DecodeError::InvalidMemorySectionSize { size });
                     }
                 }

@@ -77,7 +77,8 @@ impl ModuleCommand {
         let result = ModuleSpec::new(&bytes);
         match result {
             Ok(_) => {}
-            Err(DecodeError::UnsupportedFcExtension) => {}
+            Err(DecodeError::UnsupportedExtension { .. }) => {}
+            Err(DecodeError::UnsupportedProposal { .. }) => {}
             _ => {
                 result
                     .map_err(|e| Failure::new(format!("{e:?}")))
