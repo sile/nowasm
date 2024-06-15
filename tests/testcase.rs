@@ -59,8 +59,14 @@ pub enum Command {
         text: String,
         module_type: String,
     },
+    AssertUnlinkable {
+        filename: PathBuf,
+        text: String,
+        module_type: String,
+    },
     Register {
-        name: String,
+        #[serde(default)]
+        name: Option<String>,
         r#as: String,
     },
 }

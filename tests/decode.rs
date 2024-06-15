@@ -20,6 +20,9 @@ fn decode(testcase_name: &str) -> orfail::Result<()> {
                     | "elem.66.wasm"
                     | "elem.67.wasm"
                     | "elem.68.wasm"
+                    | "global.0.wasm"
+                    | "i32.0.wasm"
+                    | "i64.0.wasm"
             )
         ) {
             // Unsupported in 1.0
@@ -219,13 +222,41 @@ pub fn decode_if() -> orfail::Result<()> {
     decode("if.json").or_fail()
 }
 
-// ../testdata/if.json
-// ../testdata/imports.json
-// ../testdata/inline-module.json
-// ../testdata/int_exprs.json
-// ../testdata/int_literals.json
-// ../testdata/labels.json
-// ../testdata/left-to-right.json
+#[test]
+pub fn decode_imports() -> orfail::Result<()> {
+    decode("imports.json").or_fail()
+}
+
+#[test]
+pub fn decode_inline_module() -> orfail::Result<()> {
+    decode("inline-module.json").or_fail()
+}
+
+#[test]
+pub fn decode_int_exprs() -> orfail::Result<()> {
+    decode("int_exprs.json").or_fail()
+}
+
+#[test]
+pub fn decode_int_literals() -> orfail::Result<()> {
+    decode("int_literals.json").or_fail()
+}
+
+#[test]
+pub fn decode_labels() -> orfail::Result<()> {
+    decode("labels.json").or_fail()
+}
+
+#[test]
+pub fn decode_left_to_right() -> orfail::Result<()> {
+    decode("left-to-right.json").or_fail()
+}
+
+#[test]
+pub fn decode_linking() -> orfail::Result<()> {
+    decode("linking.json").or_fail()
+}
+
 // ../testdata/linking.json
 // ../testdata/load.json
 // ../testdata/local_get.json
