@@ -1,4 +1,5 @@
 use crate::reader::Reader;
+use crate::writer::Writer;
 use crate::DecodeError;
 
 #[derive(Debug)]
@@ -72,6 +73,15 @@ pub struct Name {
 }
 
 impl Name {
+    pub fn decode(reader: &mut Reader, writer: &mut Writer) -> Result<Self, DecodeError> {
+        let start = writer.position();
+        let len = reader.read_usize()?;
+        let name = reader.read(len)?;
+        let _ = core::str::from_utf8(name).map_err(DecodeError::InvalidUtf8)?;
+        writer.write(name)?;
+        Ok(Self { start, len })
+    }
+
     pub fn len(self) -> usize {
         self.len
     }
