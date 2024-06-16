@@ -71,6 +71,10 @@ impl<'a> Reader<'a> {
         Ok(f64::from_le_bytes(buf))
     }
 
+    pub fn read_usize(&mut self) -> Result<usize, DecodeError> {
+        self.read_u32().map(|v| v as usize)
+    }
+
     pub fn read_integer_u(&mut self, bits: usize) -> Result<u64, DecodeError> {
         let mut n = 0u64;
         let mut offset = 0;

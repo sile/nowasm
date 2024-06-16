@@ -1,3 +1,5 @@
+use crate::symbols::SectionId;
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DecodeError {
     EndOfBytes,
@@ -5,4 +7,5 @@ pub enum DecodeError {
     InvalidVersion { value: [u8; 4] },
     InvalidSectionId { value: u8 },
     MalformedInteger,
+    OutOfOrderSectionId { last: SectionId, current: SectionId },
 }

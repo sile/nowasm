@@ -29,7 +29,7 @@ impl Version {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum SectionId {
     Custom,
     Type,
