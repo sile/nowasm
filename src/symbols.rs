@@ -64,3 +64,63 @@ impl SectionId {
         }
     }
 }
+
+#[derive(Debug, Clone, Copy)]
+pub struct Name {
+    start: usize,
+    len: usize,
+}
+
+impl Name {
+    pub fn len(self) -> usize {
+        self.len
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Import {
+    pub module: Name,
+    pub name: Name,
+    pub desc: ImportDesc,
+}
+
+#[derive(Debug, Clone)]
+pub enum ImportDesc {
+    Func(TypeIdx),
+    Table(TableType),
+    Mem(MemType),
+    Global(GlobalType),
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct TypeIdx(u32);
+
+#[derive(Debug, Clone)]
+pub struct TableType {
+    pub limits: Limits,
+}
+
+#[derive(Debug, Clone)]
+pub struct Limits {
+    pub min: u32,
+    pub max: Option<u32>,
+}
+
+#[derive(Debug, Clone)]
+pub struct MemType {
+    pub limits: Limits,
+}
+
+#[derive(Debug, Clone)]
+pub enum GlobalType {
+    Const(ValType),
+    Var(ValType),
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum ValType {
+    I32,
+    I64,
+    F32,
+    F64,
+}

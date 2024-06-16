@@ -7,12 +7,18 @@ use crate::{
 #[derive(Debug, Clone)]
 pub struct ModuleSpec {
     pub types: usize,
+    pub imports: usize,
+    pub bytes: usize,
 }
 
 impl ModuleSpec {
     pub fn inspect(wasm_bytes: &[u8]) -> Result<ModuleSpec, DecodeError> {
         let mut reader = Reader::new(wasm_bytes);
-        let mut this = Self { types: 0 };
+        let mut this = Self {
+            types: 0,
+            imports: 0,
+            bytes: 0,
+        };
         this.handle_module(&mut reader)?;
         Ok(this)
     }
@@ -42,7 +48,7 @@ impl ModuleSpec {
             match section_id {
                 SectionId::Custom => {}
                 SectionId::Type => self.handle_type_section(&mut section_reader)?,
-                SectionId::Import => todo!(),
+                SectionId::Import => self.handle_import_section(&mut section_reader)?,
                 SectionId::Function => todo!(),
                 SectionId::Table => todo!(),
                 SectionId::Memory => todo!(),
@@ -60,6 +66,16 @@ impl ModuleSpec {
 
     fn handle_type_section(&mut self, reader: &mut Reader) -> Result<(), DecodeError> {
         self.types = reader.read_usize()?;
+        Ok(())
+    }
+
+    fn handle_import_section(&mut self, reader: &mut Reader) -> Result<(), DecodeError> {
+        self.imports = reader.read_usize()?;
+        for _ in 0..self.imports {
+            // let _ = reader.read_u32()?;
+            // let _ = reader.read_string()?;
+            // let _ = reader.read_string()?;
+        }
         Ok(())
     }
 }
