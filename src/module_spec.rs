@@ -4,7 +4,7 @@ use crate::{
     DecodeError,
 };
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone)]
 pub struct ModuleSpec {}
 
 impl ModuleSpec {
