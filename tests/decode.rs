@@ -23,6 +23,9 @@ fn decode(testcase_name: &str) -> orfail::Result<()> {
                     | "global.0.wasm"
                     | "i32.0.wasm"
                     | "i64.0.wasm"
+                    | "linking.9.wasm"
+                    | "linking.10.wasm"
+                    | "linking.26.wasm"
             )
         ) {
             // Unsupported in 1.0
@@ -257,20 +260,71 @@ pub fn decode_linking() -> orfail::Result<()> {
     decode("linking.json").or_fail()
 }
 
-// ../testdata/linking.json
-// ../testdata/load.json
-// ../testdata/local_get.json
-// ../testdata/local_set.json
-// ../testdata/local_tee.json
-// ../testdata/loop.json
-// ../testdata/memory.json
-// ../testdata/memory_copy.json
-// ../testdata/memory_fill.json
-// ../testdata/memory_grow.json
-// ../testdata/memory_init.json
-// ../testdata/memory_redundancy.json
-// ../testdata/memory_size.json
-// ../testdata/memory_trap.json
+#[test]
+pub fn decode_load() -> orfail::Result<()> {
+    decode("load.json").or_fail()
+}
+
+#[test]
+pub fn decode_local_get() -> orfail::Result<()> {
+    decode("local_get.json").or_fail()
+}
+
+#[test]
+pub fn decode_local_set() -> orfail::Result<()> {
+    decode("local_set.json").or_fail()
+}
+
+#[test]
+pub fn decode_local_tee() -> orfail::Result<()> {
+    decode("local_tee.json").or_fail()
+}
+
+#[test]
+pub fn decode_loop() -> orfail::Result<()> {
+    decode("loop.json").or_fail()
+}
+
+#[test]
+pub fn decode_memory() -> orfail::Result<()> {
+    decode("memory.json").or_fail()
+}
+
+#[test]
+pub fn decode_memory_copy() -> orfail::Result<()> {
+    decode("memory_copy.json").or_fail()
+}
+
+#[test]
+pub fn decode_memory_fill() -> orfail::Result<()> {
+    decode("memory_fill.json").or_fail()
+}
+
+#[test]
+pub fn decode_memory_grow() -> orfail::Result<()> {
+    decode("memory_grow.json").or_fail()
+}
+
+#[test]
+pub fn decode_memory_init() -> orfail::Result<()> {
+    decode("memory_init.json").or_fail()
+}
+
+#[test]
+pub fn decode_memory_redundancy() -> orfail::Result<()> {
+    decode("memory_redundancy.json").or_fail()
+}
+
+#[test]
+pub fn decode_memory_size() -> orfail::Result<()> {
+    decode("memory_size.json").or_fail()
+}
+
+#[test]
+pub fn decode_memory_trap() -> orfail::Result<()> {
+    decode("memory_trap.json").or_fail()
+}
+
 // ../testdata/names.json
 // ../testdata/nop.json
 // ../testdata/obsolete-keywords.json
