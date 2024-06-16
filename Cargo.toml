@@ -7,6 +7,7 @@ categories = ["no-std"]
 [dependencies]
 
 [dev-dependencies]
+clap = { version = "4.5.7", features = ["derive"] }
 orfail = "1.1.0"
 serde = { version = "1.0.203", features = ["derive"] }
 serde_json = "1.0.117"
