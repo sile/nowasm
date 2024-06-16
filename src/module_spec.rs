@@ -1,6 +1,7 @@
 use crate::{
     reader::Reader,
-    symbols::{Magic, SectionId, Version},
+    symbols::{Import, Magic, SectionId, Version},
+    writer::Writer,
     DecodeError,
 };
 
@@ -72,9 +73,9 @@ impl ModuleSpec {
     fn handle_import_section(&mut self, reader: &mut Reader) -> Result<(), DecodeError> {
         self.imports = reader.read_usize()?;
         for _ in 0..self.imports {
-            // let _ = reader.read_u32()?;
-            // let _ = reader.read_string()?;
-            // let _ = reader.read_string()?;
+            let import = Import::decode(reader, &mut Writer::null())?;
+            self.bytes += import.module.len();
+            self.bytes += import.name.len();
         }
         Ok(())
     }

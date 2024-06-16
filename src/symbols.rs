@@ -94,12 +94,27 @@ pub struct Import {
     pub desc: ImportDesc,
 }
 
+impl Import {
+    pub fn decode(reader: &mut Reader, writer: &mut Writer) -> Result<Self, DecodeError> {
+        let module = Name::decode(reader, writer)?;
+        let name = Name::decode(reader, writer)?;
+        let desc = ImportDesc::decode(reader)?;
+        Ok(Self { module, name, desc })
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum ImportDesc {
     Func(TypeIdx),
     Table(TableType),
     Mem(MemType),
     Global(GlobalType),
+}
+
+impl ImportDesc {
+    pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
+        todo!()
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
