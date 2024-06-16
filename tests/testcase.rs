@@ -98,6 +98,8 @@ impl ModuleCommand {
                 dbg!((id, reader.len()));
             }
         }
+
+        nowasm::ModuleSpec::inspect(&bytes).unwrap();
         let result = ModuleSpec::new(&bytes);
         match result {
             Ok(_) => {}
