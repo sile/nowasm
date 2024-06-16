@@ -26,6 +26,9 @@ fn decode(testcase_name: &str) -> orfail::Result<()> {
                     | "linking.9.wasm"
                     | "linking.10.wasm"
                     | "linking.26.wasm"
+                    | "select.0.wasm"
+                    | "select.29.wasm"
+                    | "unreached-valid.0.wasm"
             )
         ) {
             // Unsupported in 1.0
@@ -305,10 +308,12 @@ pub fn decode_memory_grow() -> orfail::Result<()> {
     decode("memory_grow.json").or_fail()
 }
 
-#[test]
-pub fn decode_memory_init() -> orfail::Result<()> {
-    decode("memory_init.json").or_fail()
-}
+// Unsupported in 1.0
+//
+// #[test]
+// pub fn decode_memory_init() -> orfail::Result<()> {
+//     decode("memory_init.json").or_fail()
+// }
 
 #[test]
 pub fn decode_memory_redundancy() -> orfail::Result<()> {
@@ -325,36 +330,175 @@ pub fn decode_memory_trap() -> orfail::Result<()> {
     decode("memory_trap.json").or_fail()
 }
 
-// ../testdata/names.json
-// ../testdata/nop.json
-// ../testdata/obsolete-keywords.json
-// ../testdata/ref_func.json
-// ../testdata/ref_is_null.json
-// ../testdata/ref_null.json
-// ../testdata/return.json
-// ../testdata/select.json
-// ../testdata/skip-stack-guard-page.json
-// ../testdata/stack.json
-// ../testdata/start.json
-// ../testdata/store.json
-// ../testdata/switch.json
-// ../testdata/table-sub.json
-// ../testdata/table.json
-// ../testdata/table_copy.json
-// ../testdata/table_fill.json
-// ../testdata/table_get.json
-// ../testdata/table_grow.json
-// ../testdata/table_init.json
-// ../testdata/table_set.json
-// ../testdata/table_size.json
-// ../testdata/token.json
-// ../testdata/traps.json
-// ../testdata/type.json
-// ../testdata/unreachable.json
-// ../testdata/unreached-invalid.json
-// ../testdata/unreached-valid.json
-// ../testdata/unwind.json
-// ../testdata/utf8-custom-section-id.json
-// ../testdata/utf8-import-field.json
-// ../testdata/utf8-import-module.json
-// ../testdata/utf8-invalid-encoding.json
+#[test]
+pub fn decode_names() -> orfail::Result<()> {
+    decode("names.json").or_fail()
+}
+
+#[test]
+pub fn decode_nop() -> orfail::Result<()> {
+    decode("nop.json").or_fail()
+}
+
+#[test]
+pub fn decode_obsolete_keywords() -> orfail::Result<()> {
+    decode("obsolete-keywords.json").or_fail()
+}
+
+// Unsupported in 1.0
+//
+// #[test]
+// pub fn decode_ref_func() -> orfail::Result<()> {
+//     decode("ref_func.json").or_fail()
+// }
+//
+// #[test]
+// pub fn decode_ref_is_null() -> orfail::Result<()> {
+//     decode("ref_is_null.json").or_fail()
+// }
+//
+// #[test]
+// pub fn decode_ref_null() -> orfail::Result<()> {
+//     decode("ref_null.json").or_fail()
+// }
+
+#[test]
+pub fn decode_return() -> orfail::Result<()> {
+    decode("return.json").or_fail()
+}
+
+#[test]
+pub fn decode_select() -> orfail::Result<()> {
+    decode("select.json").or_fail()
+}
+
+#[test]
+pub fn decode_skip_stack_guard_page() -> orfail::Result<()> {
+    decode("skip-stack-guard-page.json").or_fail()
+}
+
+#[test]
+pub fn decode_stack() -> orfail::Result<()> {
+    decode("stack.json").or_fail()
+}
+
+#[test]
+pub fn decode_start() -> orfail::Result<()> {
+    decode("start.json").or_fail()
+}
+
+#[test]
+pub fn decode_store() -> orfail::Result<()> {
+    decode("store.json").or_fail()
+}
+
+#[test]
+pub fn decode_switch() -> orfail::Result<()> {
+    decode("switch.json").or_fail()
+}
+
+#[test]
+pub fn decode_table_sub() -> orfail::Result<()> {
+    decode("table-sub.json").or_fail()
+}
+
+#[test]
+pub fn decode_table() -> orfail::Result<()> {
+    decode("table.json").or_fail()
+}
+
+// Unsupported in 1.0
+//
+// #[test]
+// pub fn decode_table_copy() -> orfail::Result<()> {
+//     decode("table_copy.json").or_fail()
+// }
+
+#[test]
+pub fn decode_table_fill() -> orfail::Result<()> {
+    decode("table_fill.json").or_fail()
+}
+
+// Unsupported in 1.0
+//
+// #[test]
+// pub fn decode_table_get() -> orfail::Result<()> {
+//     decode("table_get.json").or_fail()
+// }
+//
+// #[test]
+// pub fn decode_table_grow() -> orfail::Result<()> {
+//     decode("table_grow.json").or_fail()
+// }
+//
+// #[test]
+// pub fn decode_table_init() -> orfail::Result<()> {
+//     decode("table_init.json").or_fail()
+// }
+//
+// #[test]
+// pub fn decode_table_set() -> orfail::Result<()> {
+//     decode("table_set.json").or_fail()
+// }
+
+#[test]
+pub fn decode_table_size() -> orfail::Result<()> {
+    decode("table_size.json").or_fail()
+}
+
+// Unsupported in 1.0
+//
+// #[test]
+// pub fn decode_token() -> orfail::Result<()> {
+//     decode("token.json").or_fail()
+// }
+
+#[test]
+pub fn decode_traps() -> orfail::Result<()> {
+    decode("traps.json").or_fail()
+}
+
+#[test]
+pub fn decode_type() -> orfail::Result<()> {
+    decode("type.json").or_fail()
+}
+
+#[test]
+pub fn decode_unreachable() -> orfail::Result<()> {
+    decode("unreachable.json").or_fail()
+}
+
+#[test]
+pub fn decode_unreached_invalid() -> orfail::Result<()> {
+    decode("unreached-invalid.json").or_fail()
+}
+
+#[test]
+pub fn decode_unreached_valid() -> orfail::Result<()> {
+    decode("unreached-valid.json").or_fail()
+}
+
+#[test]
+pub fn decode_unwind() -> orfail::Result<()> {
+    decode("unwind.json").or_fail()
+}
+
+#[test]
+pub fn decode_utf8_custom_section_id() -> orfail::Result<()> {
+    decode("utf8-custom-section-id.json").or_fail()
+}
+
+#[test]
+pub fn decode_utf8_import_field() -> orfail::Result<()> {
+    decode("utf8-import-field.json").or_fail()
+}
+
+#[test]
+pub fn decode_utf8_import_module() -> orfail::Result<()> {
+    decode("utf8-import-module.json").or_fail()
+}
+
+#[test]
+pub fn decode_utf8_invalid_encoding() -> orfail::Result<()> {
+    decode("utf8-invalid-encoding.json").or_fail()
+}
