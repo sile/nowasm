@@ -1,2 +1,6 @@
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DecodeError {}
+pub enum DecodeError {
+    EndOfBytes,
+    InvalidMagic,
+    InvalidVersion,
+}

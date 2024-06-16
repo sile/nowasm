@@ -1,4 +1,8 @@
-use crate::{reader::Reader, DecodeError};
+use crate::{
+    reader::Reader,
+    symbols::{Magic, Version},
+    DecodeError,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ModuleSpec {}
@@ -12,6 +16,10 @@ impl ModuleSpec {
     }
 
     fn handle_module(&mut self, mut reader: Reader) -> Result<(), DecodeError> {
+        // Preamble
+        let _ = Magic::decode(&mut reader)?;
+        let _ = Version::decode(&mut reader)?;
+
         Ok(())
     }
 }

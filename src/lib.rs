@@ -4,6 +4,7 @@ mod decode_error;
 mod module_spec;
 
 pub(crate) mod reader;
+pub(crate) mod symbols;
 
 pub mod module;
 
