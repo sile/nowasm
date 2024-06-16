@@ -113,16 +113,39 @@ pub enum ImportDesc {
 
 impl ImportDesc {
     pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
-        todo!()
+        match reader.read_u8()? {
+            0x00 => Ok(Self::Func(TypeIdx::decode(reader)?)),
+            0x01 => Ok(Self::Table(TableType::decode(reader)?)),
+            0x02 => Ok(Self::Mem(MemType::decode(reader)?)),
+            0x03 => Ok(Self::Global(GlobalType::decode(reader)?)),
+            value => Err(DecodeError::InvalidImportDescTag { value }),
+        }
     }
 }
 
 #[derive(Debug, Clone, Copy)]
 pub struct TypeIdx(u32);
 
+impl TypeIdx {
+    pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
+        reader.read_u32().map(Self)
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct TableType {
     pub limits: Limits,
+}
+
+impl TableType {
+    pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
+        let elem_type = reader.read_u8()?;
+        if elem_type != 0x70 {
+            return Err(DecodeError::InvalidElemType { value: elem_type });
+        }
+        let limits = Limits::decode(reader)?;
+        Ok(Self { limits })
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -131,9 +154,34 @@ pub struct Limits {
     pub max: Option<u32>,
 }
 
+impl Limits {
+    pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
+        match reader.read_u8()? {
+            0x00 => {
+                let min = reader.read_u32()?;
+                Ok(Self { min, max: None })
+            }
+            0x01 => {
+                let min = reader.read_u32()?;
+                let max = Some(reader.read_u32()?);
+                Ok(Self { min, max })
+            }
+            value => Err(DecodeError::InvalidLimitsTag { value }),
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct MemType {
     pub limits: Limits,
+}
+
+impl MemType {
+    pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
+        Ok(Self {
+            limits: Limits::decode(reader)?,
+        })
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -142,10 +190,33 @@ pub enum GlobalType {
     Var(ValType),
 }
 
+impl GlobalType {
+    pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
+        let t = ValType::decode(reader)?;
+        match reader.read_u8()? {
+            0x00 => Ok(Self::Const(t)),
+            0x01 => Ok(Self::Var(t)),
+            value => Err(DecodeError::InvalidMutabilityFlag { value }),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy)]
 pub enum ValType {
     I32,
     I64,
     F32,
     F64,
+}
+
+impl ValType {
+    pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
+        match reader.read_u8()? {
+            0x7f => Ok(Self::I32),
+            0x7e => Ok(Self::I64),
+            0x7d => Ok(Self::F32),
+            0x7c => Ok(Self::F64),
+            value => Err(DecodeError::InvalidValType { value }),
+        }
+    }
 }
