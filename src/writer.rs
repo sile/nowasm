@@ -1,12 +1,12 @@
 use crate::DecodeError;
 
 #[derive(Debug)]
-pub enum Writer<'a> {
+pub enum Writer<'a, T = u8> {
     Null { position: usize },
-    Data { data: &'a mut [u8], position: usize },
+    Data { data: &'a mut [T], position: usize },
 }
 
-impl<'a> Writer<'a> {
+impl<'a, T: Copy> Writer<'a, T> {
     pub fn null() -> Self {
         Self::Null { position: 0 }
     }
@@ -18,7 +18,7 @@ impl<'a> Writer<'a> {
         }
     }
 
-    pub fn write(&mut self, buf: &[u8]) -> Result<(), DecodeError> {
+    pub fn write(&mut self, buf: &[T]) -> Result<(), DecodeError> {
         match self {
             Self::Null { position } => {
                 *position += buf.len();
