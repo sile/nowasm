@@ -10,6 +10,7 @@ pub struct ModuleSpec {
     pub types: usize,
     pub imports: usize,
     pub bytes: usize,
+    pub idxs: usize,
 }
 
 impl ModuleSpec {
@@ -19,6 +20,7 @@ impl ModuleSpec {
             types: 0,
             imports: 0,
             bytes: 0,
+            idxs: 0,
         };
         this.handle_module(&mut reader)?;
         Ok(this)
@@ -50,7 +52,7 @@ impl ModuleSpec {
                 SectionId::Custom => {}
                 SectionId::Type => self.handle_type_section(&mut section_reader)?,
                 SectionId::Import => self.handle_import_section(&mut section_reader)?,
-                SectionId::Function => todo!(),
+                SectionId::Function => self.handle_function_section(&mut section_reader)?,
                 SectionId::Table => todo!(),
                 SectionId::Memory => todo!(),
                 SectionId::Global => todo!(),
@@ -77,6 +79,11 @@ impl ModuleSpec {
             self.bytes += import.module.len();
             self.bytes += import.name.len();
         }
+        Ok(())
+    }
+
+    fn handle_function_section(&mut self, reader: &mut Reader) -> Result<(), DecodeError> {
+        self.idxs = reader.read_usize()?;
         Ok(())
     }
 }
