@@ -260,3 +260,12 @@ impl ResultType {
         self.len
     }
 }
+
+#[derive(Debug, Clone)]
+pub struct Global {
+    pub ty: GlobalType,
+    pub init: Expr,
+}
+
+#[derive(Debug, Clone)]
+pub struct Expr;

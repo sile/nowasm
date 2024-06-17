@@ -13,6 +13,7 @@ pub struct ModuleSpec {
     pub idxs: usize,
     pub table_types: usize,
     pub val_types: usize,
+    pub globals: usize,
 }
 
 impl ModuleSpec {
@@ -25,6 +26,7 @@ impl ModuleSpec {
             idxs: 0,
             table_types: 0,
             val_types: 0,
+            globals: 0,
         };
         this.handle_module(&mut reader)?;
         Ok(this)
@@ -59,7 +61,7 @@ impl ModuleSpec {
                 SectionId::Function => self.handle_function_section(&mut section_reader)?,
                 SectionId::Table => self.handle_table_section(&mut section_reader)?,
                 SectionId::Memory => self.handle_memory_section(&mut section_reader)?,
-                SectionId::Global => todo!(),
+                SectionId::Global => self.handle_global_section(&mut section_reader)?,
                 SectionId::Export => todo!(),
                 SectionId::Start => todo!(),
                 SectionId::Element => todo!(),
@@ -106,6 +108,12 @@ impl ModuleSpec {
         if value > 1 {
             return Err(DecodeError::InvalidMemoryCount { value });
         }
+        Ok(())
+    }
+
+    fn handle_global_section(&mut self, reader: &mut Reader) -> Result<(), DecodeError> {
+        self.globals = reader.read_usize()?;
+        for _ in 0..self.globals {}
         Ok(())
     }
 }
