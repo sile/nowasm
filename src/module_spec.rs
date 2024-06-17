@@ -58,7 +58,7 @@ impl ModuleSpec {
                 SectionId::Import => self.handle_import_section(&mut section_reader)?,
                 SectionId::Function => self.handle_function_section(&mut section_reader)?,
                 SectionId::Table => self.handle_table_section(&mut section_reader)?,
-                SectionId::Memory => todo!(),
+                SectionId::Memory => self.handle_memory_section(&mut section_reader)?,
                 SectionId::Global => todo!(),
                 SectionId::Export => todo!(),
                 SectionId::Start => todo!(),
@@ -98,6 +98,14 @@ impl ModuleSpec {
 
     fn handle_table_section(&mut self, reader: &mut Reader) -> Result<(), DecodeError> {
         self.table_types = reader.read_usize()?;
+        Ok(())
+    }
+
+    fn handle_memory_section(&mut self, reader: &mut Reader) -> Result<(), DecodeError> {
+        let value = reader.read_u32()? as usize;
+        if value > 1 {
+            return Err(DecodeError::InvalidMemoryCount { value });
+        }
         Ok(())
     }
 }

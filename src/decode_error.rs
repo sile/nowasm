@@ -13,6 +13,7 @@ pub enum DecodeError {
     InvalidMutabilityFlag { value: u8 },
     InvalidElemType { value: u8 },
     InvalidFuncTypeTag { value: u8 },
+    InvalidMemoryCount { value: usize },
     InvalidUtf8(Utf8Error),
     MalformedInteger,
     OutOfOrderSectionId { last: SectionId, current: SectionId },
