@@ -7,20 +7,22 @@ use crate::{
 
 #[derive(Debug, Clone)]
 pub struct ModuleSpec {
-    pub types: usize,
+    pub func_types: usize,
     pub imports: usize,
     pub bytes: usize,
     pub idxs: usize,
+    pub table_types: usize,
 }
 
 impl ModuleSpec {
     pub fn inspect(wasm_bytes: &[u8]) -> Result<ModuleSpec, DecodeError> {
         let mut reader = Reader::new(wasm_bytes);
         let mut this = Self {
-            types: 0,
+            func_types: 0,
             imports: 0,
             bytes: 0,
             idxs: 0,
+            table_types: 0,
         };
         this.handle_module(&mut reader)?;
         Ok(this)
@@ -53,7 +55,7 @@ impl ModuleSpec {
                 SectionId::Type => self.handle_type_section(&mut section_reader)?,
                 SectionId::Import => self.handle_import_section(&mut section_reader)?,
                 SectionId::Function => self.handle_function_section(&mut section_reader)?,
-                SectionId::Table => todo!(),
+                SectionId::Table => self.handle_table_section(&mut section_reader)?,
                 SectionId::Memory => todo!(),
                 SectionId::Global => todo!(),
                 SectionId::Export => todo!(),
@@ -68,7 +70,7 @@ impl ModuleSpec {
     }
 
     fn handle_type_section(&mut self, reader: &mut Reader) -> Result<(), DecodeError> {
-        self.types = reader.read_usize()?;
+        self.func_types = reader.read_usize()?;
         Ok(())
     }
 
@@ -83,7 +85,12 @@ impl ModuleSpec {
     }
 
     fn handle_function_section(&mut self, reader: &mut Reader) -> Result<(), DecodeError> {
-        self.idxs = reader.read_usize()?;
+        self.idxs += reader.read_usize()?;
+        Ok(())
+    }
+
+    fn handle_table_section(&mut self, reader: &mut Reader) -> Result<(), DecodeError> {
+        self.table_types = reader.read_usize()?;
         Ok(())
     }
 }
