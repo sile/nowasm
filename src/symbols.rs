@@ -271,5 +271,19 @@ pub struct Global {
     pub init: Expr,
 }
 
+impl Global {
+    pub fn decode(reader: &mut Reader, vectors: &mut impl Vectors) -> Result<Self, DecodeError> {
+        let ty = GlobalType::decode(reader)?;
+        let init = Expr::decode(reader, vectors)?;
+        Ok(Self { ty, init })
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Expr;
+
+impl Expr {
+    pub fn decode(reader: &mut Reader, vectors: &mut impl Vectors) -> Result<Self, DecodeError> {
+        todo!()
+    }
+}

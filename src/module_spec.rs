@@ -1,6 +1,6 @@
 use crate::{
     reader::Reader,
-    symbols::{FuncType, Import, Magic, SectionId, Version},
+    symbols::{FuncType, Global, Import, Magic, SectionId, Version},
     vectors::NullVectors,
     DecodeError,
 };
@@ -113,7 +113,9 @@ impl ModuleSpec {
 
     fn handle_global_section(&mut self, reader: &mut Reader) -> Result<(), DecodeError> {
         self.globals = reader.read_usize()?;
-        for _ in 0..self.globals {}
+        for _ in 0..self.globals {
+            let _ = Global::decode(reader, &mut NullVectors::default())?;
+        }
         Ok(())
     }
 }
