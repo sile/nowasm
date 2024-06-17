@@ -14,6 +14,7 @@ pub struct ModuleSpec {
     pub table_types: usize,
     pub val_types: usize,
     pub globals: usize,
+    pub instrs: usize,
 }
 
 impl ModuleSpec {
@@ -27,6 +28,7 @@ impl ModuleSpec {
             table_types: 0,
             val_types: 0,
             globals: 0,
+            instrs: 0,
         };
         this.handle_module(&mut reader)?;
         Ok(this)
@@ -114,7 +116,8 @@ impl ModuleSpec {
     fn handle_global_section(&mut self, reader: &mut Reader) -> Result<(), DecodeError> {
         self.globals = reader.read_usize()?;
         for _ in 0..self.globals {
-            let _ = Global::decode(reader, &mut NullVectors::default())?;
+            let global = Global::decode(reader, &mut NullVectors::default())?;
+            self.instrs += global.init.len();
         }
         Ok(())
     }

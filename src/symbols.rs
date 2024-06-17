@@ -289,14 +289,14 @@ pub struct Expr {
 impl Expr {
     pub fn decode(reader: &mut Reader, vectors: &mut impl Vectors) -> Result<Self, DecodeError> {
         let start = vectors.instrs_offset();
-        let mut len = 0;
         while reader.peek_u8()? != 0x0b {
             let instr = Instr::decode(reader, vectors)?;
             if !vectors.instrs_push(instr) {
                 return Err(DecodeError::FullInstrs);
             }
-            len += 1;
         }
+        let end = vectors.instrs_offset();
+        let len = end - start;
         Ok(Self { start, len })
     }
 
