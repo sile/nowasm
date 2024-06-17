@@ -1,6 +1,6 @@
 use crate::{
     reader::Reader,
-    symbols::{Import, Magic, SectionId, Version},
+    symbols::{FuncType, Import, Magic, SectionId, Version},
     writer::Writer,
     DecodeError,
 };
@@ -12,6 +12,7 @@ pub struct ModuleSpec {
     pub bytes: usize,
     pub idxs: usize,
     pub table_types: usize,
+    pub val_types: usize,
 }
 
 impl ModuleSpec {
@@ -23,6 +24,7 @@ impl ModuleSpec {
             bytes: 0,
             idxs: 0,
             table_types: 0,
+            val_types: 0,
         };
         this.handle_module(&mut reader)?;
         Ok(this)
@@ -71,6 +73,11 @@ impl ModuleSpec {
 
     fn handle_type_section(&mut self, reader: &mut Reader) -> Result<(), DecodeError> {
         self.func_types = reader.read_usize()?;
+        for _ in 0..self.func_types {
+            let ft = FuncType::decode(reader, &mut Writer::null())?;
+            self.val_types += ft.rt1.len();
+            self.val_types += ft.rt2.len();
+        }
         Ok(())
     }
 

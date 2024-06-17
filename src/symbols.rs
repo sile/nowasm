@@ -68,7 +68,7 @@ impl SectionId {
 
 #[derive(Debug, Clone, Copy)]
 pub struct Name {
-    start: usize,
+    pub start: usize, // TODO: priv
     len: usize,
 }
 
@@ -218,5 +218,45 @@ impl ValType {
             0x7c => Ok(Self::F64),
             value => Err(DecodeError::InvalidValType { value }),
         }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct FuncType {
+    pub rt1: ResultType,
+    pub rt2: ResultType,
+}
+
+impl FuncType {
+    pub fn decode(reader: &mut Reader, writer: &mut Writer<ValType>) -> Result<Self, DecodeError> {
+        let tag = reader.read_u8()?;
+        if tag != 0x60 {
+            return Err(DecodeError::InvalidFuncTypeTag { value: tag });
+        }
+        let rt1 = ResultType::decode(reader, writer)?;
+        let rt2 = ResultType::decode(reader, writer)?;
+        Ok(Self { rt1, rt2 })
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct ResultType {
+    pub start: usize, // TODO: priv
+    len: usize,
+}
+
+impl ResultType {
+    pub fn decode(reader: &mut Reader, writer: &mut Writer<ValType>) -> Result<Self, DecodeError> {
+        let start = writer.position();
+        let len = reader.read_usize()?;
+        for _ in 0..len {
+            let vt = ValType::decode(reader)?;
+            writer.write(&[vt])?;
+        }
+        Ok(Self { start, len })
+    }
+
+    pub fn len(self) -> usize {
+        self.len
     }
 }
