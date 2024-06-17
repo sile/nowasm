@@ -1,3 +1,4 @@
+use crate::instructions::Instr;
 use crate::reader::Reader;
 use crate::vectors::Vectors;
 use crate::DecodeError;
@@ -279,11 +280,27 @@ impl Global {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct Expr;
+#[derive(Debug, Clone, Copy)]
+pub struct Expr {
+    start: usize,
+    len: usize,
+}
 
 impl Expr {
     pub fn decode(reader: &mut Reader, vectors: &mut impl Vectors) -> Result<Self, DecodeError> {
-        todo!()
+        let start = vectors.instrs_offset();
+        let mut len = 0;
+        while reader.peek_u8()? != 0x0b {
+            let instr = Instr::decode(reader, vectors)?;
+            if !vectors.instrs_push(instr) {
+                return Err(DecodeError::FullInstrs);
+            }
+            len += 1;
+        }
+        Ok(Self { start, len })
+    }
+
+    pub fn len(self) -> usize {
+        self.len
     }
 }

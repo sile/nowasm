@@ -1,4 +1,4 @@
-use crate::symbols::ValType;
+use crate::{instructions::Instr, symbols::ValType};
 
 pub trait Vectors {
     fn bytes_offset(&self) -> usize;
@@ -6,12 +6,16 @@ pub trait Vectors {
 
     fn val_types_offset(&self) -> usize;
     fn val_types_push(&mut self, val_type: ValType) -> bool;
+
+    fn instrs_offset(&self) -> usize;
+    fn instrs_push(&mut self, instr: Instr) -> bool;
 }
 
 #[derive(Debug, Default)]
 pub struct NullVectors {
     bytes_offset: usize,
     val_types_offset: usize,
+    instrs_offset: usize,
 }
 
 impl Vectors for NullVectors {
@@ -30,6 +34,15 @@ impl Vectors for NullVectors {
 
     fn val_types_push(&mut self, _val_type: ValType) -> bool {
         self.val_types_offset += 1;
+        true
+    }
+
+    fn instrs_offset(&self) -> usize {
+        self.instrs_offset
+    }
+
+    fn instrs_push(&mut self, _instr: Instr) -> bool {
+        self.instrs_offset += 1;
         true
     }
 }

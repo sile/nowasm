@@ -3,6 +3,7 @@
 mod decode_error;
 mod module_spec;
 
+pub(crate) mod instructions;
 pub(crate) mod reader;
 pub(crate) mod symbols;
 pub(crate) mod vectors;

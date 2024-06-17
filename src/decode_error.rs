@@ -19,4 +19,5 @@ pub enum DecodeError {
     OutOfOrderSectionId { last: SectionId, current: SectionId },
     FullBytes,
     FullValTypes,
+    FullInstrs,
 }

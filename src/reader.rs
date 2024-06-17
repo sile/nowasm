@@ -19,6 +19,13 @@ impl<'a> Reader<'a> {
         self.len() == 0
     }
 
+    pub fn peek_u8(&self) -> Result<u8, DecodeError> {
+        self.data
+            .get(self.position)
+            .copied()
+            .ok_or(DecodeError::EndOfBytes)
+    }
+
     pub fn read_u8(&mut self) -> Result<u8, DecodeError> {
         let v = self
             .data
