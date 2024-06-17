@@ -1,7 +1,7 @@
 use crate::{
     reader::Reader,
     symbols::{FuncType, Import, Magic, SectionId, Version},
-    writer::Writer,
+    vectors::NullVectors,
     DecodeError,
 };
 
@@ -76,7 +76,7 @@ impl ModuleSpec {
     fn handle_type_section(&mut self, reader: &mut Reader) -> Result<(), DecodeError> {
         self.func_types = reader.read_usize()?;
         for _ in 0..self.func_types {
-            let ft = FuncType::decode(reader, &mut Writer::null())?;
+            let ft = FuncType::decode(reader, &mut NullVectors::default())?;
             self.val_types += ft.rt1.len();
             self.val_types += ft.rt2.len();
         }
@@ -86,7 +86,7 @@ impl ModuleSpec {
     fn handle_import_section(&mut self, reader: &mut Reader) -> Result<(), DecodeError> {
         self.imports = reader.read_usize()?;
         for _ in 0..self.imports {
-            let import = Import::decode(reader, &mut Writer::null())?;
+            let import = Import::decode(reader, &mut NullVectors::default())?;
             self.bytes += import.module.len();
             self.bytes += import.name.len();
         }

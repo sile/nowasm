@@ -1,5 +1,5 @@
 use crate::reader::Reader;
-use crate::writer::Writer;
+use crate::vectors::Vectors;
 use crate::DecodeError;
 
 #[derive(Debug)]
@@ -73,12 +73,14 @@ pub struct Name {
 }
 
 impl Name {
-    pub fn decode(reader: &mut Reader, writer: &mut Writer) -> Result<Self, DecodeError> {
-        let start = writer.position();
+    pub fn decode(reader: &mut Reader, vectors: &mut impl Vectors) -> Result<Self, DecodeError> {
+        let start = vectors.bytes_offset();
         let len = reader.read_usize()?;
         let name = reader.read(len)?;
         let _ = core::str::from_utf8(name).map_err(DecodeError::InvalidUtf8)?;
-        writer.write(name)?;
+        if !vectors.bytes_append(name) {
+            return Err(DecodeError::FullBytes);
+        }
         Ok(Self { start, len })
     }
 
@@ -95,9 +97,9 @@ pub struct Import {
 }
 
 impl Import {
-    pub fn decode(reader: &mut Reader, writer: &mut Writer) -> Result<Self, DecodeError> {
-        let module = Name::decode(reader, writer)?;
-        let name = Name::decode(reader, writer)?;
+    pub fn decode(reader: &mut Reader, vectors: &mut impl Vectors) -> Result<Self, DecodeError> {
+        let module = Name::decode(reader, vectors)?;
+        let name = Name::decode(reader, vectors)?;
         let desc = ImportDesc::decode(reader)?;
         Ok(Self { module, name, desc })
     }
@@ -228,13 +230,13 @@ pub struct FuncType {
 }
 
 impl FuncType {
-    pub fn decode(reader: &mut Reader, writer: &mut Writer<ValType>) -> Result<Self, DecodeError> {
+    pub fn decode(reader: &mut Reader, vectors: &mut impl Vectors) -> Result<Self, DecodeError> {
         let tag = reader.read_u8()?;
         if tag != 0x60 {
             return Err(DecodeError::InvalidFuncTypeTag { value: tag });
         }
-        let rt1 = ResultType::decode(reader, writer)?;
-        let rt2 = ResultType::decode(reader, writer)?;
+        let rt1 = ResultType::decode(reader, vectors)?;
+        let rt2 = ResultType::decode(reader, vectors)?;
         Ok(Self { rt1, rt2 })
     }
 }
@@ -246,12 +248,14 @@ pub struct ResultType {
 }
 
 impl ResultType {
-    pub fn decode(reader: &mut Reader, writer: &mut Writer<ValType>) -> Result<Self, DecodeError> {
-        let start = writer.position();
+    pub fn decode(reader: &mut Reader, vectors: &mut impl Vectors) -> Result<Self, DecodeError> {
+        let start = vectors.val_types_offset();
         let len = reader.read_usize()?;
         for _ in 0..len {
             let vt = ValType::decode(reader)?;
-            writer.write(&[vt])?;
+            if !vectors.val_types_push(vt) {
+                return Err(DecodeError::FullValTypes);
+            }
         }
         Ok(Self { start, len })
     }

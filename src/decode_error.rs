@@ -18,4 +18,5 @@ pub enum DecodeError {
     MalformedInteger,
     OutOfOrderSectionId { last: SectionId, current: SectionId },
     FullBytes,
+    FullValTypes,
 }
