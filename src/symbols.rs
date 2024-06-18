@@ -135,6 +135,60 @@ impl TypeIdx {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct FuncIdx(u32);
+
+impl FuncIdx {
+    pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
+        reader.read_u32().map(Self)
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct TableIdx(u32);
+
+impl TableIdx {
+    pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
+        reader.read_u32().map(Self)
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct MemIdx(u32);
+
+impl MemIdx {
+    pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
+        reader.read_u32().map(Self)
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct GlobalIdx(u32);
+
+impl GlobalIdx {
+    pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
+        reader.read_u32().map(Self)
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct LocalIdx(u32);
+
+impl LocalIdx {
+    pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
+        reader.read_u32().map(Self)
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct LabelIdx(u32);
+
+impl LabelIdx {
+    pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
+        reader.read_u32().map(Self)
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct TableType {
     pub limits: Limits,
@@ -302,5 +356,19 @@ impl Expr {
 
     pub fn len(self) -> usize {
         self.len
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct MemArg {
+    pub align: u32,
+    pub offset: u32,
+}
+
+impl MemArg {
+    pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
+        let align = reader.read_u32()?;
+        let offset = reader.read_u32()?;
+        Ok(Self { align, offset })
     }
 }
