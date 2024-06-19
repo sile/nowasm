@@ -1,4 +1,9 @@
-use crate::{reader::Reader, symbols::MemArg, vectors::Vectors, DecodeError};
+use crate::{
+    reader::Reader,
+    symbols::{GlobalIdx, LocalIdx, MemArg},
+    vectors::Vectors,
+    DecodeError,
+};
 
 #[derive(Debug, Clone, Copy)]
 pub enum Instr {
@@ -20,11 +25,11 @@ pub enum Instr {
     Select,
 
     // Variable Instructions
-    // LocalGet(LocalIdx),
-    // LocalSet(LocalIdx),
-    // LocalTee(LocalIdx),
-    // GlobalGet(GlobalIdx),
-    // GlobalSet(GlobalIdx),
+    LocalGet(LocalIdx),
+    LocalSet(LocalIdx),
+    LocalTee(LocalIdx),
+    GlobalGet(GlobalIdx),
+    GlobalSet(GlobalIdx),
 
     // Memory Instructions
     I32Load(MemArg),
@@ -188,12 +193,11 @@ impl Instr {
         let opcode = reader.read_u8()?;
         match opcode {
             // // Control Instructions
-            // 0x00 => Ok(Some(Instr::Unreachable)),
-            // 0x01 => Ok(Some(Instr::Nop)),
+            0x00 => Ok(Instr::Unreachable),
+            0x01 => Ok(Instr::Nop),
             // 0x02 => Ok(Some(Instr::Block(BlockInstr::new(self)?))),
             // 0x03 => Ok(Some(Instr::Loop(LoopInstr::new(self)?))),
             // 0x04 => Ok(Some(Instr::If(IfInstr::new(self)?))),
-            // 0x0b => Ok(None),
             // 0x0c => Ok(Some(Instr::Br(LabelIdx(self.read_u32()?)))),
             // 0x0d => Ok(Some(Instr::BrIf(LabelIdx(self.read_u32()?)))),
             // 0x0e => Ok(Some(Instr::BrTable(BrTable::new(self)?))),
@@ -207,15 +211,15 @@ impl Instr {
             //     Ok(Some(Instr::CallIndirect(TypeIdx(idx))))
             // }
             // // Parametric Instructions
-            // 0x1a => Ok(Some(Instr::Drop)),
-            // 0x1b => Ok(Some(Instr::Select)),
+            0x1a => Ok(Instr::Drop),
+            0x1b => Ok(Instr::Select),
 
             // // Variable Instructions
-            // 0x20 => Ok(Some(Instr::LocalGet(LocalIdx(self.read_u32()?)))),
-            // 0x21 => Ok(Some(Instr::LocalSet(LocalIdx(self.read_u32()?)))),
-            // 0x22 => Ok(Some(Instr::LocalTee(LocalIdx(self.read_u32()?)))),
-            // 0x23 => Ok(Some(Instr::GlobalGet(GlobalIdx(self.read_u32()?)))),
-            // 0x24 => Ok(Some(Instr::GlobalSet(GlobalIdx(self.read_u32()?)))),
+            0x20 => Ok(Instr::LocalGet(LocalIdx::decode(reader)?)),
+            0x21 => Ok(Instr::LocalSet(LocalIdx::decode(reader)?)),
+            0x22 => Ok(Instr::LocalTee(LocalIdx::decode(reader)?)),
+            0x23 => Ok(Instr::GlobalGet(GlobalIdx::decode(reader)?)),
+            0x24 => Ok(Instr::GlobalSet(GlobalIdx::decode(reader)?)),
 
             // // Memory Instructions
             0x28 => Ok(Instr::I32Load(MemArg::decode(reader)?)),
