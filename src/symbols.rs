@@ -143,18 +143,18 @@ impl Export {
 #[derive(Debug, Clone)]
 pub enum ExportDesc {
     Func(TypeIdx),
-    Table(TableType),
-    Mem(MemType),
-    Global(GlobalType),
+    Table(TableIdx),
+    Mem(MemIdx),
+    Global(GlobalIdx),
 }
 
 impl ExportDesc {
     pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         match reader.read_u8()? {
             0x00 => Ok(Self::Func(TypeIdx::decode(reader)?)),
-            0x01 => Ok(Self::Table(TableType::decode(reader)?)),
-            0x02 => Ok(Self::Mem(MemType::decode(reader)?)),
-            0x03 => Ok(Self::Global(GlobalType::decode(reader)?)),
+            0x01 => Ok(Self::Table(TableIdx::decode(reader)?)),
+            0x02 => Ok(Self::Mem(MemIdx::decode(reader)?)),
+            0x03 => Ok(Self::Global(GlobalIdx::decode(reader)?)),
             value => Err(DecodeError::InvalidExportDescTag { value }),
         }
     }
