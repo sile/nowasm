@@ -67,7 +67,7 @@ impl ModuleSpec {
                 SectionId::Memory => self.handle_memory_section(&mut section_reader)?,
                 SectionId::Global => self.handle_global_section(&mut section_reader)?,
                 SectionId::Export => self.handle_export_section(&mut section_reader)?,
-                SectionId::Start => todo!(),
+                SectionId::Start => self.handle_start_section(&mut section_reader)?,
                 SectionId::Element => todo!(),
                 SectionId::Code => todo!(),
                 SectionId::Data => todo!(),
@@ -130,6 +130,10 @@ impl ModuleSpec {
             let export = Export::decode(reader, &mut NullVectors::default())?;
             self.bytes += export.name.len();
         }
+        Ok(())
+    }
+
+    fn handle_start_section(&mut self, _reader: &mut Reader) -> Result<(), DecodeError> {
         Ok(())
     }
 }
