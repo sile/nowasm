@@ -257,7 +257,7 @@ impl Limits {
                 let max = Some(reader.read_u32()?);
                 Ok(Self { min, max })
             }
-            value => Err(DecodeError::InvalidLimitsTag { value }),
+            value => Err(DecodeError::InvalidLimitsFlag { value }),
         }
     }
 }
