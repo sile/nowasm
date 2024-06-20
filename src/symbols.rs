@@ -349,6 +349,7 @@ impl Expr {
                 return Err(DecodeError::FullInstrs);
             }
         }
+        reader.read_u8()?;
         let end = vectors.instrs_offset();
         let len = end - start;
         Ok(Self { start, len })
