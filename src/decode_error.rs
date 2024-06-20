@@ -8,6 +8,7 @@ pub enum DecodeError {
     InvalidVersion { value: [u8; 4] },
     InvalidSectionId { value: u8 },
     InvalidImportDescTag { value: u8 },
+    InvalidExportDescTag { value: u8 },
     InvalidLimitsTag { value: u8 },
     InvalidValType { value: u8 },
     InvalidMutabilityFlag { value: u8 },

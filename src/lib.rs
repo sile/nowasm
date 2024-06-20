@@ -5,7 +5,7 @@ mod module_spec;
 
 pub(crate) mod instructions;
 pub(crate) mod reader;
-pub(crate) mod symbols;
+pub mod symbols; // TODO: pub (crate)
 pub(crate) mod vectors;
 
 pub mod module;

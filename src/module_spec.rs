@@ -1,6 +1,6 @@
 use crate::{
     reader::Reader,
-    symbols::{FuncType, Global, Import, Magic, SectionId, Version},
+    symbols::{Export, FuncType, Global, Import, Magic, SectionId, Version},
     vectors::NullVectors,
     DecodeError,
 };
@@ -15,6 +15,7 @@ pub struct ModuleSpec {
     pub val_types: usize,
     pub globals: usize,
     pub instrs: usize,
+    pub exports: usize,
 }
 
 impl ModuleSpec {
@@ -29,6 +30,7 @@ impl ModuleSpec {
             val_types: 0,
             globals: 0,
             instrs: 0,
+            exports: 0,
         };
         this.handle_module(&mut reader)?;
         Ok(this)
@@ -64,7 +66,7 @@ impl ModuleSpec {
                 SectionId::Table => self.handle_table_section(&mut section_reader)?,
                 SectionId::Memory => self.handle_memory_section(&mut section_reader)?,
                 SectionId::Global => self.handle_global_section(&mut section_reader)?,
-                SectionId::Export => todo!(),
+                SectionId::Export => self.handle_export_section(&mut section_reader)?,
                 SectionId::Start => todo!(),
                 SectionId::Element => todo!(),
                 SectionId::Code => todo!(),
@@ -118,6 +120,15 @@ impl ModuleSpec {
         for _ in 0..self.globals {
             let global = Global::decode(reader, &mut NullVectors::default())?;
             self.instrs += global.init.len();
+        }
+        Ok(())
+    }
+
+    fn handle_export_section(&mut self, reader: &mut Reader) -> Result<(), DecodeError> {
+        self.exports = reader.read_usize()?;
+        for _ in 0..self.exports {
+            let export = Export::decode(reader, &mut NullVectors::default())?;
+            self.bytes += export.name.len();
         }
         Ok(())
     }
