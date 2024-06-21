@@ -451,3 +451,12 @@ impl FuncIdxVec {
         self.len
     }
 }
+
+#[derive(Debug, Clone)]
+pub struct Code {}
+
+impl Code {
+    pub fn decode(reader: &mut Reader, vectors: &mut impl Vectors) -> Result<Self, DecodeError> {
+        todo!()
+    }
+}
