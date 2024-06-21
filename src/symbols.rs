@@ -457,6 +457,8 @@ pub struct Code {}
 
 impl Code {
     pub fn decode(reader: &mut Reader, vectors: &mut impl Vectors) -> Result<Self, DecodeError> {
+        let code_size = reader.read_usize()?;
+        let mut reader = Reader::new(reader.read(code_size)?);
         todo!()
     }
 }
