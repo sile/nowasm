@@ -24,4 +24,5 @@ pub enum DecodeError {
     FullBytes,
     FullValTypes,
     FullInstrs,
+    FullIdxs,
 }

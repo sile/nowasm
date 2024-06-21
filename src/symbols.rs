@@ -407,3 +407,47 @@ impl MemArg {
         Ok(Self { align, offset })
     }
 }
+
+#[derive(Debug, Clone)]
+pub struct Elem {
+    pub table: TableIdx,
+    pub offset: Expr,
+    pub init: FuncIdxVec,
+}
+
+impl Elem {
+    pub fn decode(reader: &mut Reader, vectors: &mut impl Vectors) -> Result<Self, DecodeError> {
+        let table = TableIdx::decode(reader)?;
+        let offset = Expr::decode(reader, vectors)?;
+        let init = FuncIdxVec::decode(reader, vectors)?;
+        Ok(Self {
+            table,
+            offset,
+            init,
+        })
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct FuncIdxVec {
+    pub start: usize,
+    len: usize,
+}
+
+impl FuncIdxVec {
+    pub fn decode(reader: &mut Reader, vectors: &mut impl Vectors) -> Result<Self, DecodeError> {
+        let start = vectors.idxs_offset();
+        let len = reader.read_usize()?;
+        for _ in 0..len {
+            let idx = FuncIdx::decode(reader)?;
+            if !vectors.idxs_push(idx.0) {
+                return Err(DecodeError::FullIdxs);
+            }
+        }
+        Ok(Self { start, len })
+    }
+
+    pub fn len(self) -> usize {
+        self.len
+    }
+}

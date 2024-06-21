@@ -1,6 +1,6 @@
 use crate::{
     reader::Reader,
-    symbols::{Export, FuncType, Global, Import, Magic, SectionId, Version},
+    symbols::{Elem, Export, FuncType, Global, Import, Magic, SectionId, Version},
     vectors::NullVectors,
     DecodeError,
 };
@@ -16,6 +16,7 @@ pub struct ModuleSpec {
     pub globals: usize,
     pub instrs: usize,
     pub exports: usize,
+    pub elements: usize,
 }
 
 impl ModuleSpec {
@@ -31,6 +32,7 @@ impl ModuleSpec {
             globals: 0,
             instrs: 0,
             exports: 0,
+            elements: 0,
         };
         this.handle_module(&mut reader)?;
         Ok(this)
@@ -68,7 +70,7 @@ impl ModuleSpec {
                 SectionId::Global => self.handle_global_section(&mut section_reader)?,
                 SectionId::Export => self.handle_export_section(&mut section_reader)?,
                 SectionId::Start => self.handle_start_section(&mut section_reader)?,
-                SectionId::Element => todo!(),
+                SectionId::Element => self.handle_element_section(&mut section_reader)?,
                 SectionId::Code => todo!(),
                 SectionId::Data => todo!(),
             }
@@ -134,6 +136,16 @@ impl ModuleSpec {
     }
 
     fn handle_start_section(&mut self, _reader: &mut Reader) -> Result<(), DecodeError> {
+        Ok(())
+    }
+
+    fn handle_element_section(&mut self, reader: &mut Reader) -> Result<(), DecodeError> {
+        self.elements = reader.read_usize()?;
+        for _ in 0..self.elements {
+            let elem = Elem::decode(reader, &mut NullVectors::default())?;
+            self.instrs += elem.offset.len();
+            self.idxs += elem.init.len();
+        }
         Ok(())
     }
 }
