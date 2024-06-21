@@ -25,4 +25,5 @@ pub enum DecodeError {
     FullValTypes,
     FullInstrs,
     FullIdxs,
+    FullLocals, // TODO: rename
 }

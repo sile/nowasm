@@ -76,7 +76,7 @@ impl ModuleSpec {
                 SectionId::Export => self.handle_export_section(&mut section_reader)?,
                 SectionId::Start => self.handle_start_section(&mut section_reader)?,
                 SectionId::Element => self.handle_element_section(&mut section_reader)?,
-                SectionId::Code => self.handle_codde_section(&mut section_reader)?,
+                SectionId::Code => self.handle_code_section(&mut section_reader)?,
                 SectionId::Data => todo!(),
             }
         }
@@ -159,7 +159,7 @@ impl ModuleSpec {
         for _ in 0..self.codes {
             let code = Code::decode(reader, &mut NullVectors::default())?;
             self.instrs += code.body.len();
-            self.locals += code.locals.len();
+            self.locals += code.locals_len;
         }
         Ok(())
     }

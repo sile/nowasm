@@ -453,12 +453,46 @@ impl FuncIdxVec {
 }
 
 #[derive(Debug, Clone)]
-pub struct Code {}
+pub struct Code {
+    // TODO: func: Func
+    locals_start: usize,
+    pub locals_len: usize,
+    pub body: Expr,
+}
 
 impl Code {
     pub fn decode(reader: &mut Reader, vectors: &mut impl Vectors) -> Result<Self, DecodeError> {
         let code_size = reader.read_usize()?;
         let mut reader = Reader::new(reader.read(code_size)?);
-        todo!()
+
+        let locals_start = vectors.locals_offset();
+        let locals_len = reader.read_usize()?;
+        for _ in 0..locals_len {
+            let locals = Locals::decode(&mut reader)?;
+            if !vectors.locals_push(locals) {
+                return Err(DecodeError::FullLocals);
+            }
+        }
+        let body = Expr::decode(&mut reader, vectors)?;
+        Ok(Self {
+            locals_start,
+            locals_len,
+            body,
+        })
+    }
+}
+
+// TODO: flatten(?)
+#[derive(Debug, Clone)]
+pub struct Locals {
+    pub n: u32,
+    pub t: ValType,
+}
+
+impl Locals {
+    pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
+        let n = reader.read_u32()?;
+        let t = ValType::decode(reader)?;
+        Ok(Self { n, t })
     }
 }
