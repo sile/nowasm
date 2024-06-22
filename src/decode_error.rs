@@ -17,6 +17,7 @@ pub enum DecodeError {
     InvalidMemoryCount { value: usize },
     InvalidMemorySizeMemoryIndex { value: u8 },
     InvalidMemoryGrowMemoryIndex { value: u8 },
+    InvalidCallIndirectTableIndex { value: u8 },
     InvalidOpcode { value: u8 },
     InvalidUtf8(Utf8Error),
     MalformedInteger,

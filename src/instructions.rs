@@ -2,7 +2,7 @@
 use crate::instructions_sign_extension::SignExtensionInstr;
 use crate::{
     reader::Reader,
-    symbols::{BlockType, FuncIdx, GlobalIdx, LabelIdx, LocalIdx, MemArg},
+    symbols::{BlockType, FuncIdx, GlobalIdx, LabelIdx, LocalIdx, MemArg, TypeIdx},
     vectors::Vectors,
     DecodeError,
 };
@@ -20,7 +20,7 @@ pub enum Instr {
     BrTable(BrTableInstr),
     Return,
     Call(FuncIdx),
-    // CallIndirect(TypeIdx),
+    CallIndirect(TypeIdx),
 
     // Parametric Instructions
     Drop,
@@ -209,13 +209,14 @@ impl Instr {
             0x0e => Ok(Self::BrTable(BrTableInstr::decode(reader, vectors)?)),
             0x0f => Ok(Self::Return),
             0x10 => Ok(Self::Call(FuncIdx::decode(reader)?)),
-            // 0x11 => {
-            //     let idx = self.read_u32()?;
-            //     if self.read_u8()? != 0 {
-            //         return Err(DecodeError::MalformedData); //TODO
-            //     }
-            //     Ok(Some(Self::CallIndirect(TypeIdx(idx))))
-            // }
+            0x11 => {
+                let idx = TypeIdx::decode(reader)?;
+                let table = reader.read_u8()?;
+                if table != 0 {
+                    return Err(DecodeError::InvalidCallIndirectTableIndex { value: table });
+                }
+                Ok(Self::CallIndirect(idx))
+            }
 
             // Parametric Instructions
             0x1a => Ok(Self::Drop),
