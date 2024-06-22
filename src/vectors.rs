@@ -1,9 +1,8 @@
-use core::marker::PhantomData;
-
 use crate::{
     instructions::Instr,
     symbols::{Locals, ValType},
 };
+use core::marker::PhantomData;
 
 #[derive(Debug, Clone, Copy)]
 pub struct VectorSlice<T> {
@@ -23,6 +22,7 @@ impl<T> VectorSlice<T> {
 }
 
 impl VectorSlice<Instr> {
+    // TODO: Allow range
     pub fn get<V: Vectors>(self, i: usize, vectors: &V) -> Option<Instr> {
         todo!()
     }
