@@ -4,6 +4,10 @@ version = "0.1.0"
 edition = "2021"
 categories = ["no-std"]
 
+[features]
+default = ["sign_extension"]
+sign_extension = []
+
 [dependencies]
 
 [dev-dependencies]
