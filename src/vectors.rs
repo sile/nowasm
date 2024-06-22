@@ -1,7 +1,38 @@
+use core::marker::PhantomData;
+
 use crate::{
     instructions::Instr,
     symbols::{Locals, ValType},
 };
+
+#[derive(Debug, Clone, Copy)]
+pub struct VectorSlice<T> {
+    offset: usize,
+    len: usize,
+    _item: PhantomData<T>,
+}
+
+impl<T> VectorSlice<T> {
+    pub fn len(self) -> usize {
+        self.len
+    }
+
+    pub fn is_empty(self) -> bool {
+        self.len == 0
+    }
+}
+
+impl VectorSlice<Instr> {
+    pub fn get<V: Vectors>(self, i: usize, vectors: &V) -> Option<Instr> {
+        todo!()
+    }
+}
+
+impl VectorSlice<ValType> {
+    pub fn get<V: Vectors>(self, i: usize, vectors: &V) -> Option<ValType> {
+        todo!()
+    }
+}
 
 pub trait Vectors {
     fn bytes_offset(&self) -> usize;

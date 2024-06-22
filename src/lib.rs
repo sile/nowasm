@@ -14,3 +14,4 @@ pub mod module;
 
 pub use decode_error::DecodeError;
 pub use module_spec::ModuleSpec;
+pub use vectors::{VectorSlice, Vectors};
