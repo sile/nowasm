@@ -14,7 +14,7 @@ pub enum Instr {
     Nop,
     Block(BlockInstr),
     Loop(LoopInstr),
-    // If(IfInstr),
+    If(IfInstr),
     Br(LabelIdx),
     BrIf(LabelIdx),
     BrTable(BrTableInstr),
@@ -203,7 +203,7 @@ impl Instr {
             0x01 => Ok(Self::Nop),
             0x02 => Ok(Self::Block(BlockInstr::decode(reader, vectors)?)),
             0x03 => Ok(Self::Loop(LoopInstr::decode(reader, vectors)?)),
-            // 0x04 => Ok(Some(Self::If(IfInstr::new(self)?))),
+            0x04 => Ok(Self::If(IfInstr::decode(reader, vectors)?)),
             0x0c => Ok(Self::Br(LabelIdx::decode(reader)?)),
             0x0d => Ok(Self::BrIf(LabelIdx::decode(reader)?)),
             0x0e => Ok(Self::BrTable(BrTableInstr::decode(reader, vectors)?)),
@@ -467,63 +467,64 @@ impl LoopInstr {
     }
 }
 
-// #[derive(Debug, Clone, Copy, PartialEq)]
-// pub struct IfInstr {
-//     pub block_type: BlockType,
-//     pub then_instr_start: usize,
-//     pub then_instr_end: usize,
-//     pub else_instr_start: usize,
-//     pub else_instr_end: usize,
-// }
+#[derive(Debug, Clone, Copy)]
+pub struct IfInstr {
+    pub block_type: BlockType,
 
-// impl IfInstr {
-//     pub fn new(reader: &mut ByteReader) -> Result<Self, DecodeError> {
-//         let block_type = BlockType::new(reader)?;
-//         let mut then_instrs = 0;
-//         let mut else_instrs = 0;
+    // TODO
+    pub then_instr_start: usize,
+    pub then_instr_end: usize,
+    pub else_instr_start: usize,
+    pub else_instr_end: usize,
+}
 
-//         loop {
-//             let b = reader.peek_u8()?;
-//             if b == 0x0B {
-//                 reader.read_u8()?;
-//                 return Ok(Self {
-//                     block_type,
-//                     then_instr_start: 0,
-//                     then_instr_end: then_instrs,
-//                     else_instr_start: then_instrs,
-//                     else_instr_end: then_instrs + else_instrs,
-//                 });
-//             } else if b == 0x05 {
-//                 reader.read_u8()?;
-//                 break;
-//             }
+impl IfInstr {
+    pub fn decode(reader: &mut Reader, vectors: &mut impl Vectors) -> Result<Self, DecodeError> {
+        let block_type = BlockType::decode(reader)?;
+        let mut then_instrs = 0;
+        let mut else_instrs = 0;
 
-//             let Some(i) = reader.read_instr()? else {
-//                 unreachable!();
-//             };
-//             then_instrs += i.instr_len();
-//             // TODO: increment idx_len
-//         }
+        loop {
+            let b = reader.peek_u8()?;
+            if b == 0x0B {
+                reader.read_u8()?;
+                return Ok(Self {
+                    block_type,
+                    then_instr_start: 0,
+                    then_instr_end: then_instrs,
+                    else_instr_start: then_instrs,
+                    else_instr_end: then_instrs + else_instrs,
+                });
+            } else if b == 0x05 {
+                reader.read_u8()?;
+                break;
+            }
 
-//         while let Some(i) = reader.read_instr()? {
-//             else_instrs += i.instr_len();
-//             // TODO: increment idx_len
-//         }
+            let instr = Instr::decode(reader, vectors)?;
+            if !vectors.instrs_push(instr) {
+                return Err(DecodeError::FullInstrs);
+            }
+            then_instrs += 1; // TODO
+        }
 
-//         Ok(Self {
-//             block_type,
-//             then_instr_start: 0,
-//             then_instr_end: then_instrs,
-//             else_instr_start: then_instrs,
-//             else_instr_end: then_instrs + else_instrs,
-//         })
-//     }
+        while reader.peek_u8()? != 0x0B {
+            let instr = Instr::decode(reader, vectors)?;
+            if !vectors.instrs_push(instr) {
+                return Err(DecodeError::FullInstrs);
+            }
+            else_instrs += 1; // TODO
+        }
+        reader.read_u8()?;
 
-//     pub fn len(self) -> usize {
-//         1 + self.then_instr_end - self.then_instr_start + self.else_instr_end
-//             - self.else_instr_start
-//     }
-// }
+        Ok(Self {
+            block_type,
+            then_instr_start: 0,
+            then_instr_end: then_instrs,
+            else_instr_start: then_instrs,
+            else_instr_end: then_instrs + else_instrs,
+        })
+    }
+}
 
 #[derive(Debug, Clone, Copy)]
 pub struct BrTableInstr {
