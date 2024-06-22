@@ -11,7 +11,7 @@ pub enum Instr {
     Unreachable,
     Nop,
     Block(BlockInstr),
-    // Loop(LoopInstr),
+    Loop(LoopInstr),
     // If(IfInstr),
     Br(LabelIdx),
     BrIf(LabelIdx),
@@ -196,7 +196,7 @@ impl Instr {
             0x00 => Ok(Self::Unreachable),
             0x01 => Ok(Self::Nop),
             0x02 => Ok(Self::Block(BlockInstr::decode(reader, vectors)?)),
-            // 0x03 => Ok(Some(Self::Loop(LoopInstr::new(self)?))),
+            0x03 => Ok(Self::Loop(LoopInstr::decode(reader, vectors)?)),
             // 0x04 => Ok(Some(Self::If(IfInstr::new(self)?))),
             0x0c => Ok(Self::Br(LabelIdx::decode(reader)?)),
             0x0d => Ok(Self::BrIf(LabelIdx::decode(reader)?)),
@@ -424,32 +424,33 @@ impl BlockInstr {
     }
 }
 
-// #[derive(Debug, Clone, Copy, PartialEq)]
-// pub struct LoopInstr {
-//     pub block_type: BlockType,
-//     pub instr_start: usize,
-//     pub instr_end: usize,
-// }
+#[derive(Debug, Clone, Copy)]
+pub struct LoopInstr {
+    pub block_type: BlockType,
 
-// impl LoopInstr {
-//     pub fn new(reader: &mut ByteReader) -> Result<Self, DecodeError> {
-//         let block_type = BlockType::new(reader)?;
-//         let mut n = 0;
-//         while let Some(i) = reader.read_instr()? {
-//             n += i.instr_len();
-//             // TODO: increment idx_len
-//         }
-//         Ok(Self {
-//             block_type,
-//             instr_start: 0,
-//             instr_end: n,
-//         })
-//     }
+    // TODO: VecRef<Instr> or VecSlice<Instr>
+    pub instr_start: usize,
+    pub instr_end: usize,
+}
 
-//     pub fn len(self) -> usize {
-//         1 + self.instr_end - self.instr_start
-//     }
-// }
+impl LoopInstr {
+    pub fn decode(reader: &mut Reader, vectors: &mut impl Vectors) -> Result<Self, DecodeError> {
+        let block_type = BlockType::decode(reader)?;
+        let instr_start = vectors.instrs_offset();
+        while reader.peek_u8()? != 0x0b {
+            let instr = Instr::decode(reader, vectors)?;
+            if !vectors.instrs_push(instr) {
+                return Err(DecodeError::FullInstrs);
+            }
+        }
+        reader.read_u8()?;
+        Ok(Self {
+            block_type,
+            instr_start,
+            instr_end: vectors.instrs_offset() - instr_start,
+        })
+    }
+}
 
 // #[derive(Debug, Clone, Copy, PartialEq)]
 // pub struct IfInstr {
