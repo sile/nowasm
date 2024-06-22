@@ -15,7 +15,7 @@ pub enum Instr {
     // If(IfInstr),
     Br(LabelIdx),
     BrIf(LabelIdx),
-    // BrTable(BrTable),
+    BrTable(BrTableInstr),
     Return,
     Call(FuncIdx),
     // CallIndirect(TypeIdx),
@@ -200,7 +200,7 @@ impl Instr {
             // 0x04 => Ok(Some(Self::If(IfInstr::new(self)?))),
             0x0c => Ok(Self::Br(LabelIdx::decode(reader)?)),
             0x0d => Ok(Self::BrIf(LabelIdx::decode(reader)?)),
-            // 0x0e => Ok(Some(Self::BrTable(BrTable::new(self)?))),
+            0x0e => Ok(Self::BrTable(BrTableInstr::decode(reader, vectors)?)),
             0x0f => Ok(Self::Return),
             0x10 => Ok(Self::Call(FuncIdx::decode(reader)?)),
             // 0x11 => {
@@ -407,7 +407,9 @@ impl BlockInstr {
         let instrs_start = vectors.instrs_offset();
         while reader.peek_u8()? != 0x0b {
             let instr = Instr::decode(reader, vectors)?;
-            vectors.instrs_push(instr);
+            if !vectors.instrs_push(instr) {
+                return Err(DecodeError::FullInstrs);
+            }
         }
         reader.read_u8()?;
         Ok(Self {
@@ -507,29 +509,33 @@ impl BlockInstr {
 //     }
 // }
 
-// #[derive(Debug, Clone, Copy, PartialEq)]
-// pub struct BrTable {
-//     pub label_idx_start: usize,
-//     pub label_idx_end: usize,
+#[derive(Debug, Clone, Copy)]
+pub struct BrTableInstr {
+    pub label_idx_start: usize,
+    pub label_idx_end: usize,
 
-//     // TODO: rename
-//     pub last_label_idx: LabelIdx,
-// }
+    // TODO: rename
+    pub last_label_idx: LabelIdx,
+}
 
-// impl BrTable {
-//     pub fn new(reader: &mut ByteReader) -> Result<Self, DecodeError> {
-//         let n = reader.read_u32()? as usize;
-//         for _ in 0..n {
-//             let _ = LabelIdx(reader.read_u32()?);
-//         }
-//         Ok(Self {
-//             label_idx_start: 0,
-//             label_idx_end: n,
-//             last_label_idx: LabelIdx(reader.read_u32()?),
-//         })
-//     }
+impl BrTableInstr {
+    pub fn decode(reader: &mut Reader, vectors: &mut impl Vectors) -> Result<Self, DecodeError> {
+        let n = reader.read_u32()? as usize;
+        let label_idx_start = vectors.idxs_offset();
+        for _ in 0..n {
+            let idx = LabelIdx::decode(reader)?;
+            if !vectors.idxs_push(idx.get()) {
+                return Err(DecodeError::FullIdxs);
+            }
+        }
+        Ok(Self {
+            label_idx_start,
+            label_idx_end: vectors.idxs_offset(),
+            last_label_idx: LabelIdx::decode(reader)?,
+        })
+    }
 
-//     pub fn idx_len(self) -> usize {
-//         self.label_idx_end - self.label_idx_start
-//     }
-// }
+    pub fn idx_len(self) -> usize {
+        self.label_idx_end - self.label_idx_start
+    }
+}

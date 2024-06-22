@@ -221,6 +221,10 @@ impl LabelIdx {
     pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         reader.read_u32().map(Self)
     }
+
+    pub fn get(self) -> u32 {
+        self.0
+    }
 }
 
 #[derive(Debug, Clone)]
