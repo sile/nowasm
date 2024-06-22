@@ -1,6 +1,7 @@
 use crate::symbols::SectionId;
 use core::str::Utf8Error;
 
+// TODO: impl Display
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DecodeError {
     EndOfBytes,
@@ -21,6 +22,7 @@ pub enum DecodeError {
     InvalidOpcode { value: u8 },
     InvalidUtf8(Utf8Error),
     MalformedInteger,
+    // TODO: InvalidSectionOrder
     OutOfOrderSectionId { last: SectionId, current: SectionId },
     FullBytes,
     FullValTypes,
