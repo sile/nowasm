@@ -1,6 +1,9 @@
 use crate::{
+    decode::Decode,
     instructions::Instr,
+    reader::Reader,
     symbols::{Locals, ValType},
+    DecodeError,
 };
 use core::marker::PhantomData;
 
@@ -21,17 +24,25 @@ impl<T> VectorSlice<T> {
     }
 }
 
-impl VectorSlice<Instr> {
-    // TODO: Allow range
-    pub fn get<V: Vectors>(self, i: usize, vectors: &V) -> Option<Instr> {
-        todo!()
+impl<T: VectorItem> Decode for VectorSlice<T> {
+    fn decode<V: Vectors>(reader: &mut Reader, vectors: &mut V) -> Result<Self, DecodeError> {
+        let offset = T::append(vectors, &[])?;
+        let len = reader.read_usize()?;
+        for _ in 0..len {
+            let item = T::decode(reader, vectors)?;
+            T::append(vectors, &[item])?;
+        }
+        Ok(Self {
+            offset,
+            len,
+            _item: PhantomData,
+        })
     }
 }
 
-impl VectorSlice<ValType> {
-    pub fn get<V: Vectors>(self, i: usize, vectors: &V) -> Option<ValType> {
-        todo!()
-    }
+pub trait VectorItem: Decode {
+    fn get<V: Vectors>(vectors: &mut V) -> Option<Self>;
+    fn append<V: Vectors>(vectors: &mut V, items: &[Self]) -> Result<usize, DecodeError>;
 }
 
 pub trait Vectors {
