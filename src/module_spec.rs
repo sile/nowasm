@@ -1,6 +1,6 @@
 use crate::{
     reader::Reader,
-    symbols::{Code, Elem, Export, FuncType, Global, Import, Magic, SectionId, Version},
+    symbols::{Code, Data, Elem, Export, FuncType, Global, Import, Magic, SectionId, Version},
     vectors::NullVectors,
     DecodeError,
 };
@@ -20,6 +20,7 @@ pub struct ModuleSpec {
     pub elements: usize,
     pub codes: usize,
     pub locals: usize,
+    pub data_segments: usize,
 }
 
 impl ModuleSpec {
@@ -38,6 +39,7 @@ impl ModuleSpec {
             elements: 0,
             codes: 0,
             locals: 0,
+            data_segments: 0,
         };
         this.handle_module(&mut reader)?;
         Ok(this)
@@ -77,7 +79,7 @@ impl ModuleSpec {
                 SectionId::Start => self.handle_start_section(&mut section_reader)?,
                 SectionId::Element => self.handle_element_section(&mut section_reader)?,
                 SectionId::Code => self.handle_code_section(&mut section_reader)?,
-                SectionId::Data => todo!(),
+                SectionId::Data => self.handle_data_section(&mut section_reader)?,
             }
         }
 
@@ -160,6 +162,14 @@ impl ModuleSpec {
             let code = Code::decode(reader, &mut NullVectors::default())?;
             self.instrs += code.body.len();
             self.locals += code.locals_len;
+        }
+        Ok(())
+    }
+
+    fn handle_data_section(&mut self, reader: &mut Reader) -> Result<(), DecodeError> {
+        self.data_segments = reader.read_usize()?;
+        for _ in 0..self.data_segments {
+            let _data = Data::decode(reader, &mut NullVectors::default())?;
         }
         Ok(())
     }

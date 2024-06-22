@@ -532,3 +532,28 @@ impl S33 {
         reader.read_integer_s(33).map(Self)
     }
 }
+
+#[derive(Debug, Clone, Copy)]
+pub struct Data {
+    pub data: MemIdx,
+    pub offset: Expr,
+    pub init_start: usize,
+    pub init_end: usize,
+}
+
+impl Data {
+    pub fn decode(reader: &mut Reader, vectors: &mut impl Vectors) -> Result<Self, DecodeError> {
+        let data = MemIdx::decode(reader)?;
+        let offset = Expr::decode(reader, vectors)?;
+        let init_start = vectors.bytes_offset();
+        let init_len = reader.read_usize()?;
+        vectors.bytes_append(reader.read(init_len)?);
+        let init_end = vectors.bytes_offset();
+        Ok(Self {
+            data,
+            offset,
+            init_start,
+            init_end,
+        })
+    }
+}
