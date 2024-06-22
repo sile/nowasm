@@ -1,3 +1,5 @@
+#[cfg(feature = "sign_extension")]
+use crate::instructions_sign_extension::SignExtensionInstr;
 use crate::{
     reader::Reader,
     symbols::{BlockType, FuncIdx, GlobalIdx, LabelIdx, LocalIdx, MemArg},
@@ -186,6 +188,10 @@ pub enum Instr {
     I64ReinterpretF64,
     F32ReinterpretI32,
     F64ReinterpretI64,
+
+    // Sign Extension
+    #[cfg(feature = "sign_extension")]
+    SignExtension(SignExtensionInstr),
 }
 
 impl Instr {
@@ -389,6 +395,14 @@ impl Instr {
             0xBD => Ok(Self::I64ReinterpretF64),
             0xBE => Ok(Self::F32ReinterpretI32),
             0xBF => Ok(Self::F64ReinterpretI64),
+
+            // Sign Extension
+            #[cfg(feature = "sign_extension")]
+            0xC0..=0xC4 => {
+                reader.unread_u8();
+                Ok(Self::SignExtension(SignExtensionInstr::decode(reader)?))
+            }
+
             _ => Err(DecodeError::InvalidOpcode { value: opcode }),
         }
     }
