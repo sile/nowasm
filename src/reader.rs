@@ -36,6 +36,10 @@ impl<'a> Reader<'a> {
         Ok(v)
     }
 
+    pub fn unread_u8(&mut self) {
+        self.position = self.position.saturating_sub(1);
+    }
+
     pub fn read(&mut self, n: usize) -> Result<&'a [u8], DecodeError> {
         let v = self
             .data

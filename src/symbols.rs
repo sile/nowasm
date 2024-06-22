@@ -496,3 +496,35 @@ impl Locals {
         Ok(Self { n, t })
     }
 }
+
+#[derive(Debug, Clone, Copy)]
+pub enum BlockType {
+    Empty,
+    Val(ValType),
+    TypeIndex(S33),
+}
+
+impl BlockType {
+    pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
+        if reader.read_u8()? == 0x40 {
+            return Ok(Self::Empty);
+        }
+
+        reader.unread_u8();
+        if let Ok(t) = ValType::decode(reader) {
+            return Ok(Self::Val(t));
+        }
+
+        reader.unread_u8();
+        Ok(Self::TypeIndex(S33::decode(reader)?))
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct S33(i64);
+
+impl S33 {
+    pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
+        reader.read_integer_s(33).map(Self)
+    }
+}

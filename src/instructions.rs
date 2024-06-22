@@ -1,6 +1,6 @@
 use crate::{
     reader::Reader,
-    symbols::{FuncIdx, GlobalIdx, LabelIdx, LocalIdx, MemArg},
+    symbols::{BlockType, FuncIdx, GlobalIdx, LabelIdx, LocalIdx, MemArg},
     vectors::Vectors,
     DecodeError,
 };
@@ -10,7 +10,7 @@ pub enum Instr {
     // Control Instructions
     Unreachable,
     Nop,
-    // Block(BlockInstr),
+    Block(BlockInstr),
     // Loop(LoopInstr),
     // If(IfInstr),
     Br(LabelIdx),
@@ -195,7 +195,7 @@ impl Instr {
             // Control Instructions
             0x00 => Ok(Self::Unreachable),
             0x01 => Ok(Self::Nop),
-            // 0x02 => Ok(Some(Self::Block(BlockInstr::new(self)?))),
+            0x02 => Ok(Self::Block(BlockInstr::decode(reader, vectors)?)),
             // 0x03 => Ok(Some(Self::Loop(LoopInstr::new(self)?))),
             // 0x04 => Ok(Some(Self::If(IfInstr::new(self)?))),
             0x0c => Ok(Self::Br(LabelIdx::decode(reader)?)),
@@ -394,32 +394,33 @@ impl Instr {
     }
 }
 
-// #[derive(Debug, Clone, Copy, PartialEq)]
-// pub struct BlockInstr {
-//     pub block_type: BlockType,
-//     pub instr_start: usize,
-//     pub instr_end: usize,
-// }
+#[derive(Debug, Clone, Copy)]
+pub struct BlockInstr {
+    pub block_type: BlockType,
+    pub instrs_start: usize,
+    pub instrs_len: usize,
+}
 
-// impl BlockInstr {
-//     pub fn new(reader: &mut ByteReader) -> Result<Self, DecodeError> {
-//         let block_type = BlockType::new(reader)?;
-//         let mut n = 0;
-//         while let Some(i) = reader.read_instr()? {
-//             n += i.instr_len();
-//             // TODO: increment idx_len
-//         }
-//         Ok(Self {
-//             block_type,
-//             instr_start: 0,
-//             instr_end: n,
-//         })
-//     }
+impl BlockInstr {
+    pub fn decode(reader: &mut Reader, vectors: &mut impl Vectors) -> Result<Self, DecodeError> {
+        let block_type = BlockType::decode(reader)?;
+        let instrs_start = vectors.instrs_offset();
+        while reader.peek_u8()? != 0x0b {
+            let instr = Instr::decode(reader, vectors)?;
+            vectors.instrs_push(instr);
+        }
+        reader.read_u8()?;
+        Ok(Self {
+            block_type,
+            instrs_start,
+            instrs_len: vectors.instrs_offset() - instrs_start,
+        })
+    }
 
-//     pub fn len(self) -> usize {
-//         1 + self.instr_end - self.instr_start
-//     }
-// }
+    pub fn len(self) -> usize {
+        self.instrs_len
+    }
+}
 
 // #[derive(Debug, Clone, Copy, PartialEq)]
 // pub struct LoopInstr {
