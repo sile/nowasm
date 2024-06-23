@@ -1,7 +1,7 @@
 use crate::{
     decode::Decode,
     reader::Reader,
-    symbols::{FuncType, Import, TableType, TypeIdx},
+    symbols::{FuncType, Import, MemType, TableType, TypeIdx},
     DecodeError, VectorSlice, Vectors,
 };
 
@@ -98,5 +98,25 @@ impl TableSection {
     ) -> Result<Self, DecodeError> {
         let tables = VectorSlice::decode(reader, vectors)?;
         Ok(Self { tables })
+    }
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct MemorySection {
+    pub mem: Option<MemType>,
+}
+
+impl MemorySection {
+    pub(crate) fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
+        let value = reader.read_u32()? as usize;
+        if value > 1 {
+            return Err(DecodeError::InvalidMemoryCount { value });
+        }
+        if value == 0 {
+            Ok(Self { mem: None })
+        } else {
+            let mem = MemType::decode(reader)?;
+            Ok(Self { mem: Some(mem) })
+        }
     }
 }
