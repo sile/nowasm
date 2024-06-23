@@ -11,6 +11,7 @@ pub(crate) mod vectors;
 
 pub mod module; // TODO: pub (crate)
 pub mod sections;
+pub mod validation; // TODO: pub (crate)
 
 pub use decode_error::DecodeError;
 pub use module::Module;

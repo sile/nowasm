@@ -5,6 +5,7 @@ use crate::{
         ImportSection, MemorySection, SectionId, StartSection, TableSection, TypeSection,
     },
     symbols::{Magic, Version},
+    validation::ValidateError,
     DecodeError, Vectors,
 };
 
@@ -168,6 +169,10 @@ impl<V: Vectors> Module<V> {
                 });
             }
         }
+        Ok(())
+    }
+
+    pub fn validate(&self) -> Result<(), ValidateError> {
         Ok(())
     }
 }

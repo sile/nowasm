@@ -8,7 +8,7 @@ use core::marker::PhantomData;
 
 #[derive(Debug, Clone, Copy)]
 pub struct VectorSlice<T> {
-    offset: usize,
+    pub offset: usize, // TODO: priv
     len: usize,
     _item: PhantomData<T>,
 }
