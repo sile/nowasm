@@ -36,11 +36,11 @@ impl<T> Default for VectorSlice<T> {
 // TODO: move
 impl<T: VectorItem> VectorSlice<T> {
     pub fn decode<V: Vectors>(reader: &mut Reader, vectors: &mut V) -> Result<Self, DecodeError> {
-        let offset = T::append(vectors, &[])?;
+        let offset = T::append(&[], vectors)?;
         let len = reader.read_usize()?;
         for _ in 0..len {
             let item = T::decode(reader, vectors)?;
-            T::append(vectors, &[item])?;
+            T::append(&[item], vectors)?;
         }
         Ok(Self {
             offset,
@@ -51,7 +51,7 @@ impl<T: VectorItem> VectorSlice<T> {
 }
 
 pub trait VectorItem: Sized {
-    fn append<V: Vectors>(vectors: &mut V, items: &[Self]) -> Result<usize, DecodeError>;
+    fn append<V: Vectors>(items: &[Self], vectors: &mut V) -> Result<usize, DecodeError>;
     fn decode<V: Vectors>(reader: &mut Reader, vectors: &mut V) -> Result<Self, DecodeError>;
 }
 
