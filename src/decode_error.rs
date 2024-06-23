@@ -61,16 +61,7 @@ pub enum DecodeError {
     },
     InvalidUtf8(Utf8Error),
     MalformedInteger,
-    OutOfOrderSectionId {
-        last: SectionId,
-        current: SectionId,
-    }, // TODO: delete
     FullVector {
         kind: VectorKind,
     },
-    FullBytes,
-    FullValTypes,
-    FullInstrs,
-    FullIdxs,
-    FullLocals, // TODO: rename
 }

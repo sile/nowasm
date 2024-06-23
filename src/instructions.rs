@@ -3,7 +3,7 @@ use crate::instructions_sign_extension::SignExtensionInstr;
 use crate::{
     reader::Reader,
     symbols::{BlockType, FuncIdx, GlobalIdx, LabelIdx, LocalIdx, MemArg, TypeIdx},
-    vectors::Vectors,
+    vectors::{VectorKind, Vectors},
     DecodeError,
 };
 
@@ -423,7 +423,9 @@ impl BlockInstr {
         while reader.peek_u8()? != 0x0b {
             let instr = Instr::decode(reader, vectors)?;
             if !vectors.instrs_push(instr) {
-                return Err(DecodeError::FullInstrs);
+                return Err(DecodeError::FullVector {
+                    kind: VectorKind::Instrs,
+                });
             }
         }
         reader.read_u8()?;
@@ -455,7 +457,9 @@ impl LoopInstr {
         while reader.peek_u8()? != 0x0b {
             let instr = Instr::decode(reader, vectors)?;
             if !vectors.instrs_push(instr) {
-                return Err(DecodeError::FullInstrs);
+                return Err(DecodeError::FullVector {
+                    kind: VectorKind::Instrs,
+                });
             }
         }
         reader.read_u8()?;
@@ -502,7 +506,9 @@ impl IfInstr {
 
             let instr = Instr::decode(reader, vectors)?;
             if !vectors.instrs_push(instr) {
-                return Err(DecodeError::FullInstrs);
+                return Err(DecodeError::FullVector {
+                    kind: VectorKind::Instrs,
+                });
             }
             then_instrs += 1; // TODO
         }
@@ -510,7 +516,9 @@ impl IfInstr {
         while reader.peek_u8()? != 0x0B {
             let instr = Instr::decode(reader, vectors)?;
             if !vectors.instrs_push(instr) {
-                return Err(DecodeError::FullInstrs);
+                return Err(DecodeError::FullVector {
+                    kind: VectorKind::Instrs,
+                });
             }
             else_instrs += 1; // TODO
         }
@@ -542,7 +550,9 @@ impl BrTableInstr {
         for _ in 0..n {
             let idx = LabelIdx::decode(reader)?;
             if !vectors.idxs_push(idx.get()) {
-                return Err(DecodeError::FullIdxs);
+                return Err(DecodeError::FullVector {
+                    kind: VectorKind::Idxs,
+                });
             }
         }
         Ok(Self {

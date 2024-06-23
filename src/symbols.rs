@@ -47,7 +47,9 @@ impl Name {
         let name = reader.read(len)?;
         let _ = core::str::from_utf8(name).map_err(DecodeError::InvalidUtf8)?;
         if !vectors.bytes_append(name) {
-            return Err(DecodeError::FullBytes);
+            return Err(DecodeError::FullVector {
+                kind: VectorKind::Bytes,
+            });
         }
         Ok(Self { start, len })
     }
@@ -411,7 +413,9 @@ impl ResultType {
         for _ in 0..len {
             let vt = ValType::decode(reader)?;
             if !vectors.val_types_push(vt) {
-                return Err(DecodeError::FullValTypes);
+                return Err(DecodeError::FullVector {
+                    kind: VectorKind::ValTypes,
+                });
             }
         }
         Ok(Self { start, len })
@@ -465,7 +469,9 @@ impl Expr {
         while reader.peek_u8()? != 0x0b {
             let instr = Instr::decode(reader, vectors)?;
             if !vectors.instrs_push(instr) {
-                return Err(DecodeError::FullInstrs);
+                return Err(DecodeError::FullVector {
+                    kind: VectorKind::Instrs,
+                });
             }
         }
         reader.read_u8()?;
@@ -543,7 +549,9 @@ impl FuncIdxVec {
         for _ in 0..len {
             let idx = FuncIdx::decode(reader)?;
             if !vectors.idxs_push(idx.0) {
-                return Err(DecodeError::FullIdxs);
+                return Err(DecodeError::FullVector {
+                    kind: VectorKind::Idxs,
+                });
             }
         }
         Ok(Self { start, len })
@@ -572,7 +580,9 @@ impl Code {
         for _ in 0..locals_len {
             let locals = Locals::decode(&mut reader)?;
             if !vectors.locals_push(locals) {
-                return Err(DecodeError::FullLocals);
+                return Err(DecodeError::FullVector {
+                    kind: VectorKind::Locals,
+                });
             }
         }
         let body = Expr::decode(&mut reader, vectors)?;
