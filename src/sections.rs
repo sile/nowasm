@@ -1,7 +1,7 @@
 use crate::{
     decode::Decode,
     reader::Reader,
-    symbols::{FuncType, Import, MemType, TableType, TypeIdx},
+    symbols::{FuncType, GlobalType, Import, MemType, TableType, TypeIdx},
     DecodeError, VectorSlice, Vectors,
 };
 
@@ -118,5 +118,20 @@ impl MemorySection {
             let mem = MemType::decode(reader)?;
             Ok(Self { mem: Some(mem) })
         }
+    }
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct GlobalSection {
+    pub globals: VectorSlice<GlobalType>,
+}
+
+impl GlobalSection {
+    pub(crate) fn decode(
+        reader: &mut Reader,
+        vectors: &mut impl Vectors,
+    ) -> Result<Self, DecodeError> {
+        let globals = VectorSlice::decode(reader, vectors)?;
+        Ok(Self { globals })
     }
 }

@@ -1,7 +1,8 @@
 use crate::{
     reader::Reader,
     sections::{
-        FunctionSection, ImportSection, MemorySection, SectionId, TableSection, TypeSection,
+        FunctionSection, GlobalSection, ImportSection, MemorySection, SectionId, TableSection,
+        TypeSection,
     },
     symbols::{Magic, Version},
     DecodeError, Vectors,
@@ -15,6 +16,7 @@ pub struct Module<V> {
     function_section: FunctionSection,
     table_section: TableSection,
     memory_section: MemorySection,
+    global_section: GlobalSection,
 }
 
 impl<V: Vectors> Module<V> {
@@ -42,6 +44,10 @@ impl<V: Vectors> Module<V> {
         &self.memory_section
     }
 
+    pub fn global_section(&self) -> &GlobalSection {
+        &self.global_section
+    }
+
     pub fn decode(wasm_bytes: &[u8], vectors: V) -> Result<Self, DecodeError> {
         let mut this = Self {
             vectors,
@@ -50,6 +56,7 @@ impl<V: Vectors> Module<V> {
             function_section: FunctionSection::default(),
             table_section: TableSection::default(),
             memory_section: MemorySection::default(),
+            global_section: GlobalSection::default(),
         };
         let mut reader = Reader::new(wasm_bytes);
 
@@ -100,6 +107,10 @@ impl<V: Vectors> Module<V> {
                 }
                 SectionId::Memory => {
                     self.memory_section = MemorySection::decode(&mut section_reader)?
+                }
+                SectionId::Global => {
+                    self.global_section =
+                        GlobalSection::decode(&mut section_reader, &mut self.vectors)?
                 }
                 _ => todo!(),
             }

@@ -320,6 +320,23 @@ impl GlobalType {
     }
 }
 
+impl Decode for GlobalType {
+    fn decode<V: Vectors>(reader: &mut Reader, _vectors: &mut V) -> Result<Self, DecodeError> {
+        Self::decode(reader)
+    }
+}
+
+impl VectorItem for GlobalType {
+    fn append<V: Vectors>(vectors: &mut V, items: &[Self]) -> Result<usize, DecodeError> {
+        if !vectors.global_types_append(items) {
+            return Err(DecodeError::FullVector {
+                kind: VectorKind::GlobalTypes,
+            });
+        }
+        Ok(vectors.global_types().len())
+    }
+}
+
 #[derive(Debug, Clone, Copy)]
 pub enum ValType {
     I32,
