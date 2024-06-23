@@ -51,11 +51,11 @@ pub enum DecodeError {
         value: u8,
     },
     InvalidSectionOrder {
-        last_section_id: u8,
-        current_section_id: u8,
+        last_section_id: SectionId,
+        current_section_id: SectionId,
     },
     InvalidSectionSize {
-        section_id: u8,
+        section_id: SectionId,
         expected_size: usize,
         actual_size: usize,
     },

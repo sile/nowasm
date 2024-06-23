@@ -1,5 +1,6 @@
 use crate::{
     reader::Reader,
+    sections::SectionId,
     symbols::{Magic, Version},
     DecodeError, Vectors,
 };
@@ -33,14 +34,13 @@ impl<V: Vectors> Module<V> {
     }
 
     fn decode_sections(&mut self, reader: &mut Reader) -> Result<(), DecodeError> {
-        let mut last_section_id = 0;
+        let mut last_section_id = SectionId::Custom;
         while reader.is_empty() {
-            let section_id = reader.read_u8()?;
+            let section_id = SectionId::decode(reader)?;
             let section_size = reader.read_u32()? as usize;
             let mut section_reader = Reader::new(reader.read(section_size)?);
 
-            if section_id == 0 {
-                // Skip custom section
+            if section_id == SectionId::Custom {
                 continue;
             }
 
@@ -50,10 +50,10 @@ impl<V: Vectors> Module<V> {
                     last_section_id,
                 });
             }
-            last_section_id = section_id;
 
             match section_id {
-                1 => self.decode_type_section(&mut section_reader)?,
+                SectionId::Custom => unreachable!(),
+                SectionId::Type => self.decode_type_section(&mut section_reader)?,
                 // 2 => self.decode_import_section(&mut section_reader)?,
                 // 3 => self.decode_function_section(&mut section_reader)?,
                 // 4 => self.decode_table_section(&mut section_reader)?,
@@ -64,8 +64,10 @@ impl<V: Vectors> Module<V> {
                 // 9 => self.decode_element_section(&mut section_reader)?,
                 // 10 => self.decode_code_section(&mut section_reader)?,
                 // 11 => self.decode_data_section(&mut section_reader)?,
-                _ => return Err(DecodeError::InvalidSectionId { value: section_id }),
+                _ => todo!(),
             }
+            last_section_id = section_id;
+
             if !section_reader.is_empty() {
                 return Err(DecodeError::InvalidSectionSize {
                     section_id,

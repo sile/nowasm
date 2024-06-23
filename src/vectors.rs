@@ -43,6 +43,7 @@ impl<T: VectorItem> Decode for VectorSlice<T> {
 pub trait VectorItem: Decode {
     fn get<V: Vectors>(vectors: &mut V) -> Option<Self>;
     fn append<V: Vectors>(vectors: &mut V, items: &[Self]) -> Result<usize, DecodeError>;
+    // TODO: Add decode()
 }
 
 pub trait Vectors {

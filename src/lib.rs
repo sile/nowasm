@@ -10,8 +10,9 @@ pub(crate) mod reader;
 pub mod symbols; // TODO: pub (crate) components
 pub(crate) mod vectors;
 
-pub mod decode;
+pub mod decode; // TODO: delete
 pub mod module; // TODO: pub (crate)
+pub mod sections;
 
 pub use decode_error::DecodeError;
 pub use module_spec::ModuleSpec;
