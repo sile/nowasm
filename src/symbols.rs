@@ -672,3 +672,20 @@ impl Data {
         })
     }
 }
+
+impl Decode for Data {
+    fn decode<V: Vectors>(reader: &mut Reader, vectors: &mut V) -> Result<Self, DecodeError> {
+        Self::decode(reader, vectors)
+    }
+}
+
+impl VectorItem for Data {
+    fn append<V: Vectors>(vectors: &mut V, items: &[Self]) -> Result<usize, DecodeError> {
+        if !vectors.datas_append(items) {
+            return Err(DecodeError::FullVector {
+                kind: VectorKind::Datas,
+            });
+        }
+        Ok(vectors.datas().len())
+    }
+}
