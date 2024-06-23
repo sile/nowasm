@@ -1,4 +1,4 @@
-use crate::symbols::SectionId;
+use crate::{symbols::SectionId, vectors::VectorKind};
 use core::str::Utf8Error;
 
 // TODO: impl Display
@@ -65,6 +65,9 @@ pub enum DecodeError {
         last: SectionId,
         current: SectionId,
     }, // TODO: delete
+    FullVector {
+        kind: VectorKind,
+    },
     FullBytes,
     FullValTypes,
     FullInstrs,

@@ -1,6 +1,7 @@
+use crate::decode::Decode;
 use crate::instructions::Instr;
 use crate::reader::Reader;
-use crate::vectors::Vectors;
+use crate::vectors::{VectorItem, VectorKind, Vectors};
 use crate::DecodeError;
 
 #[derive(Debug)]
@@ -297,6 +298,29 @@ impl FuncType {
         let rt1 = ResultType::decode(reader, vectors)?;
         let rt2 = ResultType::decode(reader, vectors)?;
         Ok(Self { rt1, rt2 })
+    }
+}
+
+impl Decode for FuncType {
+    fn decode<V: Vectors>(reader: &mut Reader, vectors: &mut V) -> Result<Self, DecodeError> {
+        let tag = reader.read_u8()?;
+        if tag != 0x60 {
+            return Err(DecodeError::InvalidFuncTypeTag { value: tag });
+        }
+        let rt1 = ResultType::decode(reader, vectors)?;
+        let rt2 = ResultType::decode(reader, vectors)?;
+        Ok(Self { rt1, rt2 })
+    }
+}
+
+impl VectorItem for FuncType {
+    fn append<V: Vectors>(vectors: &mut V, items: &[Self]) -> Result<usize, DecodeError> {
+        if !vectors.func_types_append(items) {
+            return Err(DecodeError::FullVector {
+                kind: VectorKind::FuncTypes,
+            });
+        }
+        Ok(vectors.func_types().len())
     }
 }
 

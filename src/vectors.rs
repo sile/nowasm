@@ -2,7 +2,7 @@ use crate::{
     decode::Decode,
     instructions::Instr,
     reader::Reader,
-    symbols::{Locals, ValType},
+    symbols::{FuncType, Locals, ValType},
     DecodeError,
 };
 use core::marker::PhantomData;
@@ -24,6 +24,16 @@ impl<T> VectorSlice<T> {
     }
 }
 
+impl<T> Default for VectorSlice<T> {
+    fn default() -> Self {
+        Self {
+            offset: 0,
+            len: 0,
+            _item: PhantomData,
+        }
+    }
+}
+
 impl<T: VectorItem> Decode for VectorSlice<T> {
     fn decode<V: Vectors>(reader: &mut Reader, vectors: &mut V) -> Result<Self, DecodeError> {
         let offset = T::append(vectors, &[])?;
@@ -41,9 +51,18 @@ impl<T: VectorItem> Decode for VectorSlice<T> {
 }
 
 pub trait VectorItem: Decode {
-    fn get<V: Vectors>(vectors: &mut V) -> Option<Self>;
     fn append<V: Vectors>(vectors: &mut V, items: &[Self]) -> Result<usize, DecodeError>;
     // TODO: Add decode()
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum VectorKind {
+    Bytes,
+    ValTypes,
+    Instrs,
+    Idxs,
+    Locals,
+    FuncTypes,
 }
 
 pub trait Vectors {
@@ -61,6 +80,9 @@ pub trait Vectors {
 
     fn locals_offset(&self) -> usize;
     fn locals_push(&mut self, locals: Locals) -> bool;
+
+    fn func_types(&self) -> &[FuncType];
+    fn func_types_append(&mut self, items: &[FuncType]) -> bool;
 }
 
 #[derive(Debug, Default)]
@@ -70,6 +92,7 @@ pub struct NullVectors {
     instrs_offset: usize,
     idxs_offset: usize,
     locals_offset: usize,
+    func_types: usize,
 }
 
 impl Vectors for NullVectors {
@@ -115,6 +138,15 @@ impl Vectors for NullVectors {
 
     fn locals_push(&mut self, _locals: Locals) -> bool {
         self.locals_offset += 1;
+        true
+    }
+
+    fn func_types(&self) -> &[FuncType] {
+        &[]
+    }
+
+    fn func_types_append(&mut self, items: &[FuncType]) -> bool {
+        self.func_types += items.len();
         true
     }
 }
