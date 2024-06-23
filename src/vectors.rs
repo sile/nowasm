@@ -46,7 +46,7 @@ pub trait VectorItem: Decode {
 }
 
 pub trait Vectors {
-    fn bytes_offset(&self) -> usize;
+    fn bytes_offset(&self) -> usize; // TODO: bytes(&self) -> &[u8]
     fn bytes_append(&mut self, bytes: &[u8]) -> bool;
 
     fn val_types_offset(&self) -> usize;

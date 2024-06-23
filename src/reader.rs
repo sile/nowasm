@@ -15,6 +15,10 @@ impl<'a> Reader<'a> {
         self.data.len() - self.position
     }
 
+    pub fn position(&self) -> usize {
+        self.position
+    }
+
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
