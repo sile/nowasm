@@ -124,6 +124,23 @@ impl Export {
     }
 }
 
+impl Decode for Export {
+    fn decode<V: Vectors>(reader: &mut Reader, vectors: &mut V) -> Result<Self, DecodeError> {
+        Self::decode(reader, vectors)
+    }
+}
+
+impl VectorItem for Export {
+    fn append<V: Vectors>(vectors: &mut V, items: &[Self]) -> Result<usize, DecodeError> {
+        if !vectors.exports_append(items) {
+            return Err(DecodeError::FullVector {
+                kind: VectorKind::Exports,
+            });
+        }
+        Ok(vectors.exports().len())
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum ExportDesc {
     Func(TypeIdx),
