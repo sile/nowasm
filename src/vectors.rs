@@ -2,7 +2,7 @@ use crate::{
     decode::Decode,
     instructions::Instr,
     reader::Reader,
-    symbols::{FuncType, Import, Locals, ValType},
+    symbols::{FuncType, Import, Locals, TableType, ValType},
     DecodeError,
 };
 use core::marker::PhantomData;
@@ -64,6 +64,7 @@ pub enum VectorKind {
     Locals,
     FuncTypes,
     Imports,
+    TableTypes,
 }
 
 pub trait Vectors {
@@ -90,6 +91,9 @@ pub trait Vectors {
 
     fn imports(&self) -> &[Import];
     fn imports_append(&mut self, items: &[Import]) -> bool;
+
+    fn table_types(&self) -> &[TableType];
+    fn table_types_append(&mut self, items: &[TableType]) -> bool;
 }
 
 #[derive(Debug, Default)]
@@ -101,6 +105,7 @@ pub struct NullVectors {
     locals_offset: usize,
     func_types: usize,
     imports: usize,
+    table_types: usize,
 }
 
 impl Vectors for NullVectors {
@@ -174,5 +179,14 @@ impl Vectors for NullVectors {
 
     fn idxs(&self) -> &[u32] {
         &[]
+    }
+
+    fn table_types(&self) -> &[TableType] {
+        &[]
+    }
+
+    fn table_types_append(&mut self, items: &[TableType]) -> bool {
+        self.table_types += items.len();
+        true
     }
 }

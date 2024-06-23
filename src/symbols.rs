@@ -250,6 +250,23 @@ impl TableType {
     }
 }
 
+impl Decode for TableType {
+    fn decode<V: Vectors>(reader: &mut Reader, vectors: &mut V) -> Result<Self, DecodeError> {
+        Self::decode(reader)
+    }
+}
+
+impl VectorItem for TableType {
+    fn append<V: Vectors>(vectors: &mut V, items: &[Self]) -> Result<usize, DecodeError> {
+        if !vectors.table_types_append(items) {
+            return Err(DecodeError::FullVector {
+                kind: VectorKind::TableTypes,
+            });
+        }
+        Ok(vectors.table_types().len())
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Limits {
     pub min: u32,
