@@ -513,6 +513,23 @@ impl Elem {
     }
 }
 
+impl Decode for Elem {
+    fn decode<V: Vectors>(reader: &mut Reader, vectors: &mut V) -> Result<Self, DecodeError> {
+        Self::decode(reader, vectors)
+    }
+}
+
+impl VectorItem for Elem {
+    fn append<V: Vectors>(vectors: &mut V, items: &[Self]) -> Result<usize, DecodeError> {
+        if !vectors.elems_append(items) {
+            return Err(DecodeError::FullVector {
+                kind: VectorKind::Elems,
+            });
+        }
+        Ok(vectors.elems().len())
+    }
+}
+
 #[derive(Debug, Clone, Copy)]
 pub struct FuncIdxVec {
     pub start: usize,

@@ -2,7 +2,7 @@ use crate::{
     decode::Decode,
     instructions::Instr,
     reader::Reader,
-    symbols::{Export, FuncType, GlobalType, Import, Locals, TableType, ValType},
+    symbols::{Elem, Export, FuncType, GlobalType, Import, Locals, TableType, ValType},
     DecodeError,
 };
 use core::marker::PhantomData;
@@ -67,6 +67,7 @@ pub enum VectorKind {
     TableTypes,
     GlobalTypes,
     Exports,
+    Elems,
 }
 
 pub trait Vectors {
@@ -102,6 +103,9 @@ pub trait Vectors {
 
     fn exports(&self) -> &[Export];
     fn exports_append(&mut self, items: &[Export]) -> bool;
+
+    fn elems(&self) -> &[Elem];
+    fn elems_append(&mut self, items: &[Elem]) -> bool;
 }
 
 #[derive(Debug, Default)]
@@ -116,6 +120,7 @@ pub struct NullVectors {
     table_types: usize,
     global_types: usize,
     exports: usize,
+    elems: usize,
 }
 
 impl Vectors for NullVectors {
@@ -215,6 +220,15 @@ impl Vectors for NullVectors {
 
     fn exports_append(&mut self, items: &[Export]) -> bool {
         self.exports += items.len();
+        true
+    }
+
+    fn elems(&self) -> &[Elem] {
+        &[]
+    }
+
+    fn elems_append(&mut self, items: &[Elem]) -> bool {
+        self.elems += items.len();
         true
     }
 }
