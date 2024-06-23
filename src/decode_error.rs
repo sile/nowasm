@@ -38,6 +38,12 @@ pub enum DecodeError {
     InvalidMemoryCount {
         value: usize,
     },
+    InvalidMemIdx {
+        value: u32,
+    },
+    InvalidTableIdx {
+        value: u32,
+    },
     InvalidMemorySizeMemoryIndex {
         value: u8,
     },

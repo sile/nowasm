@@ -205,20 +205,28 @@ impl FuncIdx {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct TableIdx(u32);
+pub struct TableIdx;
 
 impl TableIdx {
     pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
-        reader.read_u32().map(Self)
+        let i = reader.read_u32()?;
+        if i != 0 {
+            return Err(DecodeError::InvalidTableIdx { value: i });
+        }
+        Ok(Self)
     }
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct MemIdx(u32);
+pub struct MemIdx;
 
 impl MemIdx {
     pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
-        reader.read_u32().map(Self)
+        let i = reader.read_u32()?;
+        if i != 0 {
+            return Err(DecodeError::InvalidMemIdx { value: i });
+        }
+        Ok(Self)
     }
 }
 
