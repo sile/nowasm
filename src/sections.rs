@@ -2,8 +2,7 @@ use crate::{
     decode::Decode,
     reader::Reader,
     symbols::{
-        Code, Data, Elem, Export, FuncIdx, FuncType, GlobalType, Import, MemType, TableType,
-        TypeIdx,
+        Code, Data, Elem, Export, FuncIdx, FuncType, Global, Import, MemType, TableType, TypeIdx,
     },
     DecodeError, VectorSlice, Vectors,
 };
@@ -126,7 +125,7 @@ impl MemorySection {
 
 #[derive(Debug, Default, Clone)]
 pub struct GlobalSection {
-    pub globals: VectorSlice<GlobalType>,
+    pub globals: VectorSlice<Global>,
 }
 
 impl GlobalSection {

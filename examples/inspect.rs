@@ -1,5 +1,5 @@
 use clap::Parser;
-use nowasm::ModuleSpec;
+use nowasm::{Counters, Module};
 use orfail::{Failure, OrFail};
 use std::path::PathBuf;
 
@@ -11,9 +11,9 @@ struct Args {
 pub fn main() -> orfail::Result<()> {
     let args = Args::parse();
     let wasm_bytes = std::fs::read(&args.wasm_path).or_fail()?;
-    let spec = ModuleSpec::inspect(&wasm_bytes)
+    let module = Module::decode(&wasm_bytes, Counters::new())
         .map_err(|e| Failure::new(format!("{e:?}")))
-        .or_fail();
-    println!("{spec:?}");
+        .or_fail()?;
+    println!("{:?}", module.vectors());
     Ok(())
 }

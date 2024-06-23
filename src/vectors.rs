@@ -2,7 +2,7 @@ use crate::{
     decode::Decode,
     instructions::Instr,
     reader::Reader,
-    symbols::{Code, Data, Elem, Export, FuncType, GlobalType, Import, Locals, TableType, ValType},
+    symbols::{Code, Data, Elem, Export, FuncType, Global, Import, Locals, TableType, ValType},
     DecodeError,
 };
 use core::marker::PhantomData;
@@ -65,7 +65,7 @@ pub enum VectorKind {
     FuncTypes,
     Imports,
     TableTypes,
-    GlobalTypes,
+    Globals,
     Exports,
     Elems,
     Codes,
@@ -100,8 +100,8 @@ pub trait Vectors {
     fn table_types(&self) -> &[TableType];
     fn table_types_append(&mut self, items: &[TableType]) -> bool;
 
-    fn global_types(&self) -> &[GlobalType];
-    fn global_types_append(&mut self, items: &[GlobalType]) -> bool;
+    fn globals(&self) -> &[Global];
+    fn globals_append(&mut self, items: &[Global]) -> bool;
 
     fn exports(&self) -> &[Export];
     fn exports_append(&mut self, items: &[Export]) -> bool;
@@ -117,65 +117,71 @@ pub trait Vectors {
 }
 
 #[derive(Debug, Default)]
-pub struct NullVectors {
-    bytes_offset: usize,
-    val_types_offset: usize,
-    instrs_offset: usize,
-    idxs_offset: usize,
-    locals_offset: usize,
-    func_types: usize,
-    imports: usize,
-    table_types: usize,
-    global_types: usize,
-    exports: usize,
-    elems: usize,
-    codes: usize,
-    datas: usize,
+pub struct Counters {
+    pub bytes: usize,
+    pub val_types: usize,
+    pub instrs: usize,
+    pub idxs: usize,
+    pub locals: usize,
+    pub func_types: usize,
+    pub imports: usize,
+    pub table_types: usize,
+    pub globals: usize,
+    pub exports: usize,
+    pub elems: usize,
+    pub codes: usize,
+    pub datas: usize,
 }
 
-impl Vectors for NullVectors {
+impl Counters {
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+
+impl Vectors for Counters {
     fn bytes_offset(&self) -> usize {
-        self.bytes_offset
+        self.bytes
     }
 
     fn bytes_append(&mut self, bytes: &[u8]) -> bool {
-        self.bytes_offset += bytes.len();
+        self.bytes += bytes.len();
         true
     }
 
     fn val_types_offset(&self) -> usize {
-        self.val_types_offset
+        self.val_types
     }
 
     fn val_types_push(&mut self, _val_type: ValType) -> bool {
-        self.val_types_offset += 1;
+        self.val_types += 1;
         true
     }
 
     fn instrs_offset(&self) -> usize {
-        self.instrs_offset
+        self.instrs
     }
 
     fn instrs_push(&mut self, _instr: Instr) -> bool {
-        self.instrs_offset += 1;
+        self.instrs += 1;
         true
     }
 
     fn idxs_offset(&self) -> usize {
-        self.idxs_offset
+        self.idxs
     }
 
     fn idxs_push(&mut self, _idx: u32) -> bool {
-        self.idxs_offset += 1;
+        self.idxs += 1;
         true
     }
 
     fn locals_offset(&self) -> usize {
-        self.locals_offset
+        self.locals
     }
 
     fn locals_push(&mut self, _locals: Locals) -> bool {
-        self.locals_offset += 1;
+        self.locals += 1;
         true
     }
 
@@ -198,7 +204,7 @@ impl Vectors for NullVectors {
     }
 
     fn idxs_append<T: Into<u32>>(&mut self, idxs: &[T]) -> bool {
-        self.idxs_offset += idxs.len();
+        self.idxs += idxs.len();
         true
     }
 
@@ -215,12 +221,12 @@ impl Vectors for NullVectors {
         true
     }
 
-    fn global_types(&self) -> &[GlobalType] {
+    fn globals(&self) -> &[Global] {
         &[]
     }
 
-    fn global_types_append(&mut self, items: &[GlobalType]) -> bool {
-        self.global_types += items.len();
+    fn globals_append(&mut self, items: &[Global]) -> bool {
+        self.globals += items.len();
         true
     }
 

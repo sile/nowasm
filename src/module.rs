@@ -102,7 +102,7 @@ impl<V: Vectors> Module<V> {
 
     fn decode_sections(&mut self, reader: &mut Reader) -> Result<(), DecodeError> {
         let mut last_section_id = SectionId::Custom;
-        while reader.is_empty() {
+        while !reader.is_empty() {
             let section_id = SectionId::decode(reader)?;
             let section_size = reader.read_u32()? as usize;
             let mut section_reader = Reader::new(reader.read(section_size)?);

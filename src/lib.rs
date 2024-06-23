@@ -1,7 +1,6 @@
 #![no_std]
 
 mod decode_error;
-mod module_spec;
 
 pub(crate) mod instructions;
 #[cfg(feature = "sign_extension")]
@@ -15,5 +14,5 @@ pub mod module; // TODO: pub (crate)
 pub mod sections;
 
 pub use decode_error::DecodeError;
-pub use module_spec::ModuleSpec;
-pub use vectors::{VectorSlice, Vectors};
+pub use module::Module;
+pub use vectors::{Counters, VectorSlice, Vectors};
