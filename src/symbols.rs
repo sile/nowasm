@@ -73,6 +73,23 @@ impl Import {
     }
 }
 
+impl Decode for Import {
+    fn decode<V: Vectors>(reader: &mut Reader, vectors: &mut V) -> Result<Self, DecodeError> {
+        Self::decode(reader, vectors)
+    }
+}
+
+impl VectorItem for Import {
+    fn append<V: Vectors>(vectors: &mut V, items: &[Self]) -> Result<usize, DecodeError> {
+        if !vectors.imports_append(items) {
+            return Err(DecodeError::FullVector {
+                kind: VectorKind::Imports,
+            });
+        }
+        Ok(vectors.imports().len())
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum ImportDesc {
     Func(TypeIdx),

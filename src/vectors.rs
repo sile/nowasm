@@ -2,7 +2,7 @@ use crate::{
     decode::Decode,
     instructions::Instr,
     reader::Reader,
-    symbols::{FuncType, Locals, ValType},
+    symbols::{FuncType, Import, Locals, ValType},
     DecodeError,
 };
 use core::marker::PhantomData;
@@ -63,6 +63,7 @@ pub enum VectorKind {
     Idxs,
     Locals,
     FuncTypes,
+    Imports,
 }
 
 pub trait Vectors {
@@ -83,6 +84,9 @@ pub trait Vectors {
 
     fn func_types(&self) -> &[FuncType];
     fn func_types_append(&mut self, items: &[FuncType]) -> bool;
+
+    fn imports(&self) -> &[Import];
+    fn imports_append(&mut self, items: &[Import]) -> bool;
 }
 
 #[derive(Debug, Default)]
@@ -93,6 +97,7 @@ pub struct NullVectors {
     idxs_offset: usize,
     locals_offset: usize,
     func_types: usize,
+    imports: usize,
 }
 
 impl Vectors for NullVectors {
@@ -147,6 +152,15 @@ impl Vectors for NullVectors {
 
     fn func_types_append(&mut self, items: &[FuncType]) -> bool {
         self.func_types += items.len();
+        true
+    }
+
+    fn imports(&self) -> &[Import] {
+        &[]
+    }
+
+    fn imports_append(&mut self, items: &[Import]) -> bool {
+        self.imports += items.len();
         true
     }
 }

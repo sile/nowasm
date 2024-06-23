@@ -1,4 +1,9 @@
-use crate::{decode::Decode, reader::Reader, symbols::FuncType, DecodeError, VectorSlice, Vectors};
+use crate::{
+    decode::Decode,
+    reader::Reader,
+    symbols::{FuncType, Import},
+    DecodeError, VectorSlice, Vectors,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum SectionId {
@@ -48,5 +53,20 @@ impl TypeSection {
     ) -> Result<Self, DecodeError> {
         let types = VectorSlice::decode(reader, vectors)?;
         Ok(Self { types })
+    }
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct ImportSection {
+    pub imports: VectorSlice<Import>,
+}
+
+impl ImportSection {
+    pub(crate) fn decode(
+        reader: &mut Reader,
+        vectors: &mut impl Vectors,
+    ) -> Result<Self, DecodeError> {
+        let imports = VectorSlice::decode(reader, vectors)?;
+        Ok(Self { imports })
     }
 }

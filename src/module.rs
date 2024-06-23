@@ -1,6 +1,6 @@
 use crate::{
     reader::Reader,
-    sections::{SectionId, TypeSection},
+    sections::{ImportSection, SectionId, TypeSection},
     symbols::{Magic, Version},
     DecodeError, Vectors,
 };
@@ -9,6 +9,7 @@ use crate::{
 pub struct Module<V> {
     vectors: V,
     type_section: TypeSection,
+    import_section: ImportSection,
 }
 
 impl<V: Vectors> Module<V> {
@@ -20,10 +21,15 @@ impl<V: Vectors> Module<V> {
         &self.type_section
     }
 
+    pub fn import_section(&self) -> &ImportSection {
+        &self.import_section
+    }
+
     pub fn decode(wasm_bytes: &[u8], vectors: V) -> Result<Self, DecodeError> {
         let mut this = Self {
             vectors,
             type_section: TypeSection::default(),
+            import_section: ImportSection::default(),
         };
         let mut reader = Reader::new(wasm_bytes);
 
@@ -57,17 +63,13 @@ impl<V: Vectors> Module<V> {
 
             match section_id {
                 SectionId::Custom => unreachable!(),
-                SectionId::Type => self.decode_type_section(&mut section_reader)?,
-                // 2 => self.decode_import_section(&mut section_reader)?,
-                // 3 => self.decode_function_section(&mut section_reader)?,
-                // 4 => self.decode_table_section(&mut section_reader)?,
-                // 5 => self.decode_memory_section(&mut section_reader)?,
-                // 6 => self.decode_global_section(&mut section_reader)?,
-                // 7 => self.decode_export_section(&mut section_reader)?,
-                // 8 => self.decode_start_section(&mut section_reader)?,
-                // 9 => self.decode_element_section(&mut section_reader)?,
-                // 10 => self.decode_code_section(&mut section_reader)?,
-                // 11 => self.decode_data_section(&mut section_reader)?,
+                SectionId::Type => {
+                    self.type_section = TypeSection::decode(&mut section_reader, &mut self.vectors)?
+                }
+                SectionId::Import => {
+                    self.import_section =
+                        ImportSection::decode(&mut section_reader, &mut self.vectors)?
+                }
                 _ => todo!(),
             }
             last_section_id = section_id;
@@ -80,11 +82,6 @@ impl<V: Vectors> Module<V> {
                 });
             }
         }
-        Ok(())
-    }
-
-    fn decode_type_section(&mut self, reader: &mut Reader) -> Result<(), DecodeError> {
-        self.type_section = TypeSection::decode(reader, &mut self.vectors)?;
         Ok(())
     }
 }
