@@ -153,6 +153,29 @@ impl TypeIdx {
     }
 }
 
+impl From<TypeIdx> for u32 {
+    fn from(idx: TypeIdx) -> u32 {
+        idx.0
+    }
+}
+
+impl Decode for TypeIdx {
+    fn decode<V: Vectors>(reader: &mut Reader, _vectors: &mut V) -> Result<Self, DecodeError> {
+        Self::decode(reader)
+    }
+}
+
+impl VectorItem for TypeIdx {
+    fn append<V: Vectors>(vectors: &mut V, items: &[Self]) -> Result<usize, DecodeError> {
+        if !vectors.idxs_append(items) {
+            return Err(DecodeError::FullVector {
+                kind: VectorKind::Idxs,
+            });
+        }
+        Ok(vectors.idxs().len())
+    }
+}
+
 #[derive(Debug, Clone, Copy)]
 pub struct FuncIdx(u32);
 

@@ -79,6 +79,9 @@ pub trait Vectors {
     fn idxs_offset(&self) -> usize;
     fn idxs_push(&mut self, idx: u32) -> bool;
 
+    fn idxs_append<T: Into<u32>>(&mut self, idxs: &[T]) -> bool;
+    fn idxs(&self) -> &[u32];
+
     fn locals_offset(&self) -> usize;
     fn locals_push(&mut self, locals: Locals) -> bool;
 
@@ -162,5 +165,14 @@ impl Vectors for NullVectors {
     fn imports_append(&mut self, items: &[Import]) -> bool {
         self.imports += items.len();
         true
+    }
+
+    fn idxs_append<T: Into<u32>>(&mut self, idxs: &[T]) -> bool {
+        self.idxs_offset += idxs.len();
+        true
+    }
+
+    fn idxs(&self) -> &[u32] {
+        &[]
     }
 }

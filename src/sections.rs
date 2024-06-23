@@ -1,7 +1,7 @@
 use crate::{
     decode::Decode,
     reader::Reader,
-    symbols::{FuncType, Import},
+    symbols::{FuncType, Import, TypeIdx},
     DecodeError, VectorSlice, Vectors,
 };
 
@@ -68,5 +68,20 @@ impl ImportSection {
     ) -> Result<Self, DecodeError> {
         let imports = VectorSlice::decode(reader, vectors)?;
         Ok(Self { imports })
+    }
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct FunctionSection {
+    pub idxs: VectorSlice<TypeIdx>,
+}
+
+impl FunctionSection {
+    pub(crate) fn decode(
+        reader: &mut Reader,
+        vectors: &mut impl Vectors,
+    ) -> Result<Self, DecodeError> {
+        let idxs = VectorSlice::decode(reader, vectors)?;
+        Ok(Self { idxs })
     }
 }
