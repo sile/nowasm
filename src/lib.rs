@@ -9,7 +9,6 @@ pub(crate) mod reader;
 pub mod symbols; // TODO: pub (crate) components
 pub(crate) mod vectors;
 
-pub mod decode; // TODO: delete
 pub mod module; // TODO: pub (crate)
 pub mod sections;
 

@@ -1,4 +1,3 @@
-use crate::decode::Decode;
 use crate::instructions::Instr;
 use crate::reader::Reader;
 use crate::vectors::{VectorItem, VectorKind, Vectors};
@@ -75,13 +74,11 @@ impl Import {
     }
 }
 
-impl Decode for Import {
+impl VectorItem for Import {
     fn decode<V: Vectors>(reader: &mut Reader, vectors: &mut V) -> Result<Self, DecodeError> {
         Self::decode(reader, vectors)
     }
-}
 
-impl VectorItem for Import {
     fn append<V: Vectors>(vectors: &mut V, items: &[Self]) -> Result<usize, DecodeError> {
         if !vectors.imports_append(items) {
             return Err(DecodeError::FullVector {
@@ -126,13 +123,11 @@ impl Export {
     }
 }
 
-impl Decode for Export {
+impl VectorItem for Export {
     fn decode<V: Vectors>(reader: &mut Reader, vectors: &mut V) -> Result<Self, DecodeError> {
         Self::decode(reader, vectors)
     }
-}
 
-impl VectorItem for Export {
     fn append<V: Vectors>(vectors: &mut V, items: &[Self]) -> Result<usize, DecodeError> {
         if !vectors.exports_append(items) {
             return Err(DecodeError::FullVector {
@@ -178,13 +173,11 @@ impl From<TypeIdx> for u32 {
     }
 }
 
-impl Decode for TypeIdx {
+impl VectorItem for TypeIdx {
     fn decode<V: Vectors>(reader: &mut Reader, _vectors: &mut V) -> Result<Self, DecodeError> {
         Self::decode(reader)
     }
-}
 
-impl VectorItem for TypeIdx {
     fn append<V: Vectors>(vectors: &mut V, items: &[Self]) -> Result<usize, DecodeError> {
         if !vectors.idxs_append(items) {
             return Err(DecodeError::FullVector {
@@ -285,13 +278,11 @@ impl TableType {
     }
 }
 
-impl Decode for TableType {
+impl VectorItem for TableType {
     fn decode<V: Vectors>(reader: &mut Reader, _vectors: &mut V) -> Result<Self, DecodeError> {
         Self::decode(reader)
     }
-}
 
-impl VectorItem for TableType {
     fn append<V: Vectors>(vectors: &mut V, items: &[Self]) -> Result<usize, DecodeError> {
         if !vectors.table_types_append(items) {
             return Err(DecodeError::FullVector {
@@ -381,19 +372,7 @@ pub struct FuncType {
     pub rt2: ResultType,
 }
 
-impl FuncType {
-    pub fn decode(reader: &mut Reader, vectors: &mut impl Vectors) -> Result<Self, DecodeError> {
-        let tag = reader.read_u8()?;
-        if tag != 0x60 {
-            return Err(DecodeError::InvalidFuncTypeTag { value: tag });
-        }
-        let rt1 = ResultType::decode(reader, vectors)?;
-        let rt2 = ResultType::decode(reader, vectors)?;
-        Ok(Self { rt1, rt2 })
-    }
-}
-
-impl Decode for FuncType {
+impl VectorItem for FuncType {
     fn decode<V: Vectors>(reader: &mut Reader, vectors: &mut V) -> Result<Self, DecodeError> {
         let tag = reader.read_u8()?;
         if tag != 0x60 {
@@ -403,9 +382,7 @@ impl Decode for FuncType {
         let rt2 = ResultType::decode(reader, vectors)?;
         Ok(Self { rt1, rt2 })
     }
-}
 
-impl VectorItem for FuncType {
     fn append<V: Vectors>(vectors: &mut V, items: &[Self]) -> Result<usize, DecodeError> {
         if !vectors.func_types_append(items) {
             return Err(DecodeError::FullVector {
@@ -456,13 +433,11 @@ impl Global {
     }
 }
 
-impl Decode for Global {
+impl VectorItem for Global {
     fn decode<V: Vectors>(reader: &mut Reader, vectors: &mut V) -> Result<Self, DecodeError> {
         Self::decode(reader, vectors)
     }
-}
 
-impl VectorItem for Global {
     fn append<V: Vectors>(vectors: &mut V, items: &[Self]) -> Result<usize, DecodeError> {
         if !vectors.globals_append(items) {
             return Err(DecodeError::FullVector {
@@ -535,13 +510,11 @@ impl Elem {
     }
 }
 
-impl Decode for Elem {
+impl VectorItem for Elem {
     fn decode<V: Vectors>(reader: &mut Reader, vectors: &mut V) -> Result<Self, DecodeError> {
         Self::decode(reader, vectors)
     }
-}
 
-impl VectorItem for Elem {
     fn append<V: Vectors>(vectors: &mut V, items: &[Self]) -> Result<usize, DecodeError> {
         if !vectors.elems_append(items) {
             return Err(DecodeError::FullVector {
@@ -610,13 +583,11 @@ impl Code {
     }
 }
 
-impl Decode for Code {
+impl VectorItem for Code {
     fn decode<V: Vectors>(reader: &mut Reader, vectors: &mut V) -> Result<Self, DecodeError> {
         Self::decode(reader, vectors)
     }
-}
 
-impl VectorItem for Code {
     fn append<V: Vectors>(vectors: &mut V, items: &[Self]) -> Result<usize, DecodeError> {
         if !vectors.codes_append(items) {
             return Err(DecodeError::FullVector {
@@ -699,13 +670,11 @@ impl Data {
     }
 }
 
-impl Decode for Data {
+impl VectorItem for Data {
     fn decode<V: Vectors>(reader: &mut Reader, vectors: &mut V) -> Result<Self, DecodeError> {
         Self::decode(reader, vectors)
     }
-}
 
-impl VectorItem for Data {
     fn append<V: Vectors>(vectors: &mut V, items: &[Self]) -> Result<usize, DecodeError> {
         if !vectors.datas_append(items) {
             return Err(DecodeError::FullVector {

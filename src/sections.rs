@@ -1,5 +1,4 @@
 use crate::{
-    decode::Decode,
     reader::Reader,
     symbols::{
         Code, Data, Elem, Export, FuncIdx, FuncType, Global, Import, MemType, TableType, TypeIdx,

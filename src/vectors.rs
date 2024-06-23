@@ -1,5 +1,4 @@
 use crate::{
-    decode::Decode,
     instructions::Instr,
     reader::Reader,
     symbols::{Code, Data, Elem, Export, FuncType, Global, Import, Locals, TableType, ValType},
@@ -34,8 +33,9 @@ impl<T> Default for VectorSlice<T> {
     }
 }
 
-impl<T: VectorItem> Decode for VectorSlice<T> {
-    fn decode<V: Vectors>(reader: &mut Reader, vectors: &mut V) -> Result<Self, DecodeError> {
+// TODO: move
+impl<T: VectorItem> VectorSlice<T> {
+    pub fn decode<V: Vectors>(reader: &mut Reader, vectors: &mut V) -> Result<Self, DecodeError> {
         let offset = T::append(vectors, &[])?;
         let len = reader.read_usize()?;
         for _ in 0..len {
@@ -50,9 +50,9 @@ impl<T: VectorItem> Decode for VectorSlice<T> {
     }
 }
 
-pub trait VectorItem: Decode {
+pub trait VectorItem: Sized {
     fn append<V: Vectors>(vectors: &mut V, items: &[Self]) -> Result<usize, DecodeError>;
-    // TODO: Add decode()
+    fn decode<V: Vectors>(reader: &mut Reader, vectors: &mut V) -> Result<Self, DecodeError>;
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
