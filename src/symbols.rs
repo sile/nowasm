@@ -42,7 +42,7 @@ pub struct Name {
 
 impl Name {
     pub fn decode(reader: &mut Reader, vectors: &mut impl Vectors) -> Result<Self, DecodeError> {
-        let start = vectors.bytes_offset();
+        let start = vectors.bytes().len();
         let len = reader.read_usize()?;
         let name = reader.read(len)?;
         let _ = core::str::from_utf8(name).map_err(DecodeError::InvalidUtf8)?;
@@ -237,6 +237,10 @@ impl GlobalIdx {
     pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         reader.read_u32().map(Self)
     }
+
+    pub fn get(self) -> u32 {
+        self.0
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -245,6 +249,10 @@ pub struct LocalIdx(u32);
 impl LocalIdx {
     pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         reader.read_u32().map(Self)
+    }
+
+    pub fn get(self) -> u32 {
+        self.0
     }
 }
 
@@ -278,7 +286,7 @@ impl TableType {
 }
 
 impl Decode for TableType {
-    fn decode<V: Vectors>(reader: &mut Reader, vectors: &mut V) -> Result<Self, DecodeError> {
+    fn decode<V: Vectors>(reader: &mut Reader, _vectors: &mut V) -> Result<Self, DecodeError> {
         Self::decode(reader)
     }
 }
@@ -416,11 +424,11 @@ pub struct ResultType {
 
 impl ResultType {
     pub fn decode(reader: &mut Reader, vectors: &mut impl Vectors) -> Result<Self, DecodeError> {
-        let start = vectors.val_types_offset();
+        let start = vectors.val_types().len();
         let len = reader.read_usize()?;
         for _ in 0..len {
             let vt = ValType::decode(reader)?;
-            if !vectors.val_types_push(vt) {
+            if !vectors.val_types_append(&[vt]) {
                 return Err(DecodeError::FullVector {
                     kind: VectorKind::ValTypes,
                 });
@@ -467,23 +475,23 @@ impl VectorItem for Global {
 
 #[derive(Debug, Clone, Copy)]
 pub struct Expr {
-    start: usize,
+    pub start: usize, // TODO
     len: usize,
 }
 
 impl Expr {
     pub fn decode(reader: &mut Reader, vectors: &mut impl Vectors) -> Result<Self, DecodeError> {
-        let start = vectors.instrs_offset();
+        let start = vectors.instrs().len();
         while reader.peek_u8()? != 0x0b {
             let instr = Instr::decode(reader, vectors)?;
-            if !vectors.instrs_push(instr) {
+            if !vectors.instrs_append(&[instr]) {
                 return Err(DecodeError::FullVector {
                     kind: VectorKind::Instrs,
                 });
             }
         }
         reader.read_u8()?;
-        let end = vectors.instrs_offset();
+        let end = vectors.instrs().len();
         let len = end - start;
         Ok(Self { start, len })
     }
@@ -552,11 +560,11 @@ pub struct FuncIdxVec {
 
 impl FuncIdxVec {
     pub fn decode(reader: &mut Reader, vectors: &mut impl Vectors) -> Result<Self, DecodeError> {
-        let start = vectors.idxs_offset();
+        let start = vectors.idxs().len();
         let len = reader.read_usize()?;
         for _ in 0..len {
             let idx = FuncIdx::decode(reader)?;
-            if !vectors.idxs_push(idx.0) {
+            if !vectors.idxs_append(&[idx.0]) {
                 return Err(DecodeError::FullVector {
                     kind: VectorKind::Idxs,
                 });
@@ -573,7 +581,7 @@ impl FuncIdxVec {
 #[derive(Debug, Clone)]
 pub struct Code {
     // TODO: func: Func
-    locals_start: usize,
+    pub locals_start: usize,
     pub locals_len: usize,
     pub body: Expr,
 }
@@ -583,11 +591,11 @@ impl Code {
         let code_size = reader.read_usize()?;
         let mut reader = Reader::new(reader.read(code_size)?);
 
-        let locals_start = vectors.locals_offset();
+        let locals_start = vectors.locals().len();
         let locals_len = reader.read_usize()?;
         for _ in 0..locals_len {
             let locals = Locals::decode(&mut reader)?;
-            if !vectors.locals_push(locals) {
+            if !vectors.locals_append(&[locals]) {
                 return Err(DecodeError::FullVector {
                     kind: VectorKind::Locals,
                 });
@@ -678,10 +686,10 @@ impl Data {
     pub fn decode(reader: &mut Reader, vectors: &mut impl Vectors) -> Result<Self, DecodeError> {
         let data = MemIdx::decode(reader)?;
         let offset = Expr::decode(reader, vectors)?;
-        let init_start = vectors.bytes_offset();
+        let init_start = vectors.bytes().len();
         let init_len = reader.read_usize()?;
         vectors.bytes_append(reader.read(init_len)?);
-        let init_end = vectors.bytes_offset();
+        let init_end = vectors.bytes().len();
         Ok(Self {
             data,
             offset,

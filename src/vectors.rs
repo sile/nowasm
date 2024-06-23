@@ -73,23 +73,21 @@ pub enum VectorKind {
 }
 
 pub trait Vectors {
-    fn bytes_offset(&self) -> usize; // TODO: bytes(&self) -> &[u8]
+    fn bytes(&self) -> &[u8];
     fn bytes_append(&mut self, bytes: &[u8]) -> bool;
 
-    fn val_types_offset(&self) -> usize;
-    fn val_types_push(&mut self, val_type: ValType) -> bool;
+    fn val_types(&self) -> &[ValType];
+    fn val_types_append(&mut self, items: &[ValType]) -> bool;
 
-    fn instrs_offset(&self) -> usize;
-    fn instrs_push(&mut self, instr: Instr) -> bool;
+    fn instrs(&self) -> &[Instr];
+    fn instrs_append(&mut self, items: &[Instr]) -> bool;
 
-    fn idxs_offset(&self) -> usize;
-    fn idxs_push(&mut self, idx: u32) -> bool;
-
-    fn idxs_append<T: Into<u32>>(&mut self, idxs: &[T]) -> bool;
     fn idxs(&self) -> &[u32];
+    fn idxs_append<T: Into<u32>>(&mut self, idxs: &[T]) -> bool;
 
-    fn locals_offset(&self) -> usize;
-    fn locals_push(&mut self, locals: Locals) -> bool;
+    // TODO: name
+    fn locals(&self) -> &[Locals];
+    fn locals_append(&mut self, items: &[Locals]) -> bool;
 
     fn func_types(&self) -> &[FuncType];
     fn func_types_append(&mut self, items: &[FuncType]) -> bool;
@@ -140,8 +138,8 @@ impl Counters {
 }
 
 impl Vectors for Counters {
-    fn bytes_offset(&self) -> usize {
-        self.bytes
+    fn bytes(&self) -> &[u8] {
+        &[]
     }
 
     fn bytes_append(&mut self, bytes: &[u8]) -> bool {
@@ -149,39 +147,30 @@ impl Vectors for Counters {
         true
     }
 
-    fn val_types_offset(&self) -> usize {
-        self.val_types
+    fn val_types(&self) -> &[ValType] {
+        &[]
     }
 
-    fn val_types_push(&mut self, _val_type: ValType) -> bool {
-        self.val_types += 1;
+    fn val_types_append(&mut self, items: &[ValType]) -> bool {
+        self.val_types += items.len();
         true
     }
 
-    fn instrs_offset(&self) -> usize {
-        self.instrs
+    fn instrs(&self) -> &[Instr] {
+        &[]
     }
 
-    fn instrs_push(&mut self, _instr: Instr) -> bool {
-        self.instrs += 1;
+    fn instrs_append(&mut self, items: &[Instr]) -> bool {
+        self.instrs += items.len();
         true
     }
 
-    fn idxs_offset(&self) -> usize {
-        self.idxs
+    fn locals(&self) -> &[Locals] {
+        &[]
     }
 
-    fn idxs_push(&mut self, _idx: u32) -> bool {
-        self.idxs += 1;
-        true
-    }
-
-    fn locals_offset(&self) -> usize {
-        self.locals
-    }
-
-    fn locals_push(&mut self, _locals: Locals) -> bool {
-        self.locals += 1;
+    fn locals_append(&mut self, items: &[Locals]) -> bool {
+        self.locals += items.len();
         true
     }
 

@@ -419,10 +419,10 @@ pub struct BlockInstr {
 impl BlockInstr {
     pub fn decode(reader: &mut Reader, vectors: &mut impl Vectors) -> Result<Self, DecodeError> {
         let block_type = BlockType::decode(reader)?;
-        let instrs_start = vectors.instrs_offset();
+        let instrs_start = vectors.instrs().len();
         while reader.peek_u8()? != 0x0b {
             let instr = Instr::decode(reader, vectors)?;
-            if !vectors.instrs_push(instr) {
+            if !vectors.instrs_append(&[instr]) {
                 return Err(DecodeError::FullVector {
                     kind: VectorKind::Instrs,
                 });
@@ -432,7 +432,7 @@ impl BlockInstr {
         Ok(Self {
             block_type,
             instrs_start,
-            instrs_len: vectors.instrs_offset() - instrs_start,
+            instrs_len: vectors.instrs().len() - instrs_start,
         })
     }
 
@@ -453,10 +453,10 @@ pub struct LoopInstr {
 impl LoopInstr {
     pub fn decode(reader: &mut Reader, vectors: &mut impl Vectors) -> Result<Self, DecodeError> {
         let block_type = BlockType::decode(reader)?;
-        let instr_start = vectors.instrs_offset();
+        let instr_start = vectors.instrs().len();
         while reader.peek_u8()? != 0x0b {
             let instr = Instr::decode(reader, vectors)?;
-            if !vectors.instrs_push(instr) {
+            if !vectors.instrs_append(&[instr]) {
                 return Err(DecodeError::FullVector {
                     kind: VectorKind::Instrs,
                 });
@@ -466,7 +466,7 @@ impl LoopInstr {
         Ok(Self {
             block_type,
             instr_start,
-            instr_end: vectors.instrs_offset() - instr_start,
+            instr_end: vectors.instrs().len() - instr_start,
         })
     }
 }
@@ -505,7 +505,7 @@ impl IfInstr {
             }
 
             let instr = Instr::decode(reader, vectors)?;
-            if !vectors.instrs_push(instr) {
+            if !vectors.instrs_append(&[instr]) {
                 return Err(DecodeError::FullVector {
                     kind: VectorKind::Instrs,
                 });
@@ -515,7 +515,7 @@ impl IfInstr {
 
         while reader.peek_u8()? != 0x0B {
             let instr = Instr::decode(reader, vectors)?;
-            if !vectors.instrs_push(instr) {
+            if !vectors.instrs_append(&[instr]) {
                 return Err(DecodeError::FullVector {
                     kind: VectorKind::Instrs,
                 });
@@ -546,10 +546,10 @@ pub struct BrTableInstr {
 impl BrTableInstr {
     pub fn decode(reader: &mut Reader, vectors: &mut impl Vectors) -> Result<Self, DecodeError> {
         let n = reader.read_u32()? as usize;
-        let label_idx_start = vectors.idxs_offset();
+        let label_idx_start = vectors.idxs().len();
         for _ in 0..n {
             let idx = LabelIdx::decode(reader)?;
-            if !vectors.idxs_push(idx.get()) {
+            if !vectors.idxs_append(&[idx.get()]) {
                 return Err(DecodeError::FullVector {
                     kind: VectorKind::Idxs,
                 });
@@ -557,7 +557,7 @@ impl BrTableInstr {
         }
         Ok(Self {
             label_idx_start,
-            label_idx_end: vectors.idxs_offset(),
+            label_idx_end: vectors.idxs().len(),
             last_label_idx: LabelIdx::decode(reader)?,
         })
     }
