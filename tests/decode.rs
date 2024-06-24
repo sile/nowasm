@@ -13,21 +13,40 @@ fn decode(testcase_name: &str) -> orfail::Result<()> {
         if matches!(
             command.filename.to_str(),
             Some(
-                "call_indirect.1.wasm"
+                "binary-leb128.5.wasm"
+                    | "binary-leb128.81.wasm"
+                    | "binary-leb128.84.wasm"
+                    | "binary-leb128.85.wasm"
+                    | "binary-leb128.87.wasm"
+                    | "binary-leb128.88.wasm"
+                    | "binary-leb128.89.wasm"
+                    | "binary.68.wasm"
+                    | "binary.69.wasm"
+                    | "br_table.0.wasm"
+                    | "call_indirect.1.wasm"
+                    | "conversions.0.wasm"
                     | "elem.0.wasm"
+                    | "elem.1.wasm"
+                    | "elem.9.wasm"
+                    | "elem.34.wasm"
                     | "elem.35.wasm"
                     | "elem.65.wasm"
                     | "elem.66.wasm"
                     | "elem.67.wasm"
                     | "elem.68.wasm"
+                    | "exports.45.wasm"
                     | "global.0.wasm"
                     | "i32.0.wasm"
                     | "i64.0.wasm"
+                    | "imports.0.wasm"
                     | "linking.9.wasm"
                     | "linking.10.wasm"
+                    | "linking.25.wasm"
                     | "linking.26.wasm"
                     | "select.0.wasm"
                     | "select.29.wasm"
+                    | "table_fill.0.wasm"
+                    | "table_size.0.wasm"
                     | "unreached-valid.0.wasm"
             )
         ) {
@@ -293,15 +312,19 @@ pub fn decode_memory() -> orfail::Result<()> {
     decode("memory.json").or_fail()
 }
 
-#[test]
-pub fn decode_memory_copy() -> orfail::Result<()> {
-    decode("memory_copy.json").or_fail()
-}
+// Unsupported in 1.0
+//
+// #[test]
+// pub fn decode_memory_copy() -> orfail::Result<()> {
+//     decode("memory_copy.json").or_fail()
+// }
 
-#[test]
-pub fn decode_memory_fill() -> orfail::Result<()> {
-    decode("memory_fill.json").or_fail()
-}
+// Unsupported in 1.0
+//
+// #[test]
+// pub fn decode_memory_fill() -> orfail::Result<()> {
+//     decode("memory_fill.json").or_fail()
+// }
 
 #[test]
 pub fn decode_memory_grow() -> orfail::Result<()> {

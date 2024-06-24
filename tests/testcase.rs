@@ -1,4 +1,4 @@
-use nowasm::module::{ByteReader, DecodeError, ModuleSpec};
+use nowasm::{Counters, DecodeError, Module};
 use orfail::{Failure, OrFail};
 use serde::Deserialize;
 use std::path::{Path, PathBuf};
@@ -89,28 +89,9 @@ impl ModuleCommand {
             .join(&self.filename);
         let bytes = std::fs::read(&path).or_fail()?;
 
-        // debug
-        let mut reader = ByteReader::new(&bytes);
-        reader.validate_preamble().unwrap();
-        while !reader.is_empty() {
-            let (id, reader) = reader.read_section_reader().unwrap();
-            {
-                dbg!((id, reader.len()));
-            }
-        }
-
-        nowasm::ModuleSpec::inspect(&bytes).unwrap();
-        let result = ModuleSpec::new(&bytes);
-        match result {
-            Ok(_) => {}
-            Err(DecodeError::UnsupportedExtension { .. }) => {}
-            Err(DecodeError::UnsupportedProposal { .. }) => {}
-            _ => {
-                result
-                    .map_err(|e| Failure::new(format!("{e:?}")))
-                    .or_fail()?;
-            }
-        }
+        Module::decode(&bytes, Counters::new())
+            .map_err(|e| Failure::new(format!("{e:?}")))
+            .or_fail()?;
         Ok(())
     }
 }
