@@ -1,4 +1,4 @@
-use nowasm::{Counters, DecodeError, Module};
+use nowasm::{Counters, Module};
 use orfail::{Failure, OrFail};
 use serde::Deserialize;
 use std::path::{Path, PathBuf};

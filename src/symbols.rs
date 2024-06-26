@@ -366,7 +366,7 @@ impl ValType {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct FuncType {
     pub rt1: ResultType,
     pub rt2: ResultType,
@@ -396,7 +396,7 @@ impl VectorItem for FuncType {
 #[derive(Debug, Clone, Copy)]
 pub struct ResultType {
     pub start: usize, // TODO: priv
-    len: usize,
+    pub len: usize,
 }
 
 impl ResultType {
@@ -599,7 +599,7 @@ impl VectorItem for Code {
 }
 
 // TODO: flatten(?)
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct Locals {
     pub n: u32,
     pub t: ValType,

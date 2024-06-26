@@ -4,7 +4,7 @@ use crate::{
     symbols::{Code, Data, Elem, Export, FuncType, Global, Import, Locals, TableType, ValType},
     DecodeError,
 };
-use core::marker::PhantomData;
+use core::{marker::PhantomData, slice::SliceIndex};
 
 #[derive(Debug, Clone, Copy)]
 pub struct VectorSlice<T> {
@@ -114,7 +114,58 @@ pub trait Vectors {
     fn datas_append(&mut self, items: &[Data]) -> bool;
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
+pub struct FixedSizeMutVector<'a, T> {
+    items: &'a mut [T],
+    len: usize,
+}
+
+impl<'a, T: Copy> FixedSizeMutVector<'a, T> {
+    pub fn new(items: &'a mut [T]) -> Self {
+        Self { items, len: 0 }
+    }
+
+    pub fn len(&self) -> usize {
+        self.len
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len == 0
+    }
+
+    pub fn get<I: SliceIndex<[T]>>(&self, index: I) -> Option<&I::Output> {
+        self.items.get(index)
+    }
+
+    pub fn append(&mut self, items: &[T]) -> bool {
+        if self.len + items.len() <= self.items.len() {
+            self.items[self.len..self.len + items.len()].copy_from_slice(items);
+            self.len += items.len();
+            true
+        } else {
+            false
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct FixedSizeMutVectors<'a> {
+    pub bytes: FixedSizeMutVector<'a, u8>,
+    pub val_types: FixedSizeMutVector<'a, ValType>,
+    pub instrs: FixedSizeMutVector<'a, Instr>,
+    pub idxs: FixedSizeMutVector<'a, u32>,
+    pub locals: FixedSizeMutVector<'a, Locals>,
+    pub func_types: FixedSizeMutVector<'a, FuncType>,
+    pub imports: FixedSizeMutVector<'a, Import>,
+    pub table_types: FixedSizeMutVector<'a, TableType>,
+    pub globals: FixedSizeMutVector<'a, Global>,
+    pub exports: FixedSizeMutVector<'a, Export>,
+    pub elems: FixedSizeMutVector<'a, Elem>,
+    pub codes: FixedSizeMutVector<'a, Code>,
+    pub datas: FixedSizeMutVector<'a, Data>,
+}
+
+#[derive(Debug, Default, Clone)]
 pub struct Counters {
     pub bytes: usize,
     pub val_types: usize,

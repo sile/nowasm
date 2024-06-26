@@ -173,6 +173,7 @@ impl<V: Vectors> Module<V> {
     }
 
     pub fn validate(&self) -> Result<(), ValidateError> {
+        // TODO
         Ok(())
     }
 }

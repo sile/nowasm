@@ -15,7 +15,9 @@ pub mod sections;
 pub mod validation; // TODO: pub (crate)
 
 pub use decode_error::DecodeError;
+pub use instructions::Instr;
 pub use module::Module;
-pub use vectors::{Counters, VectorSlice, Vectors};
+pub use symbols::{FuncType, Locals};
+pub use vectors::{Counters, FixedSizeMutVector, FixedSizeMutVectors, VectorSlice, Vectors};
 
 pub const PAGE_SIZE: u32 = 65536;
