@@ -1,20 +1,36 @@
 use crate::{Module, Vectors};
 
-pub trait Stacks {}
-
-#[derive(Debug)]
-pub struct Store {}
-
-// #[derive(Debug)]
-// pub struct ModuleInstanceBuilder {}
-
-#[derive(Debug)]
-pub struct ModuleInstance<V> {
-    pub module: Module<V>,
+#[derive(Debug, Clone, Copy)]
+pub enum ExecutionError {
+    //
 }
 
-impl<V: Vectors> ModuleInstance<V> {
-    pub fn new(module: Module<V>) -> Self {
-        ModuleInstance { module }
+pub trait Stacks {
+    //
+}
+
+pub trait Store {
+    //
+}
+
+#[derive(Debug)]
+pub struct ModuleInstance<V, G, S> {
+    pub module: Module<V>,
+    pub store: G,
+    pub stacks: S,
+}
+
+impl<V, G, S> ModuleInstance<V, G, S>
+where
+    V: Vectors,
+    G: Store,
+    S: Stacks,
+{
+    pub fn new(module: Module<V>, store: G, stacks: S) -> Result<Self, ExecutionError> {
+        Ok(Self {
+            module,
+            store,
+            stacks,
+        })
     }
 }
