@@ -83,7 +83,7 @@ pub trait Vectors {
     fn instrs_append(&mut self, items: &[Instr]) -> bool;
 
     fn idxs(&self) -> &[u32];
-    fn idxs_append<T: Into<u32>>(&mut self, idxs: &[T]) -> bool;
+    fn idxs_append<T: Copy + Into<u32>>(&mut self, idxs: &[T]) -> bool;
 
     // TODO: name
     fn locals(&self) -> &[Locals];
@@ -146,6 +146,16 @@ impl<'a, T: Copy> FixedSizeMutVector<'a, T> {
             false
         }
     }
+
+    // TODO
+    pub fn append_iter(&mut self, items: impl Iterator<Item = T>) -> bool {
+        for item in items {
+            if !self.append(&[item]) {
+                return false;
+            }
+        }
+        true
+    }
 }
 
 #[derive(Debug)]
@@ -163,6 +173,112 @@ pub struct FixedSizeMutVectors<'a> {
     pub elems: FixedSizeMutVector<'a, Elem>,
     pub codes: FixedSizeMutVector<'a, Code>,
     pub datas: FixedSizeMutVector<'a, Data>,
+}
+
+impl<'a> Vectors for FixedSizeMutVectors<'a> {
+    fn bytes(&self) -> &[u8] {
+        &self.bytes.items[..self.bytes.len]
+    }
+
+    fn bytes_append(&mut self, bytes: &[u8]) -> bool {
+        self.bytes.append(bytes)
+    }
+
+    fn val_types(&self) -> &[ValType] {
+        &self.val_types.items[..self.val_types.len]
+    }
+
+    fn val_types_append(&mut self, items: &[ValType]) -> bool {
+        self.val_types.append(items)
+    }
+
+    fn instrs(&self) -> &[Instr] {
+        &self.instrs.items[..self.instrs.len]
+    }
+
+    fn instrs_append(&mut self, items: &[Instr]) -> bool {
+        self.instrs.append(items)
+    }
+
+    fn idxs(&self) -> &[u32] {
+        &self.idxs.items[..self.idxs.len]
+    }
+
+    fn idxs_append<T: Copy + Into<u32>>(&mut self, idxs: &[T]) -> bool {
+        self.idxs.append_iter(idxs.iter().map(|&idx| idx.into()))
+    }
+
+    fn locals(&self) -> &[Locals] {
+        &self.locals.items[..self.locals.len]
+    }
+
+    fn locals_append(&mut self, items: &[Locals]) -> bool {
+        self.locals.append(items)
+    }
+
+    fn func_types(&self) -> &[FuncType] {
+        &self.func_types.items[..self.func_types.len]
+    }
+
+    fn func_types_append(&mut self, items: &[FuncType]) -> bool {
+        self.func_types.append(items)
+    }
+
+    fn imports(&self) -> &[Import] {
+        &self.imports.items[..self.imports.len]
+    }
+
+    fn imports_append(&mut self, items: &[Import]) -> bool {
+        self.imports.append(items)
+    }
+
+    fn table_types(&self) -> &[TableType] {
+        &self.table_types.items[..self.table_types.len]
+    }
+
+    fn table_types_append(&mut self, items: &[TableType]) -> bool {
+        self.table_types.append(items)
+    }
+
+    fn globals(&self) -> &[Global] {
+        &self.globals.items[..self.globals.len]
+    }
+
+    fn globals_append(&mut self, items: &[Global]) -> bool {
+        self.globals.append(items)
+    }
+
+    fn exports(&self) -> &[Export] {
+        &self.exports.items[..self.exports.len]
+    }
+
+    fn exports_append(&mut self, items: &[Export]) -> bool {
+        self.exports.append(items)
+    }
+
+    fn elems(&self) -> &[Elem] {
+        &self.elems.items[..self.elems.len]
+    }
+
+    fn elems_append(&mut self, items: &[Elem]) -> bool {
+        self.elems.append(items)
+    }
+
+    fn codes(&self) -> &[Code] {
+        &self.codes.items[..self.codes.len]
+    }
+
+    fn codes_append(&mut self, items: &[Code]) -> bool {
+        self.codes.append(items)
+    }
+
+    fn datas(&self) -> &[Data] {
+        &self.datas.items[..self.datas.len]
+    }
+
+    fn datas_append(&mut self, items: &[Data]) -> bool {
+        self.datas.append(items)
+    }
 }
 
 #[derive(Debug, Default, Clone)]
@@ -243,7 +359,7 @@ impl Vectors for Counters {
         true
     }
 
-    fn idxs_append<T: Into<u32>>(&mut self, idxs: &[T]) -> bool {
+    fn idxs_append<T: Copy + Into<u32>>(&mut self, idxs: &[T]) -> bool {
         self.idxs += idxs.len();
         true
     }

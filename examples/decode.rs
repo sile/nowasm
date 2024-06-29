@@ -1,6 +1,7 @@
 use clap::Parser;
 use nowasm::{
-    symbols::ValType, Counters, FixedSizeMutVector, FixedSizeMutVectors, Instr, Locals, Module,
+    symbols::{Code, Data, Elem, Export, Global, Import, TableType, ValType},
+    Counters, FixedSizeMutVector, FixedSizeMutVectors, FuncType, Instr, Locals, Module,
 };
 use orfail::{Failure, OrFail};
 use std::path::PathBuf;
@@ -27,27 +28,36 @@ pub fn main() -> orfail::Result<()> {
         };
         counters.locals
     ];
+    let mut func_types = vec![FuncType::default(); counters.func_types];
+    let mut imports = vec![Import::default(); counters.imports];
+    let mut table_types = vec![TableType::default(); counters.table_types];
+    let mut globals = vec![Global::default(); counters.globals];
+    let mut exports = vec![Export::default(); counters.exports];
+    let mut elems = vec![Elem::default(); counters.elems];
+    let mut codes = vec![Code::default(); counters.codes];
+    let mut datas = vec![Data::default(); counters.datas];
+
     let vectors = FixedSizeMutVectors {
         bytes: FixedSizeMutVector::new(&mut bytes),
         val_types: FixedSizeMutVector::new(&mut val_types),
         instrs: FixedSizeMutVector::new(&mut instrs),
         idxs: FixedSizeMutVector::new(&mut idxs),
         locals: FixedSizeMutVector::new(&mut locals),
-        // pub func_types: FixedSizeMutVector<'a, FuncType>,
-        // pub imports: FixedSizeMutVector<'a, Import>,
-        // pub table_types: FixedSizeMutVector<'a, TableType>,
-        // pub globals: FixedSizeMutVector<'a, Global>,
-        // pub exports: FixedSizeMutVector<'a, Export>,
-        // pub elems: FixedSizeMutVector<'a, Elem>,
-        // pub codes: FixedSizeMutVector<'a, Code>,
-        // pub datas: FixedSizeMutVector<'a, Data>,
+        func_types: FixedSizeMutVector::new(&mut func_types),
+        imports: FixedSizeMutVector::new(&mut imports),
+        table_types: FixedSizeMutVector::new(&mut table_types),
+        globals: FixedSizeMutVector::new(&mut globals),
+        exports: FixedSizeMutVector::new(&mut exports),
+        elems: FixedSizeMutVector::new(&mut elems),
+        codes: FixedSizeMutVector::new(&mut codes),
+        datas: FixedSizeMutVector::new(&mut datas),
     };
 
-    let module = Module::decode(&wasm_bytes, vectors)
+    let _module = Module::decode(&wasm_bytes, vectors)
         .map_err(|e| Failure::new(format!("{e:?}")))
         .or_fail()?;
 
-    // TODO: Print information about the module
+    println!("Decoded successfully!");
 
     Ok(())
 }

@@ -33,7 +33,7 @@ impl Version {
 
 pub use crate::sections::SectionId;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy)]
 pub struct Name {
     pub start: usize, // TODO: priv
     len: usize,
@@ -58,7 +58,7 @@ impl Name {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Default, Clone, Copy)]
 pub struct Import {
     pub module: Name,
     pub name: Name,
@@ -89,7 +89,7 @@ impl VectorItem for Import {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub enum ImportDesc {
     Func(TypeIdx),
     Table(TableType),
@@ -109,7 +109,14 @@ impl ImportDesc {
     }
 }
 
-#[derive(Debug, Clone)]
+impl Default for ImportDesc {
+    fn default() -> Self {
+        Self::Func(Default::default())
+    }
+}
+
+// TODO: remove Default
+#[derive(Debug, Default, Clone, Copy)]
 pub struct Export {
     pub name: Name,
     pub desc: ExportDesc,
@@ -138,7 +145,7 @@ impl VectorItem for Export {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub enum ExportDesc {
     Func(TypeIdx),
     Table(TableIdx),
@@ -158,7 +165,13 @@ impl ExportDesc {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+impl Default for ExportDesc {
+    fn default() -> Self {
+        Self::Func(Default::default())
+    }
+}
+
+#[derive(Debug, Default, Clone, Copy)]
 pub struct TypeIdx(u32);
 
 impl TypeIdx {
@@ -188,7 +201,7 @@ impl VectorItem for TypeIdx {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy)]
 pub struct FuncIdx(u32);
 
 impl FuncIdx {
@@ -197,7 +210,7 @@ impl FuncIdx {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy)]
 pub struct TableIdx;
 
 impl TableIdx {
@@ -210,7 +223,7 @@ impl TableIdx {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy)]
 pub struct MemIdx;
 
 impl MemIdx {
@@ -262,7 +275,7 @@ impl LabelIdx {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Default, Clone, Copy)]
 pub struct TableType {
     pub limits: Limits,
 }
@@ -293,7 +306,7 @@ impl VectorItem for TableType {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Default, Clone, Copy)]
 pub struct Limits {
     pub min: u32,
     pub max: Option<u32>,
@@ -316,7 +329,7 @@ impl Limits {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct MemType {
     pub limits: Limits,
 }
@@ -329,7 +342,7 @@ impl MemType {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub enum GlobalType {
     Const(ValType),
     Var(ValType),
@@ -343,6 +356,12 @@ impl GlobalType {
             0x01 => Ok(Self::Var(t)),
             value => Err(DecodeError::InvalidMutabilityFlag { value }),
         }
+    }
+}
+
+impl Default for GlobalType {
+    fn default() -> Self {
+        Self::Const(ValType::I32)
     }
 }
 
@@ -366,7 +385,7 @@ impl ValType {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy)]
 pub struct FuncType {
     pub rt1: ResultType,
     pub rt2: ResultType,
@@ -393,7 +412,7 @@ impl VectorItem for FuncType {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy)]
 pub struct ResultType {
     pub start: usize, // TODO: priv
     pub len: usize,
@@ -419,7 +438,7 @@ impl ResultType {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Default, Clone, Copy)]
 pub struct Global {
     pub ty: GlobalType,
     pub init: Expr,
@@ -448,7 +467,7 @@ impl VectorItem for Global {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy)]
 pub struct Expr {
     pub start: usize, // TODO
     len: usize,
@@ -490,7 +509,7 @@ impl MemArg {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Default, Clone, Copy)]
 pub struct Elem {
     pub table: TableIdx,
     pub offset: Expr,
@@ -525,7 +544,7 @@ impl VectorItem for Elem {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy)]
 pub struct FuncIdxVec {
     pub start: usize,
     len: usize,
@@ -551,7 +570,7 @@ impl FuncIdxVec {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Default, Clone, Copy)]
 pub struct Code {
     // TODO: func: Func
     pub locals_start: usize,
@@ -645,7 +664,7 @@ impl S33 {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy)]
 pub struct Data {
     pub data: MemIdx,
     pub offset: Expr,

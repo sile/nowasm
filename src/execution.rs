@@ -13,24 +13,40 @@ pub trait Store {
     //
 }
 
+pub trait ImportObject {}
+
 #[derive(Debug)]
-pub struct ModuleInstance<V, G, S> {
+pub struct ModuleInstance<V, G, S, I> {
     pub module: Module<V>,
     pub store: G,
     pub stacks: S,
+    pub import_object: I,
 }
 
-impl<V, G, S> ModuleInstance<V, G, S>
+impl<V, G, S, I> ModuleInstance<V, G, S, I>
 where
     V: Vectors,
     G: Store,
     S: Stacks,
+    I: ImportObject,
 {
-    pub fn new(module: Module<V>, store: G, stacks: S) -> Result<Self, ExecutionError> {
+    pub fn new(
+        module: Module<V>,
+        store: G,
+        stacks: S,
+        import_object: I,
+    ) -> Result<Self, ExecutionError> {
+        if module.start_section().start.is_some() {
+            todo!()
+        }
+
+        // TODO: check import_object
+
         Ok(Self {
             module,
             store,
             stacks,
+            import_object,
         })
     }
 }
