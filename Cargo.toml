@@ -8,6 +8,11 @@ categories = ["no-std"]
 default = ["sign_extension"]
 sign_extension = []
 
+[[example]]
+name = "add"
+path = "examples/wasm/add.rs"
+crate-type = ["lib", "cdylib"]
+
 [dependencies]
 
 [dev-dependencies]
