@@ -1,5 +1,6 @@
 use clap::Parser;
 use nowasm::{
+    execution::{ImportObject, ModuleInstance, Stacks, Store, Value},
     symbols::{Code, Data, Elem, Export, Global, Import, TableType, ValType},
     FuncType, Instr, Locals, Module, Vectors,
 };
@@ -9,20 +10,50 @@ use std::path::PathBuf;
 #[derive(Debug, Parser)]
 struct Args {
     wasm_path: PathBuf,
-    function_name: String,
-    args: Vec<i32>,
+    func_name: String,
+    func_args: Vec<i32>,
 }
 
 pub fn main() -> orfail::Result<()> {
     let args = Args::parse();
     let wasm_bytes = std::fs::read(&args.wasm_path).or_fail()?;
 
-    let _module = Module::decode(&wasm_bytes, StdVectors::default())
+    let module = Module::decode(&wasm_bytes, StdVectors::default())
         .map_err(|e| Failure::new(format!("{e:?}")))
         .or_fail()?;
 
+    let instance = ModuleInstance::new(
+        module,
+        ExampleStore::default(),
+        ExampleStacks::default(),
+        ExampleImportObject::default(),
+    )
+    .map_err(|e| Failure::new(format!("{e:?}")))
+    .or_fail()?;
+
+    let func_args: Vec<_> = args.func_args.iter().copied().map(Value::I32).collect();
+    let result = instance
+        .invoke(&args.func_name, &func_args)
+        .map_err(|e| Failure::new(format!("{e:?}")))
+        .or_fail()?;
+    println!("=> {:?}", result);
+
     Ok(())
 }
+
+#[derive(Debug, Default)]
+pub struct ExampleStore {}
+
+impl Store for ExampleStore {}
+
+#[derive(Debug, Default)]
+pub struct ExampleStacks {}
+impl Stacks for ExampleStacks {}
+
+#[derive(Debug, Default)]
+pub struct ExampleImportObject {}
+
+impl ImportObject for ExampleImportObject {}
 
 #[derive(Debug, Default)]
 pub struct StdVectors {

@@ -87,6 +87,10 @@ impl VectorItem for Import {
         }
         Ok(vectors.imports().len())
     }
+
+    fn get(index: usize, vectors: &impl Vectors) -> Option<Self> {
+        vectors.imports().get(index).copied()
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -143,6 +147,10 @@ impl VectorItem for Export {
         }
         Ok(vectors.exports().len())
     }
+
+    fn get(index: usize, vectors: &impl Vectors) -> Option<Self> {
+        vectors.exports().get(index).copied()
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -198,6 +206,10 @@ impl VectorItem for TypeIdx {
             });
         }
         Ok(vectors.idxs().len())
+    }
+
+    fn get(index: usize, vectors: &impl Vectors) -> Option<Self> {
+        vectors.idxs().get(index).copied().map(Self)
     }
 }
 
@@ -303,6 +315,10 @@ impl VectorItem for TableType {
             });
         }
         Ok(vectors.table_types().len())
+    }
+
+    fn get(index: usize, vectors: &impl Vectors) -> Option<Self> {
+        vectors.table_types().get(index).copied()
     }
 }
 
@@ -410,6 +426,10 @@ impl VectorItem for FuncType {
         }
         Ok(vectors.func_types().len())
     }
+
+    fn get(index: usize, vectors: &impl Vectors) -> Option<Self> {
+        vectors.func_types().get(index).copied()
+    }
 }
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -464,6 +484,10 @@ impl VectorItem for Global {
             });
         }
         Ok(vectors.globals().len())
+    }
+
+    fn get(index: usize, vectors: &impl Vectors) -> Option<Self> {
+        vectors.globals().get(index).copied()
     }
 }
 
@@ -542,6 +566,10 @@ impl VectorItem for Elem {
         }
         Ok(vectors.elems().len())
     }
+
+    fn get(index: usize, vectors: &impl Vectors) -> Option<Self> {
+        vectors.elems().get(index).copied()
+    }
 }
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -614,6 +642,10 @@ impl VectorItem for Code {
             });
         }
         Ok(vectors.codes().len())
+    }
+
+    fn get(index: usize, vectors: &impl Vectors) -> Option<Self> {
+        vectors.codes().get(index).copied()
     }
 }
 
@@ -701,5 +733,9 @@ impl VectorItem for Data {
             });
         }
         Ok(vectors.datas().len())
+    }
+
+    fn get(index: usize, vectors: &impl Vectors) -> Option<Self> {
+        vectors.datas().get(index).copied()
     }
 }

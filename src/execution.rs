@@ -2,7 +2,7 @@ use crate::{Module, Vectors};
 
 #[derive(Debug, Clone, Copy)]
 pub enum ExecutionError {
-    //
+    NotExportedFunction,
 }
 
 pub trait Stacks {
@@ -49,4 +49,21 @@ where
             import_object,
         })
     }
+
+    pub fn invoke(
+        &self,
+        function_name: &str,
+        args: &[Value],
+    ) -> Result<Option<Value>, ExecutionError> {
+        self.module.export_section().exports;
+        todo!()
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum Value {
+    I32(i32),
+    I64(i64),
+    F32(f32),
+    F64(f64),
 }

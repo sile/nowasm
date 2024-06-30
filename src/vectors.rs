@@ -6,7 +6,7 @@ use crate::{
 };
 use core::{marker::PhantomData, slice::SliceIndex};
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug)]
 pub struct VectorSlice<T> {
     pub offset: usize, // TODO: priv
     len: usize,
@@ -33,6 +33,18 @@ impl<T> Default for VectorSlice<T> {
     }
 }
 
+impl<T> Clone for VectorSlice<T> {
+    fn clone(&self) -> Self {
+        Self {
+            offset: self.offset,
+            len: self.len,
+            _item: PhantomData,
+        }
+    }
+}
+
+impl<T> Copy for VectorSlice<T> {}
+
 // TODO: move
 impl<T: VectorItem> VectorSlice<T> {
     pub fn decode<V: Vectors>(reader: &mut Reader, vectors: &mut V) -> Result<Self, DecodeError> {
@@ -48,11 +60,60 @@ impl<T: VectorItem> VectorSlice<T> {
             _item: PhantomData,
         })
     }
+
+    pub fn get(self, index: usize, vectors: &impl Vectors) -> Option<T> {
+        if index >= self.len {
+            return None;
+        }
+        T::get(self.offset + index, vectors)
+    }
+
+    pub fn iter<'a, V: Vectors>(self, vectors: &'a V) -> Iter<'a, T, V> {
+        Iter::new(self, vectors)
+    }
+}
+
+#[derive(Debug)]
+pub struct Iter<'a, T, V> {
+    vectors: &'a V,
+    slice: VectorSlice<T>,
+    i: usize,
+}
+
+impl<'a, T, V> Iter<'a, T, V>
+where
+    T: VectorItem,
+    V: Vectors,
+{
+    fn new(slice: VectorSlice<T>, vectors: &'a V) -> Self {
+        Self {
+            slice,
+            vectors,
+            i: 0,
+        }
+    }
+}
+
+impl<'a, T, V> Iterator for Iter<'a, T, V>
+where
+    T: VectorItem,
+    V: Vectors,
+{
+    type Item = T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let Some(item) = self.slice.get(self.i, self.vectors) else {
+            return None;
+        };
+        self.i += 1;
+        Some(item)
+    }
 }
 
 pub trait VectorItem: Sized {
     fn append<V: Vectors>(items: &[Self], vectors: &mut V) -> Result<usize, DecodeError>;
     fn decode<V: Vectors>(reader: &mut Reader, vectors: &mut V) -> Result<Self, DecodeError>;
+    fn get(index: usize, vectors: &impl Vectors) -> Option<Self>;
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
