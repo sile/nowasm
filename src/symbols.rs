@@ -209,7 +209,13 @@ impl TypeIdx {
         Some(ty)
     }
 
-    // TODO: get_code()
+    pub fn get_code(self, module: &Module<impl Vectors>) -> Option<Code> {
+        let code = module
+            .code_section()
+            .codes
+            .get(self.0 as usize, module.vectors())?;
+        Some(code)
+    }
 }
 
 impl From<TypeIdx> for u32 {

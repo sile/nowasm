@@ -63,10 +63,16 @@ where
             if Some(function_name) != self.module.get_name(export.name) {
                 continue;
             }
+
             let fun_type = func_idx
                 .get_type(&self.module)
                 .ok_or(ExecutionError::InvalidFuncIdx)?;
             dbg!(fun_type);
+
+            let code = func_idx
+                .get_code(&self.module)
+                .ok_or(ExecutionError::InvalidFuncIdx)?;
+            dbg!(code);
         }
         Err(ExecutionError::NotExportedFunction)
     }
