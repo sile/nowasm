@@ -4,7 +4,7 @@ use crate::{
         CodeSection, DataSection, ElementSection, ExportSection, FunctionSection, GlobalSection,
         ImportSection, MemorySection, SectionId, StartSection, TableSection, TypeSection,
     },
-    symbols::{Magic, Version},
+    symbols::{Export, Magic, Name, Version},
     validation::ValidateError,
     DecodeError, Vectors,
 };
@@ -72,6 +72,14 @@ impl<V: Vectors> Module<V> {
 
     pub fn data_section(&self) -> &DataSection {
         &self.data_section
+    }
+
+    pub fn exports(&self) -> impl '_ + Iterator<Item = Export> {
+        self.export_section.exports.iter(&self.vectors)
+    }
+
+    pub fn get_name(&self, name: Name) -> Option<&str> {
+        name.as_str(&self.vectors)
     }
 
     pub fn decode(wasm_bytes: &[u8], vectors: V) -> Result<Self, DecodeError> {

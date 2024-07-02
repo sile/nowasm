@@ -1,8 +1,9 @@
-use crate::{Module, Vectors};
+use crate::{symbols::ExportDesc, Module, Vectors};
 
 #[derive(Debug, Clone, Copy)]
 pub enum ExecutionError {
     NotExportedFunction,
+    InvalidFuncIdx,
 }
 
 pub trait Stacks {
@@ -55,8 +56,19 @@ where
         function_name: &str,
         args: &[Value],
     ) -> Result<Option<Value>, ExecutionError> {
-        self.module.export_section().exports;
-        todo!()
+        for export in self.module.exports() {
+            let ExportDesc::Func(func_idx) = export.desc else {
+                continue;
+            };
+            if Some(function_name) != self.module.get_name(export.name) {
+                continue;
+            }
+            let fun_type = func_idx
+                .get_type(&self.module)
+                .ok_or(ExecutionError::InvalidFuncIdx)?;
+            dbg!(fun_type);
+        }
+        Err(ExecutionError::NotExportedFunction)
     }
 }
 

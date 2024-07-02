@@ -1,7 +1,7 @@
 use crate::instructions::Instr;
 use crate::reader::Reader;
 use crate::vectors::{VectorItem, VectorKind, Vectors};
-use crate::DecodeError;
+use crate::{DecodeError, Module};
 
 #[derive(Debug)]
 pub struct Magic;
@@ -35,7 +35,7 @@ pub use crate::sections::SectionId;
 
 #[derive(Debug, Default, Clone, Copy)]
 pub struct Name {
-    pub start: usize, // TODO: priv
+    start: usize,
     len: usize,
 }
 
@@ -51,6 +51,16 @@ impl Name {
             });
         }
         Ok(Self { start, len })
+    }
+
+    pub fn as_str(self, vectors: &impl Vectors) -> Option<&str> {
+        let bytes = vectors.bytes();
+        let start = self.start;
+        let end = start + self.len;
+        if bytes.len() < end {
+            return None;
+        }
+        core::str::from_utf8(&bytes[start..end]).ok()
     }
 
     pub fn len(self) -> usize {
@@ -186,6 +196,20 @@ impl TypeIdx {
     pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         reader.read_u32().map(Self)
     }
+
+    pub fn get_type(self, module: &Module<impl Vectors>) -> Option<FuncType> {
+        let type_idx = module
+            .function_section()
+            .idxs
+            .get(self.0 as usize, module.vectors())?;
+        let ty = module
+            .type_section()
+            .types
+            .get(type_idx.0 as usize, module.vectors())?;
+        Some(ty)
+    }
+
+    // TODO: get_code()
 }
 
 impl From<TypeIdx> for u32 {
