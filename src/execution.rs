@@ -72,12 +72,12 @@ where
                 .get_type(&self.module)
                 .ok_or(ExecutionError::InvalidFuncIdx)?;
             fun_type.validate_args(args, &self.module)?;
-            dbg!(fun_type);
 
             let code = func_idx
                 .get_code(&self.module)
                 .ok_or(ExecutionError::InvalidFuncIdx)?;
             dbg!(code);
+            code.execute(args, &self.module)?;
         }
         Err(ExecutionError::NotExportedFunction)
     }

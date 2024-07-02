@@ -576,6 +576,12 @@ impl Expr {
     pub fn len(self) -> usize {
         self.len
     }
+
+    pub fn iter(self, module: &Module<impl Vectors>) -> impl '_ + Iterator<Item = Instr> {
+        module.vectors().instrs()[self.start..self.start + self.len]
+            .iter()
+            .copied()
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -660,7 +666,7 @@ impl FuncIdxVec {
 #[derive(Debug, Default, Clone, Copy)]
 pub struct Code {
     // TODO: func: Func
-    pub locals_start: usize,
+    pub locals_start: usize, // TODO: use VectorSlice
     pub locals_len: usize,
     pub body: Expr,
 }
@@ -686,6 +692,17 @@ impl Code {
             locals_len,
             body,
         })
+    }
+
+    pub fn execute(
+        self,
+        args: &[Value],
+        module: &Module<impl Vectors>,
+    ) -> Result<(), ExecutionError> {
+        for instr in self.body.iter(module) {
+            dbg!(instr);
+        }
+        Ok(())
     }
 }
 
