@@ -1,9 +1,13 @@
-use crate::{symbols::ExportDesc, Module, Vectors};
+use crate::{
+    symbols::{ExportDesc, ValType},
+    Module, Vectors,
+};
 
 #[derive(Debug, Clone, Copy)]
 pub enum ExecutionError {
     NotExportedFunction,
     InvalidFuncIdx,
+    InvalidFuncArgs,
 }
 
 pub trait Stacks {
@@ -67,6 +71,7 @@ where
             let fun_type = func_idx
                 .get_type(&self.module)
                 .ok_or(ExecutionError::InvalidFuncIdx)?;
+            fun_type.validate_args(args, &self.module)?;
             dbg!(fun_type);
 
             let code = func_idx
@@ -84,4 +89,15 @@ pub enum Value {
     I64(i64),
     F32(f32),
     F64(f64),
+}
+
+impl Value {
+    pub fn ty(self) -> ValType {
+        match self {
+            Value::I32(_) => ValType::I32,
+            Value::I64(_) => ValType::I64,
+            Value::F32(_) => ValType::F32,
+            Value::F64(_) => ValType::F64,
+        }
+    }
 }

@@ -1,3 +1,4 @@
+use crate::execution::{ExecutionError, Value};
 use crate::instructions::Instr;
 use crate::reader::Reader;
 use crate::vectors::{VectorItem, VectorKind, Vectors};
@@ -411,7 +412,7 @@ impl Default for GlobalType {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ValType {
     I32,
     I64,
@@ -435,6 +436,26 @@ impl ValType {
 pub struct FuncType {
     pub rt1: ResultType,
     pub rt2: ResultType,
+}
+
+impl FuncType {
+    pub fn validate_args(
+        self,
+        args: &[Value],
+        module: &Module<impl Vectors>,
+    ) -> Result<(), ExecutionError> {
+        if args.len() != self.rt1.len() {
+            return Err(ExecutionError::InvalidFuncArgs);
+        }
+
+        for (ty, val) in self.rt1.iter(module).zip(args.iter()) {
+            if ty != val.ty() {
+                return Err(ExecutionError::InvalidFuncArgs);
+            }
+        }
+
+        Ok(())
+    }
 }
 
 impl VectorItem for FuncType {
@@ -464,6 +485,7 @@ impl VectorItem for FuncType {
 
 #[derive(Debug, Default, Clone, Copy)]
 pub struct ResultType {
+    // TODO: Use VectorSlice
     pub start: usize, // TODO: priv
     pub len: usize,
 }
@@ -485,6 +507,13 @@ impl ResultType {
 
     pub fn len(self) -> usize {
         self.len
+    }
+
+    pub fn iter(self, module: &Module<impl Vectors>) -> impl '_ + Iterator<Item = ValType> {
+        (self.start..self.start + self.len).map(|i| {
+            // TODO: error handling
+            module.vectors().val_types()[i]
+        })
     }
 }
 
