@@ -77,7 +77,12 @@ where
                 .get_code(&self.module)
                 .ok_or(ExecutionError::InvalidFuncIdx)?;
             dbg!(code);
-            code.execute(args, &self.module)?;
+            for instr in code.instrs(&self.module) {
+                dbg!(instr);
+            }
+            for local in code.locals(&self.module) {
+                dbg!(local);
+            }
         }
         Err(ExecutionError::NotExportedFunction)
     }

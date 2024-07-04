@@ -694,15 +694,15 @@ impl Code {
         })
     }
 
-    pub fn execute(
-        self,
-        args: &[Value],
-        module: &Module<impl Vectors>,
-    ) -> Result<(), ExecutionError> {
-        for instr in self.body.iter(module) {
-            dbg!(instr);
-        }
-        Ok(())
+    pub fn locals(self, module: &Module<impl Vectors>) -> impl '_ + Iterator<Item = ValType> {
+        module.vectors().locals()[self.locals_start..self.locals_start + self.locals_len]
+            .iter()
+            .copied()
+            .flat_map(|locals| std::iter::repeat(locals.t).take(locals.n as usize))
+    }
+
+    pub fn instrs(self, module: &Module<impl Vectors>) -> impl '_ + Iterator<Item = Instr> {
+        self.body.iter(module)
     }
 }
 
