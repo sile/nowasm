@@ -215,15 +215,7 @@ where
                     }
                 }
                 Instr::Return => {
-                    if return_values == 0 {
-                        self.stacks.pop_frame();
-                    } else {
-                        assert_eq!(return_values, 1);
-                        let v = self.stacks.pop_value();
-                        self.stacks.pop_frame();
-                        self.stacks.push_value(v);
-                    }
-                    return Ok(());
+                    break;
                 }
                 _ => {
                     dbg!(instr);
@@ -232,7 +224,15 @@ where
             }
         }
 
-        todo!("error")
+        if return_values == 0 {
+            self.stacks.pop_frame();
+        } else {
+            assert_eq!(return_values, 1);
+            let v = self.stacks.pop_value();
+            self.stacks.pop_frame();
+            self.stacks.push_value(v);
+        }
+        Ok(())
     }
 }
 
