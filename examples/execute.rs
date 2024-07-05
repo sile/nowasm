@@ -73,11 +73,13 @@ impl Stacks for ExampleStacks {
     fn push_frame(&mut self, locals: usize) {
         self.frames.push(ExampleFrame {
             locals: vec![Value::I32(0); locals],
+            values_start: self.values.len(),
         });
     }
 
     fn pop_frame(&mut self) {
-        self.frames.pop();
+        let frame = self.frames.pop().expect("unreachable");
+        self.values.truncate(frame.values_start);
     }
 
     fn current_frame(&mut self) -> Frame {
@@ -101,6 +103,7 @@ impl Stacks for ExampleStacks {
 #[derive(Debug, Clone)]
 struct ExampleFrame {
     locals: Vec<Value>,
+    values_start: usize,
 }
 
 #[derive(Debug, Default)]

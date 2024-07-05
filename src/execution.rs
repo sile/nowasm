@@ -108,13 +108,28 @@ where
 
         let locals = args.len() + code.locals(&self.module).count();
         self.stacks.push_frame(locals);
-        let result = self.call(code, args);
-        self.stacks.pop_frame();
-        // TODO: Clear all stacks
+        let result = match self.call(code, args, fun_type.rt2.len) {
+            Err(e) => Err(e),
+            Ok(()) => {
+                // TODO: validate result type
+                if fun_type.rt2.len == 0 {
+                    Ok(None)
+                } else {
+                    Ok(Some(self.stacks.pop_value()))
+                }
+            }
+        };
+
+        // TODO: Clear all stacks when error
         result
     }
 
-    fn call(&mut self, code: Code, args: &[Value]) -> Result<Option<Value>, ExecutionError> {
+    fn call(
+        &mut self,
+        code: Code,
+        args: &[Value],
+        return_values: usize,
+    ) -> Result<(), ExecutionError> {
         let frame = self.stacks.current_frame();
         for (i, arg) in args
             .iter()
@@ -192,6 +207,24 @@ where
                     }
                     v.copy_to(&mut mem[start..end]);
                 }
+                Instr::BrIf(label) => {
+                    let c = self.stacks.pop_value_i32();
+                    if c != 0 {
+                        dbg!(label);
+                        todo!();
+                    }
+                }
+                Instr::Return => {
+                    if return_values == 0 {
+                        self.stacks.pop_frame();
+                    } else {
+                        assert_eq!(return_values, 1);
+                        let v = self.stacks.pop_value();
+                        self.stacks.pop_frame();
+                        self.stacks.push_value(v);
+                    }
+                    return Ok(());
+                }
                 _ => {
                     dbg!(instr);
                     todo!();
@@ -199,7 +232,7 @@ where
             }
         }
 
-        todo!()
+        todo!("error")
     }
 }
 
