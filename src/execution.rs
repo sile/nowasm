@@ -1,5 +1,5 @@
 use crate::{
-    symbols::{Code, ExportDesc, ValType},
+    symbols::{Code, ExportDesc, GlobalIdx, ValType},
     Instr, Module, Vectors,
 };
 
@@ -8,6 +8,7 @@ pub enum ExecutionError {
     NotExportedFunction,
     InvalidFuncIdx,
     InvalidFuncArgs,
+    InvalidGlobalInitializer,
 }
 
 pub trait Stacks {
@@ -18,7 +19,9 @@ pub trait Stacks {
 }
 
 pub trait Store {
-    //
+    fn push_global(&mut self, value: Value);
+    fn set_global(&mut self, i: GlobalIdx, value: Value);
+    fn get_global(&self, i: GlobalIdx) -> Value;
 }
 
 pub trait ImportObject {}
@@ -40,7 +43,7 @@ where
 {
     pub fn new(
         module: Module<V>,
-        store: G,
+        mut store: G,
         stacks: S,
         import_object: I,
     ) -> Result<Self, ExecutionError> {
@@ -49,6 +52,10 @@ where
         }
 
         // TODO: check import_object
+
+        for global in module.global_section().globals.iter(module.vectors()) {
+            store.push_global(global.init(&module)?);
+        }
 
         Ok(Self {
             module,

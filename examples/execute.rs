@@ -1,7 +1,7 @@
 use clap::Parser;
 use nowasm::{
     execution::{Frame, ImportObject, ModuleInstance, Stacks, Store, Value},
-    symbols::{Code, Data, Elem, Export, Global, Import, TableType, ValType},
+    symbols::{Code, Data, Elem, Export, Global, GlobalIdx, Import, TableType, ValType},
     FuncType, Instr, Locals, Module, Vectors,
 };
 use orfail::{Failure, OrFail};
@@ -42,9 +42,23 @@ pub fn main() -> orfail::Result<()> {
 }
 
 #[derive(Debug, Default)]
-pub struct ExampleStore {}
+pub struct ExampleStore {
+    globals: Vec<Value>,
+}
 
-impl Store for ExampleStore {}
+impl Store for ExampleStore {
+    fn push_global(&mut self, value: Value) {
+        self.globals.push(value);
+    }
+
+    fn set_global(&mut self, i: GlobalIdx, value: Value) {
+        self.globals[i.get() as usize] = value;
+    }
+
+    fn get_global(&self, i: GlobalIdx) -> Value {
+        self.globals[i.get() as usize]
+    }
+}
 
 #[derive(Debug, Default)]
 pub struct ExampleStacks {

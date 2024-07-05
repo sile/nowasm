@@ -404,6 +404,13 @@ impl GlobalType {
             value => Err(DecodeError::InvalidMutabilityFlag { value }),
         }
     }
+
+    pub fn val_type(self) -> ValType {
+        match self {
+            Self::Const(t) => t,
+            Self::Var(t) => t,
+        }
+    }
 }
 
 impl Default for GlobalType {
@@ -528,6 +535,22 @@ impl Global {
         let ty = GlobalType::decode(reader)?;
         let init = Expr::decode(reader, vectors)?;
         Ok(Self { ty, init })
+    }
+
+    pub fn init(&self, module: &Module<impl Vectors>) -> Result<Value, ExecutionError> {
+        if self.init.len != 1 {
+            return Err(ExecutionError::InvalidGlobalInitializer);
+        }
+        let Some(instr) = self.init.iter(module).next() else {
+            return Err(ExecutionError::InvalidGlobalInitializer);
+        };
+        match (self.ty.val_type(), instr) {
+            (ValType::I32, Instr::I32Const(x)) => Ok(Value::I32(x)),
+            (ValType::I64, Instr::I64Const(x)) => Ok(Value::I64(x)),
+            (ValType::F32, Instr::F32Const(x)) => Ok(Value::F32(x)),
+            (ValType::F64, Instr::F64Const(x)) => Ok(Value::F64(x)),
+            _ => Err(ExecutionError::InvalidGlobalInitializer),
+        }
     }
 }
 
