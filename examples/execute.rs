@@ -1,6 +1,6 @@
 use clap::Parser;
 use nowasm::{
-    execution::{ImportObject, ModuleInstance, Stacks, Store, Value},
+    execution::{Frame, ImportObject, ModuleInstance, Stacks, Store, Value},
     symbols::{Code, Data, Elem, Export, Global, Import, TableType, ValType},
     FuncType, Instr, Locals, Module, Vectors,
 };
@@ -22,7 +22,7 @@ pub fn main() -> orfail::Result<()> {
         .map_err(|e| Failure::new(format!("{e:?}")))
         .or_fail()?;
 
-    let instance = ModuleInstance::new(
+    let mut instance = ModuleInstance::new(
         module,
         ExampleStore::default(),
         ExampleStacks::default(),
@@ -47,8 +47,35 @@ pub struct ExampleStore {}
 impl Store for ExampleStore {}
 
 #[derive(Debug, Default)]
-pub struct ExampleStacks {}
-impl Stacks for ExampleStacks {}
+pub struct ExampleStacks {
+    frames: Vec<ExampleFrame>,
+}
+
+impl Stacks for ExampleStacks {
+    fn push_frame(&mut self, locals: usize) {
+        self.frames.push(ExampleFrame {
+            locals: vec![Value::I32(0); locals],
+        });
+    }
+
+    fn pop_frame(&mut self) {
+        self.frames.pop();
+    }
+
+    fn current_frame(&mut self) -> Frame {
+        let Some(last) = self.frames.last_mut() else {
+            return Frame { locals: &mut [] };
+        };
+        Frame {
+            locals: &mut last.locals,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+struct ExampleFrame {
+    locals: Vec<Value>,
+}
 
 #[derive(Debug, Default)]
 pub struct ExampleImportObject {}
