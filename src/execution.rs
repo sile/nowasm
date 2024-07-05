@@ -20,6 +20,14 @@ pub trait Stacks {
 
     fn push_value(&mut self, value: Value);
     fn pop_value(&mut self) -> Value;
+
+    fn pop_value_i32(&mut self) -> i32 {
+        let Value::I32(v) = self.pop_value() else {
+            // TODO: Implement validation phases
+            unreachable!();
+        };
+        v
+    }
 }
 
 pub trait Store {
@@ -136,6 +144,11 @@ where
                 }
                 Instr::F64Const(v) => {
                     self.stacks.push_value(Value::F64(v));
+                }
+                Instr::I32Sub => {
+                    let v0 = self.stacks.pop_value_i32();
+                    let v1 = self.stacks.pop_value_i32();
+                    self.stacks.push_value(Value::I32(v0 - v1));
                 }
                 _ => {
                     dbg!(instr);
