@@ -36,7 +36,9 @@ pub trait Store {
     fn get_global(&self, i: GlobalIdx) -> Value;
 }
 
-pub trait ImportObject {}
+pub trait ImportObject {
+    fn mem(&mut self) -> &mut [u8];
+}
 
 #[derive(Debug)]
 pub struct ModuleInstance<V, G, S, I> {
@@ -152,7 +154,20 @@ where
                 Instr::I32Sub => {
                     let v0 = self.stacks.pop_value_i32();
                     let v1 = self.stacks.pop_value_i32();
-                    self.stacks.push_value(Value::I32(v0 - v1));
+                    self.stacks.push_value(Value::I32(v1 - v0));
+                }
+                Instr::I32Store(arg) => {
+                    let v = self.stacks.pop_value();
+                    let i = self.stacks.pop_value_i32();
+                    let start = (i + arg.offset as i32) as usize;
+                    let end = start + v.byte_size();
+                    let mem = self.import_object.mem();
+                    if mem.len() < end {
+                        dbg!(v);
+                        dbg!(i);
+                        todo!("trap");
+                    }
+                    v.copy_to(&mut mem[start..end]);
                 }
                 _ => {
                     dbg!(instr);
@@ -194,6 +209,24 @@ impl Value {
             ValType::I64 => Self::I64(0),
             ValType::F32 => Self::F32(0.0),
             ValType::F64 => Self::F64(0.0),
+        }
+    }
+
+    pub fn byte_size(self) -> usize {
+        match self {
+            Value::I32(_) => 4,
+            Value::I64(_) => 8,
+            Value::F32(_) => 4,
+            Value::F64(_) => 8,
+        }
+    }
+
+    pub fn copy_to(self, mem: &mut [u8]) {
+        match self {
+            Value::I32(v) => mem.copy_from_slice(&v.to_le_bytes()),
+            Value::I64(v) => mem.copy_from_slice(&v.to_le_bytes()),
+            Value::F32(v) => mem.copy_from_slice(&v.to_le_bytes()),
+            Value::F64(v) => mem.copy_from_slice(&v.to_le_bytes()),
         }
     }
 }

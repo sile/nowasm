@@ -22,11 +22,14 @@ pub fn main() -> orfail::Result<()> {
         .map_err(|e| Failure::new(format!("{e:?}")))
         .or_fail()?;
 
+    let mut import_object = ExampleImportObject::default();
+    import_object.mem.resize(1024 * 1024, 0);
+
     let mut instance = ModuleInstance::new(
         module,
         ExampleStore::default(),
         ExampleStacks::default(),
-        ExampleImportObject::default(),
+        import_object,
     )
     .map_err(|e| Failure::new(format!("{e:?}")))
     .or_fail()?;
@@ -101,9 +104,15 @@ struct ExampleFrame {
 }
 
 #[derive(Debug, Default)]
-pub struct ExampleImportObject {}
+pub struct ExampleImportObject {
+    mem: Vec<u8>,
+}
 
-impl ImportObject for ExampleImportObject {}
+impl ImportObject for ExampleImportObject {
+    fn mem(&mut self) -> &mut [u8] {
+        &mut self.mem
+    }
+}
 
 #[derive(Debug, Default)]
 pub struct StdVectors {
