@@ -1,6 +1,6 @@
 use crate::{
     symbols::{Code, ExportDesc, ValType},
-    Module, Vectors,
+    Instr, Module, Vectors,
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -101,7 +101,15 @@ where
         }
 
         for instr in code.instrs(&self.module) {
-            dbg!(instr);
+            match instr {
+                Instr::GlobalGet(idx) => {
+                    todo!("{idx:?}");
+                }
+                _ => {
+                    dbg!(instr);
+                    todo!();
+                }
+            }
         }
 
         todo!()
