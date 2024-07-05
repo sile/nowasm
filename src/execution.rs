@@ -1,5 +1,5 @@
 use crate::{
-    symbols::{ExportDesc, ValType},
+    symbols::{Code, ExportDesc, ValType},
     Module, Vectors,
 };
 
@@ -11,7 +11,10 @@ pub enum ExecutionError {
 }
 
 pub trait Stacks {
-    //
+    // TODO: Return Result
+    fn push_frame(&mut self, locals: usize);
+    fn pop_frame(&mut self);
+    fn current_frame(&mut self) -> Frame;
 }
 
 pub trait Store {
@@ -56,36 +59,51 @@ where
     }
 
     pub fn invoke(
-        &self,
+        &mut self,
         function_name: &str,
         args: &[Value],
     ) -> Result<Option<Value>, ExecutionError> {
-        for export in self.module.exports() {
-            let ExportDesc::Func(func_idx) = export.desc else {
-                continue;
-            };
-            if Some(function_name) != self.module.get_name(export.name) {
-                continue;
-            }
+        let Some(export) = self.module.exports().find(|export| {
+            matches!(export.desc, ExportDesc::Func(_))
+                && Some(function_name) == self.module.get_name(export.name)
+        }) else {
+            return Err(ExecutionError::NotExportedFunction);
+        };
+        let ExportDesc::Func(func_idx) = export.desc else {
+            unreachable!();
+        };
 
-            let fun_type = func_idx
-                .get_type(&self.module)
-                .ok_or(ExecutionError::InvalidFuncIdx)?;
-            fun_type.validate_args(args, &self.module)?;
+        let fun_type = func_idx
+            .get_type(&self.module)
+            .ok_or(ExecutionError::InvalidFuncIdx)?;
+        fun_type.validate_args(args, &self.module)?;
 
-            let code = func_idx
-                .get_code(&self.module)
-                .ok_or(ExecutionError::InvalidFuncIdx)?;
-            dbg!(code);
-            for instr in code.instrs(&self.module) {
-                dbg!(instr);
-            }
-            for local in code.locals(&self.module) {
-                dbg!(local);
-            }
+        let code = func_idx
+            .get_code(&self.module)
+            .ok_or(ExecutionError::InvalidFuncIdx)?;
+        dbg!(code);
+        for instr in code.instrs(&self.module) {
+            dbg!(instr);
         }
-        Err(ExecutionError::NotExportedFunction)
+        for local in code.locals(&self.module) {
+            dbg!(local);
+        }
+
+        let locals = args.len() + code.locals(&self.module).count();
+        self.stacks.push_frame(locals);
+        let result = self.call(code, args);
+        self.stacks.pop_frame();
+        result
     }
+
+    fn call(&mut self, code: Code, args: &[Value]) -> Result<Option<Value>, ExecutionError> {
+        todo!()
+    }
+}
+
+#[derive(Debug)]
+pub struct Frame<'a> {
+    pub locals: &'a mut [Value],
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
