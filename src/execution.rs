@@ -155,10 +155,31 @@ where
                 Instr::F64Const(v) => {
                     self.stacks.push_value(Value::F64(v));
                 }
+                Instr::I32Add => {
+                    let v0 = self.stacks.pop_value_i32();
+                    let v1 = self.stacks.pop_value_i32();
+                    self.stacks.push_value(Value::I32(v1 + v0));
+                }
                 Instr::I32Sub => {
                     let v0 = self.stacks.pop_value_i32();
                     let v1 = self.stacks.pop_value_i32();
                     self.stacks.push_value(Value::I32(v1 - v0));
+                }
+                Instr::I32Xor => {
+                    let v0 = self.stacks.pop_value_i32();
+                    let v1 = self.stacks.pop_value_i32();
+                    self.stacks.push_value(Value::I32(v1 ^ v0));
+                }
+                Instr::I32And => {
+                    let v0 = self.stacks.pop_value_i32();
+                    let v1 = self.stacks.pop_value_i32();
+                    self.stacks.push_value(Value::I32(v1 & v0));
+                }
+                Instr::I32LtS => {
+                    let v0 = self.stacks.pop_value_i32();
+                    let v1 = self.stacks.pop_value_i32();
+                    let r = if v1 < v0 { 1 } else { 0 };
+                    self.stacks.push_value(Value::I32(r));
                 }
                 Instr::I32Store(arg) => {
                     let v = self.stacks.pop_value();
