@@ -81,13 +81,6 @@ where
         let code = func_idx
             .get_code(&self.module)
             .ok_or(ExecutionError::InvalidFuncIdx)?;
-        dbg!(code);
-        for instr in code.instrs(&self.module) {
-            dbg!(instr);
-        }
-        for local in code.locals(&self.module) {
-            dbg!(local);
-        }
 
         let locals = args.len() + code.locals(&self.module).count();
         self.stacks.push_frame(locals);
@@ -97,6 +90,20 @@ where
     }
 
     fn call(&mut self, code: Code, args: &[Value]) -> Result<Option<Value>, ExecutionError> {
+        let frame = self.stacks.current_frame();
+        for (i, arg) in args
+            .iter()
+            .copied()
+            .chain(code.locals(&self.module).map(Value::zero))
+            .enumerate()
+        {
+            frame.locals[i] = arg;
+        }
+
+        for instr in code.instrs(&self.module) {
+            dbg!(instr);
+        }
+
         todo!()
     }
 }
@@ -121,6 +128,15 @@ impl Value {
             Value::I64(_) => ValType::I64,
             Value::F32(_) => ValType::F32,
             Value::F64(_) => ValType::F64,
+        }
+    }
+
+    pub fn zero(ty: ValType) -> Self {
+        match ty {
+            ValType::I32 => Self::I32(0),
+            ValType::I64 => Self::I64(0),
+            ValType::F32 => Self::F32(0.0),
+            ValType::F64 => Self::F64(0.0),
         }
     }
 }
