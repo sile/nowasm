@@ -9,6 +9,7 @@ pub enum ExecutionError {
     InvalidFuncIdx,
     InvalidFuncArgs,
     InvalidGlobalInitializer,
+    Trapped, // TODO: Add reason
 }
 
 // TODO: s/Stacks/Stack/
@@ -39,6 +40,8 @@ pub trait Store {
 pub trait ImportObject {
     fn mem(&mut self) -> &mut [u8];
 }
+
+// TODO: Add trap_handler()
 
 #[derive(Debug)]
 pub struct ModuleInstance<V, G, S, I> {
@@ -107,6 +110,7 @@ where
         self.stacks.push_frame(locals);
         let result = self.call(code, args);
         self.stacks.pop_frame();
+        // TODO: Clear all stacks
         result
     }
 
@@ -163,9 +167,7 @@ where
                     let end = start + v.byte_size();
                     let mem = self.import_object.mem();
                     if mem.len() < end {
-                        dbg!(v);
-                        dbg!(i);
-                        todo!("trap");
+                        return Err(ExecutionError::Trapped);
                     }
                     v.copy_to(&mut mem[start..end]);
                 }
