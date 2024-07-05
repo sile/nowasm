@@ -117,6 +117,10 @@ where
                     let v = self.store.get_global(idx);
                     self.stacks.push_value(v);
                 }
+                Instr::LocalSet(idx) => {
+                    let v = self.stacks.pop_value();
+                    self.stacks.current_frame().locals[idx.as_usize()] = v;
+                }
                 _ => {
                     dbg!(instr);
                     todo!();
