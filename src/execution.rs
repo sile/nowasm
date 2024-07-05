@@ -121,6 +121,10 @@ where
                     let v = self.stacks.pop_value();
                     self.stacks.current_frame().locals[idx.as_usize()] = v;
                 }
+                Instr::LocalGet(idx) => {
+                    let v = self.stacks.current_frame().locals[idx.as_usize()];
+                    self.stacks.push_value(v);
+                }
                 Instr::I32Const(v) => {
                     self.stacks.push_value(Value::I32(v));
                 }
