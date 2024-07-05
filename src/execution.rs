@@ -121,6 +121,18 @@ where
                     let v = self.stacks.pop_value();
                     self.stacks.current_frame().locals[idx.as_usize()] = v;
                 }
+                Instr::I32Const(v) => {
+                    self.stacks.push_value(Value::I32(v));
+                }
+                Instr::I64Const(v) => {
+                    self.stacks.push_value(Value::I64(v));
+                }
+                Instr::F32Const(v) => {
+                    self.stacks.push_value(Value::F32(v));
+                }
+                Instr::F64Const(v) => {
+                    self.stacks.push_value(Value::F64(v));
+                }
                 _ => {
                     dbg!(instr);
                     todo!();
