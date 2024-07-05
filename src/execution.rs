@@ -11,11 +11,15 @@ pub enum ExecutionError {
     InvalidGlobalInitializer,
 }
 
+// TODO: s/Stacks/Stack/
 pub trait Stacks {
     // TODO: Return Result
     fn push_frame(&mut self, locals: usize);
     fn pop_frame(&mut self);
     fn current_frame(&mut self) -> Frame;
+
+    fn push_value(&mut self, value: Value);
+    fn pop_value(&mut self) -> Value;
 }
 
 pub trait Store {
@@ -110,7 +114,8 @@ where
         for instr in code.instrs(&self.module) {
             match instr {
                 Instr::GlobalGet(idx) => {
-                    todo!("{idx:?}");
+                    let v = self.store.get_global(idx);
+                    self.stacks.push_value(v);
                 }
                 _ => {
                     dbg!(instr);

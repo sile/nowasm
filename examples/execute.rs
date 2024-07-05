@@ -63,6 +63,7 @@ impl Store for ExampleStore {
 #[derive(Debug, Default)]
 pub struct ExampleStacks {
     frames: Vec<ExampleFrame>,
+    values: Vec<Value>,
 }
 
 impl Stacks for ExampleStacks {
@@ -83,6 +84,14 @@ impl Stacks for ExampleStacks {
         Frame {
             locals: &mut last.locals,
         }
+    }
+
+    fn push_value(&mut self, value: Value) {
+        self.values.push(value);
+    }
+
+    fn pop_value(&mut self) -> Value {
+        self.values.pop().expect("unreachable")
     }
 }
 
