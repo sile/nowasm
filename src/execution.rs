@@ -121,6 +121,10 @@ where
 
         for instr in code.instrs(&self.module) {
             match instr {
+                Instr::GlobalSet(idx) => {
+                    let v = self.stacks.pop_value();
+                    self.store.set_global(idx, v);
+                }
                 Instr::GlobalGet(idx) => {
                     let v = self.store.get_global(idx);
                     self.stacks.push_value(v);
