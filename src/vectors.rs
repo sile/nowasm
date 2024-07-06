@@ -12,7 +12,9 @@ pub trait Allocator {
     fn allocate_vector<T: Clone>() -> Self::Vector<T>;
 }
 
-pub trait Vector<T: Clone> {}
+pub trait Vector<T: Clone>: AsRef<[T]> + AsMut<[T]> {
+    fn push(&mut self, item: T);
+}
 
 #[derive(Debug)]
 pub struct VectorSlice<T> {
@@ -122,6 +124,20 @@ pub trait VectorItem: Sized {
     fn append<V: Vectors>(items: &[Self], vectors: &mut V) -> Result<usize, DecodeError>;
     fn decode<V: Vectors>(reader: &mut Reader, vectors: &mut V) -> Result<Self, DecodeError>;
     fn get(index: usize, vectors: &impl Vectors) -> Option<Self>;
+}
+
+// TODO: rename
+pub trait DecodeVector: Sized + Clone {
+    fn decode_item(reader: &mut Reader) -> Result<Self, DecodeError>;
+    fn decode_vector<A: Allocator>(reader: &mut Reader) -> Result<A::Vector<Self>, DecodeError> {
+        let len = reader.read_usize()?;
+        let mut vs = A::allocate_vector();
+        for _ in 0..len {
+            let item = Self::decode_item(reader)?;
+            vs.push(item);
+        }
+        Ok(vs)
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

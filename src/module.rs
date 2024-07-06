@@ -11,11 +11,11 @@ use crate::{
     Allocator, DecodeError, Vectors,
 };
 
-#[derive(Debug)]
-pub struct Module<V, A> {
+// TODO: #[derive(Debug)]
+pub struct Module<V, A: Allocator> {
     _allocator: PhantomData<A>,
     vectors: V,
-    type_section: TypeSection,
+    type_section: TypeSection<A>,
     import_section: ImportSection,
     function_section: FunctionSection,
     table_section: TableSection,
@@ -33,7 +33,7 @@ impl<V: Vectors, A: Allocator> Module<V, A> {
         &self.vectors
     }
 
-    pub fn type_section(&self) -> &TypeSection {
+    pub fn type_section(&self) -> &TypeSection<A> {
         &self.type_section
     }
 
@@ -89,7 +89,7 @@ impl<V: Vectors, A: Allocator> Module<V, A> {
         let mut this = Self {
             _allocator: PhantomData,
             vectors,
-            type_section: TypeSection::default(),
+            type_section: TypeSection::new(),
             import_section: ImportSection::default(),
             function_section: FunctionSection::default(),
             table_section: TableSection::default(),

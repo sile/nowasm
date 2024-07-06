@@ -2,7 +2,7 @@ use crate::execution::{ExecutionError, Value};
 use crate::instructions::Instr;
 use crate::reader::Reader;
 use crate::vectors::{VectorItem, VectorKind, Vectors};
-use crate::{Allocator, DecodeError, Module};
+use crate::{Allocator, DecodeError, DecodeVector, Module};
 
 #[derive(Debug)]
 pub struct Magic;
@@ -206,7 +206,9 @@ impl TypeIdx {
         let ty = module
             .type_section()
             .types
-            .get(type_idx.0 as usize, module.vectors())?;
+            .as_ref()
+            .get(type_idx.0 as usize)
+            .copied()?;
         Some(ty)
     }
 
@@ -466,6 +468,18 @@ impl FuncType {
         }
 
         Ok(())
+    }
+}
+
+impl DecodeVector for FuncType {
+    fn decode_item(reader: &mut Reader) -> Result<Self, DecodeError> {
+        let tag = reader.read_u8()?;
+        if tag != 0x60 {
+            return Err(DecodeError::InvalidFuncTypeTag { value: tag });
+        }
+        let rt1 = ResultType::decode_item(reader)?;
+        let rt2 = ResultType::decode_item(reader)?;
+        Ok(Self { rt1, rt2 })
     }
 }
 

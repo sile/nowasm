@@ -43,8 +43,8 @@ pub trait ImportObject {
 
 // TODO: Add trap_handler()
 
-#[derive(Debug)]
-pub struct ModuleInstance<V, G, S, I, A> {
+// TODO: #[derive(Debug)]
+pub struct ModuleInstance<V, G, S, I, A: Allocator> {
     pub module: Module<V, A>,
     pub store: G,
     pub stacks: S,

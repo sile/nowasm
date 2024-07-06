@@ -3,7 +3,7 @@ use crate::{
     symbols::{
         Code, Data, Elem, Export, FuncIdx, FuncType, Global, Import, MemType, TableType, TypeIdx,
     },
-    DecodeError, VectorSlice, Vectors,
+    Allocator, DecodeError, DecodeVector, VectorSlice, Vectors,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -42,17 +42,23 @@ impl SectionId {
     }
 }
 
-#[derive(Debug, Default, Clone)]
-pub struct TypeSection {
-    pub types: VectorSlice<FuncType>,
+// TODO: derive debug
+pub struct TypeSection<A: Allocator> {
+    pub types: A::Vector<FuncType>,
 }
 
-impl TypeSection {
+impl<A: Allocator> TypeSection<A> {
+    pub(crate) fn new() -> Self {
+        Self {
+            types: A::allocate_vector(),
+        }
+    }
+
     pub(crate) fn decode(
         reader: &mut Reader,
         vectors: &mut impl Vectors,
     ) -> Result<Self, DecodeError> {
-        let types = VectorSlice::decode(reader, vectors)?;
+        let types = FuncType::decode_vector::<A>(reader)?;
         Ok(Self { types })
     }
 }
