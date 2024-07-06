@@ -218,9 +218,17 @@ where
                 Instr::Return => {
                     break;
                 }
+                Instr::Call(idx) => {
+                    dbg!(idx);
+                    dbg!(&self.module.code_section().codes.as_ref()[idx.get() as usize]);
+                    todo!();
+                }
+                Instr::Unreachable => {
+                    return Err(ExecutionError::Trapped);
+                }
                 _ => {
                     dbg!(instr);
-                    todo!();
+                    //                    todo!();
                 }
             }
         }

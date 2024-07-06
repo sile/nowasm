@@ -575,7 +575,7 @@ impl BlockType {
         }
 
         reader.unread_u8();
-        Ok(Self::TypeIndex(S33::decode(reader)?))
+        Ok(Self::TypeIndex(S33::decode(reader)?)) // TODO: n>0 check
     }
 }
 
