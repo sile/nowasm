@@ -1,7 +1,7 @@
 // TODO
 //#![no_std]
 
-mod decode_error;
+mod decode;
 
 pub(crate) mod instructions;
 #[cfg(feature = "sign_extension")]
@@ -15,7 +15,7 @@ pub mod module; // TODO: pub (crate)
 pub mod sections;
 pub mod validation; // TODO: pub (crate)
 
-pub use decode_error::DecodeError;
+pub use decode::DecodeError;
 pub use instructions::Instr;
 pub use module::Module;
 pub use symbols::FuncType;
