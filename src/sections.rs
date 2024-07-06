@@ -1,9 +1,10 @@
 use crate::{
+    decode::Decode,
     reader::Reader,
     symbols::{
         Code, Data, Elem, Export, FuncIdx, FuncType, Global, Import, MemType, TableType, TypeIdx,
     },
-    Allocator, DecodeError, DecodeVector,
+    Allocator, DecodeError,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -55,7 +56,7 @@ impl<A: Allocator> TypeSection<A> {
     }
 
     pub(crate) fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
-        let types = FuncType::<A>::decode_vector(reader)?;
+        let types = FuncType::decode_vector::<A>(reader)?;
         Ok(Self { types })
     }
 }
@@ -73,7 +74,7 @@ impl<A: Allocator> ImportSection<A> {
     }
 
     pub(crate) fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
-        let imports = DecodeVector::<A>::decode_vector(reader)?;
+        let imports = Decode::decode_vector::<A>(reader)?;
         Ok(Self { imports })
     }
 }
@@ -91,7 +92,7 @@ impl<A: Allocator> FunctionSection<A> {
     }
 
     pub(crate) fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
-        let idxs = DecodeVector::<A>::decode_vector(reader)?;
+        let idxs = Decode::decode_vector::<A>(reader)?;
         Ok(Self { idxs })
     }
 }
@@ -109,7 +110,7 @@ impl<A: Allocator> TableSection<A> {
     }
 
     pub(crate) fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
-        let tables = DecodeVector::<A>::decode_vector(reader)?;
+        let tables = Decode::decode_vector::<A>(reader)?;
         Ok(Self { tables })
     }
 }
@@ -147,7 +148,7 @@ impl<A: Allocator> GlobalSection<A> {
     }
 
     pub(crate) fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
-        let globals = DecodeVector::<A>::decode_vector(reader)?;
+        let globals = Decode::decode_vector::<A>(reader)?;
         Ok(Self { globals })
     }
 }
@@ -165,7 +166,7 @@ impl<A: Allocator> ExportSection<A> {
     }
 
     pub(crate) fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
-        let exports = DecodeVector::<A>::decode_vector(reader)?;
+        let exports = Decode::decode_vector::<A>(reader)?;
         Ok(Self { exports })
     }
 }
@@ -195,7 +196,7 @@ impl<A: Allocator> ElementSection<A> {
     }
 
     pub(crate) fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
-        let elems = DecodeVector::<A>::decode_vector(reader)?;
+        let elems = Decode::decode_vector::<A>(reader)?;
         Ok(Self { elems })
     }
 }
@@ -213,7 +214,7 @@ impl<A: Allocator> CodeSection<A> {
     }
 
     pub(crate) fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
-        let codes = DecodeVector::<A>::decode_vector(reader)?;
+        let codes = Decode::decode_vector::<A>(reader)?;
         Ok(Self { codes })
     }
 }
@@ -231,7 +232,7 @@ impl<A: Allocator> DataSection<A> {
     }
 
     pub(crate) fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
-        let datas = DecodeVector::<A>::decode_vector(reader)?;
+        let datas = Decode::decode_vector::<A>(reader)?;
         Ok(Self { datas })
     }
 }

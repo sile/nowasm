@@ -1,5 +1,25 @@
-use crate::symbols::SectionId;
+use crate::vectors::Vector;
+use crate::{reader::Reader, symbols::SectionId, Allocator};
 use core::str::Utf8Error;
+
+pub trait Decode: Sized + Clone {
+    fn decode(reader: &mut Reader) -> Result<Self, DecodeError>;
+
+    fn decode_vector<A: Allocator>(reader: &mut Reader) -> Result<A::Vector<Self>, DecodeError> {
+        let len = reader.read_usize()?;
+        let mut items = A::allocate_vector();
+        for _ in 0..len {
+            items.push(Self::decode(reader)?);
+        }
+        Ok(items)
+    }
+}
+
+impl Decode for u8 {
+    fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
+        reader.read_u8()
+    }
+}
 
 // TODO: impl Display
 #[derive(Debug, Clone, PartialEq, Eq)]

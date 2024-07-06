@@ -2,6 +2,7 @@
 use crate::instructions_sign_extension::SignExtensionInstr;
 use crate::vectors::Vector;
 use crate::{
+    decode::Decode,
     reader::Reader,
     symbols::{BlockType, FuncIdx, GlobalIdx, LabelIdx, LocalIdx, MemArg, TypeIdx},
     Allocator, DecodeError,

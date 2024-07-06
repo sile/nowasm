@@ -1,8 +1,7 @@
 // TODO
 //#![no_std]
 
-mod decode;
-
+pub(crate) mod decode;
 pub(crate) mod instructions;
 #[cfg(feature = "sign_extension")]
 pub(crate) mod instructions_sign_extension;
@@ -19,6 +18,6 @@ pub use decode::DecodeError;
 pub use instructions::Instr;
 pub use module::Module;
 pub use symbols::FuncType;
-pub use vectors::{Allocator, DecodeVector, Vector};
+pub use vectors::{Allocator, Vector};
 
 pub const PAGE_SIZE: u32 = 65536;
