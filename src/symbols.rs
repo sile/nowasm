@@ -2,7 +2,7 @@ use crate::execution::{ExecutionError, Value};
 use crate::instructions::Instr;
 use crate::reader::Reader;
 use crate::vectors::{VectorItem, VectorKind, Vectors};
-use crate::{DecodeError, Module};
+use crate::{AllocateVector, DecodeError, Module};
 
 #[derive(Debug)]
 pub struct Magic;
@@ -198,7 +198,7 @@ impl TypeIdx {
         reader.read_u32().map(Self)
     }
 
-    pub fn get_type(self, module: &Module<impl Vectors>) -> Option<FuncType> {
+    pub fn get_type(self, module: &Module<impl Vectors, impl AllocateVector>) -> Option<FuncType> {
         let type_idx = module
             .function_section()
             .idxs
@@ -210,7 +210,7 @@ impl TypeIdx {
         Some(ty)
     }
 
-    pub fn get_code(self, module: &Module<impl Vectors>) -> Option<Code> {
+    pub fn get_code(self, module: &Module<impl Vectors, impl AllocateVector>) -> Option<Code> {
         let code = module
             .code_section()
             .codes
@@ -453,7 +453,7 @@ impl FuncType {
     pub fn validate_args(
         self,
         args: &[Value],
-        module: &Module<impl Vectors>,
+        module: &Module<impl Vectors, impl AllocateVector>,
     ) -> Result<(), ExecutionError> {
         if args.len() != self.rt1.len() {
             return Err(ExecutionError::InvalidFuncArgs);
@@ -520,7 +520,10 @@ impl ResultType {
         self.len
     }
 
-    pub fn iter(self, module: &Module<impl Vectors>) -> impl '_ + Iterator<Item = ValType> {
+    pub fn iter(
+        self,
+        module: &Module<impl Vectors, impl AllocateVector>,
+    ) -> impl '_ + Iterator<Item = ValType> {
         (self.start..self.start + self.len).map(|i| {
             // TODO: error handling
             module.vectors().val_types()[i]
@@ -541,7 +544,10 @@ impl Global {
         Ok(Self { ty, init })
     }
 
-    pub fn init(&self, module: &Module<impl Vectors>) -> Result<Value, ExecutionError> {
+    pub fn init(
+        &self,
+        module: &Module<impl Vectors, impl AllocateVector>,
+    ) -> Result<Value, ExecutionError> {
         if self.init.len != 1 {
             return Err(ExecutionError::InvalidGlobalInitializer);
         }
@@ -604,7 +610,10 @@ impl Expr {
         self.len
     }
 
-    pub fn iter(self, module: &Module<impl Vectors>) -> impl '_ + Iterator<Item = Instr> {
+    pub fn iter(
+        self,
+        module: &Module<impl Vectors, impl AllocateVector>,
+    ) -> impl '_ + Iterator<Item = Instr> {
         module.vectors().instrs()[self.start..self.start + self.len]
             .iter()
             .copied()
@@ -721,14 +730,20 @@ impl Code {
         })
     }
 
-    pub fn locals(self, module: &Module<impl Vectors>) -> impl '_ + Iterator<Item = ValType> {
+    pub fn locals(
+        self,
+        module: &Module<impl Vectors, impl AllocateVector>,
+    ) -> impl '_ + Iterator<Item = ValType> {
         module.vectors().locals()[self.locals_start..self.locals_start + self.locals_len]
             .iter()
             .copied()
             .flat_map(|locals| std::iter::repeat(locals.t).take(locals.n as usize))
     }
 
-    pub fn instrs(self, module: &Module<impl Vectors>) -> impl '_ + Iterator<Item = Instr> {
+    pub fn instrs(
+        self,
+        module: &Module<impl Vectors, impl AllocateVector>,
+    ) -> impl '_ + Iterator<Item = Instr> {
         self.body.iter(module)
     }
 }

@@ -6,6 +6,14 @@ use crate::{
 };
 use core::{marker::PhantomData, slice::SliceIndex};
 
+pub trait AllocateVector {
+    type Vector<T: Clone>: Vector<T>;
+
+    fn allocate_vector<T: Clone>(&mut self) -> Option<Self::Vector<T>>;
+}
+
+pub trait Vector<T: Clone> {}
+
 #[derive(Debug)]
 pub struct VectorSlice<T> {
     pub offset: usize, // TODO: priv

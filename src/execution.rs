@@ -1,6 +1,6 @@
 use crate::{
     symbols::{Code, ExportDesc, GlobalIdx, ValType},
-    Instr, Module, Vectors,
+    AllocateVector, Instr, Module, Vectors,
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -44,22 +44,23 @@ pub trait ImportObject {
 // TODO: Add trap_handler()
 
 #[derive(Debug)]
-pub struct ModuleInstance<V, G, S, I> {
-    pub module: Module<V>,
+pub struct ModuleInstance<V, G, S, I, A> {
+    pub module: Module<V, A>,
     pub store: G,
     pub stacks: S,
     pub import_object: I,
 }
 
-impl<V, G, S, I> ModuleInstance<V, G, S, I>
+impl<V, G, S, I, A> ModuleInstance<V, G, S, I, A>
 where
     V: Vectors,
     G: Store,
     S: Stacks,
     I: ImportObject,
+    A: AllocateVector,
 {
     pub fn new(
-        module: Module<V>,
+        module: Module<V, A>,
         mut store: G,
         stacks: S,
         import_object: I,
