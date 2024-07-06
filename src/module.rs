@@ -1,3 +1,5 @@
+use std::marker::PhantomData;
+
 use crate::{
     reader::Reader,
     sections::{
@@ -6,12 +8,12 @@ use crate::{
     },
     symbols::{Export, Magic, Name, Version},
     validation::ValidateError,
-    AllocateVector, DecodeError, Vectors,
+    Allocator, DecodeError, Vectors,
 };
 
 #[derive(Debug)]
 pub struct Module<V, A> {
-    allocator: A,
+    _allocator: PhantomData<A>,
     vectors: V,
     type_section: TypeSection,
     import_section: ImportSection,
@@ -26,7 +28,7 @@ pub struct Module<V, A> {
     data_section: DataSection,
 }
 
-impl<V: Vectors, A: AllocateVector> Module<V, A> {
+impl<V: Vectors, A: Allocator> Module<V, A> {
     pub fn vectors(&self) -> &V {
         &self.vectors
     }
@@ -83,9 +85,9 @@ impl<V: Vectors, A: AllocateVector> Module<V, A> {
         name.as_str(&self.vectors)
     }
 
-    pub fn decode(wasm_bytes: &[u8], vectors: V, allocator: A) -> Result<Self, DecodeError> {
+    pub fn decode(wasm_bytes: &[u8], vectors: V) -> Result<Self, DecodeError> {
         let mut this = Self {
-            allocator,
+            _allocator: PhantomData,
             vectors,
             type_section: TypeSection::default(),
             import_section: ImportSection::default(),

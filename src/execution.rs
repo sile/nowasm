@@ -1,6 +1,6 @@
 use crate::{
     symbols::{Code, ExportDesc, GlobalIdx, ValType},
-    AllocateVector, Instr, Module, Vectors,
+    Allocator, Instr, Module, Vectors,
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -57,7 +57,7 @@ where
     G: Store,
     S: Stacks,
     I: ImportObject,
-    A: AllocateVector,
+    A: Allocator,
 {
     pub fn new(
         module: Module<V, A>,

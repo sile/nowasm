@@ -20,7 +20,7 @@ pub use instructions::Instr;
 pub use module::Module;
 pub use symbols::{FuncType, Locals};
 pub use vectors::{
-    AllocateVector, Counters, FixedSizeMutVector, FixedSizeMutVectors, Vector, VectorSlice, Vectors,
+    Allocator, Counters, FixedSizeMutVector, FixedSizeMutVectors, Vector, VectorSlice, Vectors,
 };
 
 pub const PAGE_SIZE: u32 = 65536;

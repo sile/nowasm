@@ -2,7 +2,7 @@ use crate::execution::{ExecutionError, Value};
 use crate::instructions::Instr;
 use crate::reader::Reader;
 use crate::vectors::{VectorItem, VectorKind, Vectors};
-use crate::{AllocateVector, DecodeError, Module};
+use crate::{Allocator, DecodeError, Module};
 
 #[derive(Debug)]
 pub struct Magic;
@@ -198,7 +198,7 @@ impl TypeIdx {
         reader.read_u32().map(Self)
     }
 
-    pub fn get_type(self, module: &Module<impl Vectors, impl AllocateVector>) -> Option<FuncType> {
+    pub fn get_type(self, module: &Module<impl Vectors, impl Allocator>) -> Option<FuncType> {
         let type_idx = module
             .function_section()
             .idxs
@@ -210,7 +210,7 @@ impl TypeIdx {
         Some(ty)
     }
 
-    pub fn get_code(self, module: &Module<impl Vectors, impl AllocateVector>) -> Option<Code> {
+    pub fn get_code(self, module: &Module<impl Vectors, impl Allocator>) -> Option<Code> {
         let code = module
             .code_section()
             .codes
@@ -453,7 +453,7 @@ impl FuncType {
     pub fn validate_args(
         self,
         args: &[Value],
-        module: &Module<impl Vectors, impl AllocateVector>,
+        module: &Module<impl Vectors, impl Allocator>,
     ) -> Result<(), ExecutionError> {
         if args.len() != self.rt1.len() {
             return Err(ExecutionError::InvalidFuncArgs);
@@ -522,7 +522,7 @@ impl ResultType {
 
     pub fn iter(
         self,
-        module: &Module<impl Vectors, impl AllocateVector>,
+        module: &Module<impl Vectors, impl Allocator>,
     ) -> impl '_ + Iterator<Item = ValType> {
         (self.start..self.start + self.len).map(|i| {
             // TODO: error handling
@@ -546,7 +546,7 @@ impl Global {
 
     pub fn init(
         &self,
-        module: &Module<impl Vectors, impl AllocateVector>,
+        module: &Module<impl Vectors, impl Allocator>,
     ) -> Result<Value, ExecutionError> {
         if self.init.len != 1 {
             return Err(ExecutionError::InvalidGlobalInitializer);
@@ -612,7 +612,7 @@ impl Expr {
 
     pub fn iter(
         self,
-        module: &Module<impl Vectors, impl AllocateVector>,
+        module: &Module<impl Vectors, impl Allocator>,
     ) -> impl '_ + Iterator<Item = Instr> {
         module.vectors().instrs()[self.start..self.start + self.len]
             .iter()
@@ -732,7 +732,7 @@ impl Code {
 
     pub fn locals(
         self,
-        module: &Module<impl Vectors, impl AllocateVector>,
+        module: &Module<impl Vectors, impl Allocator>,
     ) -> impl '_ + Iterator<Item = ValType> {
         module.vectors().locals()[self.locals_start..self.locals_start + self.locals_len]
             .iter()
@@ -742,7 +742,7 @@ impl Code {
 
     pub fn instrs(
         self,
-        module: &Module<impl Vectors, impl AllocateVector>,
+        module: &Module<impl Vectors, impl Allocator>,
     ) -> impl '_ + Iterator<Item = Instr> {
         self.body.iter(module)
     }
