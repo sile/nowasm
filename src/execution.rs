@@ -43,9 +43,18 @@ pub trait ImportObject {
 
 // TODO: Add trap_handler()
 
+#[derive(Debug)]
+pub struct State<A: Allocator> {
+    pub mem: A::Vector<u8>,
+    pub globals: A::Vector<Value>,
+    //    pub frame_stack: A::Vector<Frame>,
+    pub value_stack: A::Vector<Value>,
+}
+
 // TODO: #[derive(Debug)]
 pub struct ModuleInstance<G, S, I, A: Allocator> {
     pub module: Module<A>,
+    // TODO: state
     pub store: G,
     pub stacks: S,
     pub import_object: I,
@@ -226,9 +235,13 @@ where
                 Instr::Unreachable => {
                     return Err(ExecutionError::Trapped);
                 }
+                Instr::Block(block) => {
+                    dbg!(block);
+                    todo!();
+                }
                 _ => {
                     dbg!(instr);
-                    //                    todo!();
+                    todo!();
                 }
             }
         }
