@@ -1,8 +1,10 @@
 use crate::vectors::Vector;
 use crate::{reader::Reader, symbols::SectionId, Allocator};
 use core::str::Utf8Error;
+use std::fmt::Debug;
 
-pub trait Decode: Sized + Clone {
+// TODO: remove Debug
+pub trait Decode: Sized + Clone + Debug {
     fn decode(reader: &mut Reader) -> Result<Self, DecodeError>;
 
     fn decode_vector<A: Allocator>(reader: &mut Reader) -> Result<A::Vector<Self>, DecodeError> {

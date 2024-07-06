@@ -2,9 +2,9 @@ use core::fmt::Debug;
 
 // TODO: Remove Debug and Clone bound
 pub trait Allocator: Debug + Clone {
-    type Vector<T: Clone>: Vector<T>;
+    type Vector<T: Clone + Debug>: Vector<T>;
 
-    fn allocate_vector<T: Clone>() -> Self::Vector<T>;
+    fn allocate_vector<T: Clone + Debug>() -> Self::Vector<T>;
 }
 
 // TODO: Remove Debug and Clone bound
