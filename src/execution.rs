@@ -102,6 +102,7 @@ where
             .get_type(&self.module)
             .ok_or(ExecutionError::InvalidFuncIdx)?;
         fun_type.validate_args(args, &self.module)?;
+        let returns = fun_type.rt2.len();
 
         let code = func_idx
             .get_code(&self.module)
@@ -109,11 +110,11 @@ where
 
         let locals = args.len() + code.locals(&self.module).count();
         self.stacks.push_frame(locals);
-        let result = match self.call(code, args, fun_type.rt2.len) {
+        let result = match self.call(code, args, returns) {
             Err(e) => Err(e),
             Ok(()) => {
                 // TODO: validate result type
-                if fun_type.rt2.len == 0 {
+                if returns == 0 {
                     Ok(None)
                 } else {
                     Ok(Some(self.stacks.pop_value()))

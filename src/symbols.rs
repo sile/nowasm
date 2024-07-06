@@ -34,13 +34,12 @@ impl Version {
 
 pub use crate::sections::SectionId;
 
-#[derive(Debug, Default, Clone, Copy)]
-pub struct Name {
-    start: usize,
-    len: usize,
+#[derive(Debug, Clone)]
+pub struct Name<A: Allocator> {
+    bytes: A::Vector<u8>, // TODO: A::String
 }
 
-impl Name {
+impl<A: Allocator> Name<A> {
     pub fn decode(reader: &mut Reader, vectors: &mut impl Vectors) -> Result<Self, DecodeError> {
         let start = vectors.bytes().len();
         let len = reader.read_usize()?;
@@ -69,14 +68,14 @@ impl Name {
     }
 }
 
-#[derive(Debug, Default, Clone, Copy)]
-pub struct Import {
-    pub module: Name,
-    pub name: Name,
+#[derive(Debug, Clone)]
+pub struct Import<A: Allocator> {
+    pub module: Name<A>,
+    pub name: Name<A>,
     pub desc: ImportDesc,
 }
 
-impl Import {
+impl<A: Allocator> Import<A> {
     pub fn decode(reader: &mut Reader, vectors: &mut impl Vectors) -> Result<Self, DecodeError> {
         let module = Name::decode(reader, vectors)?;
         let name = Name::decode(reader, vectors)?;
@@ -85,24 +84,7 @@ impl Import {
     }
 }
 
-impl VectorItem for Import {
-    fn decode<V: Vectors>(reader: &mut Reader, vectors: &mut V) -> Result<Self, DecodeError> {
-        Self::decode(reader, vectors)
-    }
-
-    fn append<V: Vectors>(items: &[Self], vectors: &mut V) -> Result<usize, DecodeError> {
-        if !vectors.imports_append(items) {
-            return Err(DecodeError::FullVector {
-                kind: VectorKind::Imports,
-            });
-        }
-        Ok(vectors.imports().len())
-    }
-
-    fn get(index: usize, vectors: &impl Vectors) -> Option<Self> {
-        vectors.imports().get(index).copied()
-    }
-}
+impl<A: Allocator> VectorItem for Import<A> {}
 
 #[derive(Debug, Clone, Copy)]
 pub enum ImportDesc {
@@ -130,14 +112,13 @@ impl Default for ImportDesc {
     }
 }
 
-// TODO: remove Default
-#[derive(Debug, Default, Clone, Copy)]
-pub struct Export {
-    pub name: Name,
+#[derive(Debug, Clone)]
+pub struct Export<A: Allocator> {
+    pub name: Name<A>,
     pub desc: ExportDesc,
 }
 
-impl Export {
+impl<A: Allocator> Export<A> {
     pub fn decode(reader: &mut Reader, vectors: &mut impl Vectors) -> Result<Self, DecodeError> {
         let name = Name::decode(reader, vectors)?;
         let desc = ExportDesc::decode(reader)?;
@@ -145,24 +126,25 @@ impl Export {
     }
 }
 
-impl VectorItem for Export {
-    fn decode<V: Vectors>(reader: &mut Reader, vectors: &mut V) -> Result<Self, DecodeError> {
-        Self::decode(reader, vectors)
-    }
+// TODO
+// impl VectorItem for Export {
+//     fn decode<V: Vectors>(reader: &mut Reader, vectors: &mut V) -> Result<Self, DecodeError> {
+//         Self::decode(reader, vectors)
+//     }
 
-    fn append<V: Vectors>(items: &[Self], vectors: &mut V) -> Result<usize, DecodeError> {
-        if !vectors.exports_append(items) {
-            return Err(DecodeError::FullVector {
-                kind: VectorKind::Exports,
-            });
-        }
-        Ok(vectors.exports().len())
-    }
+//     fn append<V: Vectors>(items: &[Self], vectors: &mut V) -> Result<usize, DecodeError> {
+//         if !vectors.exports_append(items) {
+//             return Err(DecodeError::FullVector {
+//                 kind: VectorKind::Exports,
+//             });
+//         }
+//         Ok(vectors.exports().len())
+//     }
 
-    fn get(index: usize, vectors: &impl Vectors) -> Option<Self> {
-        vectors.exports().get(index).copied()
-    }
-}
+//     fn get(index: usize, vectors: &impl Vectors) -> Option<Self> {
+//         vectors.exports().get(index).copied()
+//     }
+// }
 
 #[derive(Debug, Clone, Copy)]
 pub enum ExportDesc {
@@ -198,18 +180,16 @@ impl TypeIdx {
         reader.read_u32().map(Self)
     }
 
-    pub fn get_type(self, module: &Module<impl Vectors, impl Allocator>) -> Option<FuncType> {
+    pub fn get_type<A: Allocator>(self, module: &Module<impl Vectors, A>) -> Option<&FuncType<A>> {
         let type_idx = module
             .function_section()
             .idxs
             .get(self.0 as usize, module.vectors())?;
-        let ty = module
+        module
             .type_section()
             .types
             .as_ref()
             .get(type_idx.0 as usize)
-            .copied()?;
-        Some(ty)
     }
 
     pub fn get_code(self, module: &Module<impl Vectors, impl Allocator>) -> Option<Code> {
@@ -445,23 +425,29 @@ impl ValType {
     }
 }
 
-#[derive(Debug, Default, Clone, Copy)]
-pub struct FuncType {
-    pub rt1: ResultType,
-    pub rt2: ResultType,
+impl<A: Allocator> DecodeVector<A> for ValType {
+    fn decode_item(reader: &mut Reader) -> Result<Self, DecodeError> {
+        Self::decode(reader)
+    }
 }
 
-impl FuncType {
+#[derive(Debug, Clone)]
+pub struct FuncType<A: Allocator> {
+    pub rt1: ResultType<A>,
+    pub rt2: ResultType<A>,
+}
+
+impl<A: Allocator> FuncType<A> {
     pub fn validate_args(
-        self,
+        &self,
         args: &[Value],
-        module: &Module<impl Vectors, impl Allocator>,
+        _module: &Module<impl Vectors, impl Allocator>,
     ) -> Result<(), ExecutionError> {
         if args.len() != self.rt1.len() {
             return Err(ExecutionError::InvalidFuncArgs);
         }
 
-        for (ty, val) in self.rt1.iter(module).zip(args.iter()) {
+        for (ty, val) in self.rt1.iter().zip(args.iter()) {
             if ty != val.ty() {
                 return Err(ExecutionError::InvalidFuncArgs);
             }
@@ -471,7 +457,7 @@ impl FuncType {
     }
 }
 
-impl DecodeVector for FuncType {
+impl<A: Allocator> DecodeVector<A> for FuncType<A> {
     fn decode_item(reader: &mut Reader) -> Result<Self, DecodeError> {
         let tag = reader.read_u8()?;
         if tag != 0x60 {
@@ -483,65 +469,37 @@ impl DecodeVector for FuncType {
     }
 }
 
-impl VectorItem for FuncType {
-    fn decode<V: Vectors>(reader: &mut Reader, vectors: &mut V) -> Result<Self, DecodeError> {
-        let tag = reader.read_u8()?;
-        if tag != 0x60 {
-            return Err(DecodeError::InvalidFuncTypeTag { value: tag });
-        }
-        let rt1 = ResultType::decode(reader, vectors)?;
-        let rt2 = ResultType::decode(reader, vectors)?;
-        Ok(Self { rt1, rt2 })
+impl<A: Allocator> VectorItem for FuncType<A> {
+    fn decode<V: Vectors>(_reader: &mut Reader, _vectors: &mut V) -> Result<Self, DecodeError> {
+        todo!()
     }
 
-    fn append<V: Vectors>(items: &[Self], vectors: &mut V) -> Result<usize, DecodeError> {
-        if !vectors.func_types_append(items) {
-            return Err(DecodeError::FullVector {
-                kind: VectorKind::FuncTypes,
-            });
-        }
-        Ok(vectors.func_types().len())
+    fn append<V: Vectors>(_items: &[Self], _vectors: &mut V) -> Result<usize, DecodeError> {
+        todo!()
     }
 
-    fn get(index: usize, vectors: &impl Vectors) -> Option<Self> {
-        vectors.func_types().get(index).copied()
+    fn get(_index: usize, _vectors: &impl Vectors) -> Option<Self> {
+        todo!()
     }
 }
 
-#[derive(Debug, Default, Clone, Copy)]
-pub struct ResultType {
-    // TODO: Use VectorSlice
-    pub start: usize, // TODO: priv
-    pub len: usize,
+#[derive(Debug, Clone)]
+pub struct ResultType<A: Allocator> {
+    pub types: A::Vector<ValType>,
 }
 
-impl ResultType {
-    pub fn decode(reader: &mut Reader, vectors: &mut impl Vectors) -> Result<Self, DecodeError> {
-        let start = vectors.val_types().len();
-        let len = reader.read_usize()?;
-        for _ in 0..len {
-            let vt = ValType::decode(reader)?;
-            if !vectors.val_types_append(&[vt]) {
-                return Err(DecodeError::FullVector {
-                    kind: VectorKind::ValTypes,
-                });
-            }
-        }
-        Ok(Self { start, len })
+impl<A: Allocator> ResultType<A> {
+    fn decode_item(reader: &mut Reader) -> Result<Self, DecodeError> {
+        let types = DecodeVector::<A>::decode_vector(reader)?;
+        Ok(Self { types })
     }
 
-    pub fn len(self) -> usize {
-        self.len
+    pub fn len(&self) -> usize {
+        self.types.as_ref().len()
     }
 
-    pub fn iter(
-        self,
-        module: &Module<impl Vectors, impl Allocator>,
-    ) -> impl '_ + Iterator<Item = ValType> {
-        (self.start..self.start + self.len).map(|i| {
-            // TODO: error handling
-            module.vectors().val_types()[i]
-        })
+    pub fn iter(&self) -> impl '_ + Iterator<Item = ValType> {
+        self.types.as_ref().iter().copied()
     }
 }
 

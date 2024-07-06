@@ -16,12 +16,12 @@ pub struct Module<V, A: Allocator> {
     _allocator: PhantomData<A>,
     vectors: V,
     type_section: TypeSection<A>,
-    import_section: ImportSection,
+    import_section: ImportSection<A>,
     function_section: FunctionSection,
     table_section: TableSection,
     memory_section: MemorySection,
     global_section: GlobalSection,
-    export_section: ExportSection,
+    export_section: ExportSection<A>,
     start_section: StartSection,
     element_section: ElementSection,
     code_section: CodeSection,
@@ -37,7 +37,7 @@ impl<V: Vectors, A: Allocator> Module<V, A> {
         &self.type_section
     }
 
-    pub fn import_section(&self) -> &ImportSection {
+    pub fn import_section(&self) -> &ImportSection<A> {
         &self.import_section
     }
 
@@ -57,7 +57,7 @@ impl<V: Vectors, A: Allocator> Module<V, A> {
         &self.global_section
     }
 
-    pub fn export_section(&self) -> &ExportSection {
+    pub fn export_section(&self) -> &ExportSection<A> {
         &self.export_section
     }
 
@@ -77,11 +77,11 @@ impl<V: Vectors, A: Allocator> Module<V, A> {
         &self.data_section
     }
 
-    pub fn exports(&self) -> impl '_ + Iterator<Item = Export> {
-        self.export_section.exports.iter(&self.vectors)
+    pub fn exports(&self) -> impl '_ + Iterator<Item = &Export<A>> {
+        self.export_section.exports.as_ref().iter()
     }
 
-    pub fn get_name(&self, name: Name) -> Option<&str> {
+    pub fn get_name(&self, name: Name<A>) -> Option<&str> {
         name.as_str(&self.vectors)
     }
 
@@ -90,7 +90,7 @@ impl<V: Vectors, A: Allocator> Module<V, A> {
             _allocator: PhantomData,
             vectors,
             type_section: TypeSection::new(),
-            import_section: ImportSection::default(),
+            import_section: ImportSection::new(),
             function_section: FunctionSection::default(),
             table_section: TableSection::default(),
             memory_section: MemorySection::default(),
@@ -133,12 +133,9 @@ impl<V: Vectors, A: Allocator> Module<V, A> {
 
             match section_id {
                 SectionId::Custom => unreachable!(),
-                SectionId::Type => {
-                    self.type_section = TypeSection::decode(&mut section_reader, &mut self.vectors)?
-                }
+                SectionId::Type => self.type_section = TypeSection::decode(&mut section_reader)?,
                 SectionId::Import => {
-                    self.import_section =
-                        ImportSection::decode(&mut section_reader, &mut self.vectors)?
+                    self.import_section = ImportSection::decode(&mut section_reader)?
                 }
                 SectionId::Function => {
                     self.function_section =

@@ -44,7 +44,7 @@ impl SectionId {
 
 // TODO: derive debug
 pub struct TypeSection<A: Allocator> {
-    pub types: A::Vector<FuncType>,
+    pub types: A::Vector<FuncType<A>>,
 }
 
 impl<A: Allocator> TypeSection<A> {
@@ -54,26 +54,26 @@ impl<A: Allocator> TypeSection<A> {
         }
     }
 
-    pub(crate) fn decode(
-        reader: &mut Reader,
-        vectors: &mut impl Vectors,
-    ) -> Result<Self, DecodeError> {
-        let types = FuncType::decode_vector::<A>(reader)?;
+    pub(crate) fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
+        let types = FuncType::<A>::decode_vector(reader)?;
         Ok(Self { types })
     }
 }
 
-#[derive(Debug, Default, Clone)]
-pub struct ImportSection {
-    pub imports: VectorSlice<Import>,
+#[derive(Debug, Clone)]
+pub struct ImportSection<A: Allocator> {
+    pub imports: A::Vector<Import<A>>,
 }
 
-impl ImportSection {
-    pub(crate) fn decode(
-        reader: &mut Reader,
-        vectors: &mut impl Vectors,
-    ) -> Result<Self, DecodeError> {
-        let imports = VectorSlice::decode(reader, vectors)?;
+impl<A: Allocator> ImportSection<A> {
+    pub(crate) fn new() -> Self {
+        Self {
+            imports: A::allocate_vector(),
+        }
+    }
+
+    pub(crate) fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
+        let imports = DecodeVector::<A>::decode_vector(reader)?;
         Ok(Self { imports })
     }
 }
@@ -144,11 +144,17 @@ impl GlobalSection {
 }
 
 #[derive(Debug, Default, Clone)]
-pub struct ExportSection {
-    pub exports: VectorSlice<Export>,
+pub struct ExportSection<A: Allocator> {
+    pub exports: A::Vector<Export<A>>,
 }
 
-impl ExportSection {
+impl<A: Allocator> ExportSection<A> {
+    pub(crate) fn new() -> Self {
+        Self {
+            exports: A::allocate_vector(),
+        }
+    }
+
     pub(crate) fn decode(
         reader: &mut Reader,
         vectors: &mut impl Vectors,
