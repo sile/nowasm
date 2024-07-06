@@ -1,6 +1,6 @@
 use crate::{
     symbols::{Code, ExportDesc, GlobalIdx, ValType},
-    Allocator, Instr, Module, Vectors,
+    Allocator, Instr, Module,
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -44,23 +44,22 @@ pub trait ImportObject {
 // TODO: Add trap_handler()
 
 // TODO: #[derive(Debug)]
-pub struct ModuleInstance<V, G, S, I, A: Allocator> {
-    pub module: Module<V, A>,
+pub struct ModuleInstance<G, S, I, A: Allocator> {
+    pub module: Module<A>,
     pub store: G,
     pub stacks: S,
     pub import_object: I,
 }
 
-impl<V, G, S, I, A> ModuleInstance<V, G, S, I, A>
+impl<G, S, I, A> ModuleInstance<G, S, I, A>
 where
-    V: Vectors,
     G: Store,
     S: Stacks,
     I: ImportObject,
     A: Allocator,
 {
     pub fn new(
-        module: Module<V, A>,
+        module: Module<A>,
         mut store: G,
         stacks: S,
         import_object: I,
@@ -71,8 +70,8 @@ where
 
         // TODO: check import_object
 
-        for global in module.global_section().globals.iter(module.vectors()) {
-            store.push_global(global.init(&module)?);
+        for global in module.global_section().globals.as_ref().iter() {
+            store.push_global(global.init()?);
         }
 
         Ok(Self {
@@ -89,8 +88,7 @@ where
         args: &[Value],
     ) -> Result<Option<Value>, ExecutionError> {
         let Some(export) = self.module.exports().find(|export| {
-            matches!(export.desc, ExportDesc::Func(_))
-                && Some(function_name) == self.module.get_name(export.name)
+            matches!(export.desc, ExportDesc::Func(_)) && function_name == export.name.as_str()
         }) else {
             return Err(ExecutionError::NotExportedFunction);
         };
@@ -106,11 +104,12 @@ where
 
         let code = func_idx
             .get_code(&self.module)
-            .ok_or(ExecutionError::InvalidFuncIdx)?;
+            .ok_or(ExecutionError::InvalidFuncIdx)?
+            .clone(); // TODO: remove clone
 
-        let locals = args.len() + code.locals(&self.module).count();
+        let locals = args.len() + code.locals().count();
         self.stacks.push_frame(locals);
-        let result = match self.call(code, args, returns) {
+        let result = match self.call(&code, args, returns) {
             Err(e) => Err(e),
             Ok(()) => {
                 // TODO: validate result type
@@ -128,7 +127,7 @@ where
 
     fn call(
         &mut self,
-        code: Code,
+        code: &Code<A>,
         args: &[Value],
         return_values: usize,
     ) -> Result<(), ExecutionError> {
@@ -136,20 +135,20 @@ where
         for (i, arg) in args
             .iter()
             .copied()
-            .chain(code.locals(&self.module).map(Value::zero))
+            .chain(code.locals().map(Value::zero))
             .enumerate()
         {
             frame.locals[i] = arg;
         }
 
-        for instr in code.instrs(&self.module) {
+        for instr in code.instrs() {
             match instr {
                 Instr::GlobalSet(idx) => {
                     let v = self.stacks.pop_value();
-                    self.store.set_global(idx, v);
+                    self.store.set_global(*idx, v);
                 }
                 Instr::GlobalGet(idx) => {
-                    let v = self.store.get_global(idx);
+                    let v = self.store.get_global(*idx);
                     self.stacks.push_value(v);
                 }
                 Instr::LocalSet(idx) => {
@@ -161,16 +160,16 @@ where
                     self.stacks.push_value(v);
                 }
                 Instr::I32Const(v) => {
-                    self.stacks.push_value(Value::I32(v));
+                    self.stacks.push_value(Value::I32(*v));
                 }
                 Instr::I64Const(v) => {
-                    self.stacks.push_value(Value::I64(v));
+                    self.stacks.push_value(Value::I64(*v));
                 }
                 Instr::F32Const(v) => {
-                    self.stacks.push_value(Value::F32(v));
+                    self.stacks.push_value(Value::F32(*v));
                 }
                 Instr::F64Const(v) => {
-                    self.stacks.push_value(Value::F64(v));
+                    self.stacks.push_value(Value::F64(*v));
                 }
                 Instr::I32Add => {
                     let v0 = self.stacks.pop_value_i32();

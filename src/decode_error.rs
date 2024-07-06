@@ -1,4 +1,4 @@
-use crate::{symbols::SectionId, vectors::VectorKind};
+use crate::symbols::SectionId;
 use core::str::Utf8Error;
 
 // TODO: impl Display
@@ -67,7 +67,4 @@ pub enum DecodeError {
     },
     InvalidUtf8(Utf8Error),
     MalformedInteger,
-    FullVector {
-        kind: VectorKind,
-    },
 }

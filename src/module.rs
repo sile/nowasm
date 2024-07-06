@@ -1,38 +1,32 @@
-use std::marker::PhantomData;
-
 use crate::{
     reader::Reader,
     sections::{
         CodeSection, DataSection, ElementSection, ExportSection, FunctionSection, GlobalSection,
         ImportSection, MemorySection, SectionId, StartSection, TableSection, TypeSection,
     },
-    symbols::{Export, Magic, Name, Version},
+    symbols::{Export, Magic, Version},
     validation::ValidateError,
-    Allocator, DecodeError, Vectors,
+    Allocator, DecodeError,
 };
+use std::marker::PhantomData;
 
 // TODO: #[derive(Debug)]
-pub struct Module<V, A: Allocator> {
+pub struct Module<A: Allocator> {
     _allocator: PhantomData<A>,
-    vectors: V,
     type_section: TypeSection<A>,
     import_section: ImportSection<A>,
-    function_section: FunctionSection,
-    table_section: TableSection,
+    function_section: FunctionSection<A>,
+    table_section: TableSection<A>,
     memory_section: MemorySection,
-    global_section: GlobalSection,
+    global_section: GlobalSection<A>,
     export_section: ExportSection<A>,
     start_section: StartSection,
-    element_section: ElementSection,
-    code_section: CodeSection,
-    data_section: DataSection,
+    element_section: ElementSection<A>,
+    code_section: CodeSection<A>,
+    data_section: DataSection<A>,
 }
 
-impl<V: Vectors, A: Allocator> Module<V, A> {
-    pub fn vectors(&self) -> &V {
-        &self.vectors
-    }
-
+impl<A: Allocator> Module<A> {
     pub fn type_section(&self) -> &TypeSection<A> {
         &self.type_section
     }
@@ -41,11 +35,11 @@ impl<V: Vectors, A: Allocator> Module<V, A> {
         &self.import_section
     }
 
-    pub fn function_section(&self) -> &FunctionSection {
+    pub fn function_section(&self) -> &FunctionSection<A> {
         &self.function_section
     }
 
-    pub fn table_section(&self) -> &TableSection {
+    pub fn table_section(&self) -> &TableSection<A> {
         &self.table_section
     }
 
@@ -53,7 +47,7 @@ impl<V: Vectors, A: Allocator> Module<V, A> {
         &self.memory_section
     }
 
-    pub fn global_section(&self) -> &GlobalSection {
+    pub fn global_section(&self) -> &GlobalSection<A> {
         &self.global_section
     }
 
@@ -65,15 +59,15 @@ impl<V: Vectors, A: Allocator> Module<V, A> {
         &self.start_section
     }
 
-    pub fn element_section(&self) -> &ElementSection {
+    pub fn element_section(&self) -> &ElementSection<A> {
         &self.element_section
     }
 
-    pub fn code_section(&self) -> &CodeSection {
+    pub fn code_section(&self) -> &CodeSection<A> {
         &self.code_section
     }
 
-    pub fn data_section(&self) -> &DataSection {
+    pub fn data_section(&self) -> &DataSection<A> {
         &self.data_section
     }
 
@@ -81,25 +75,20 @@ impl<V: Vectors, A: Allocator> Module<V, A> {
         self.export_section.exports.as_ref().iter()
     }
 
-    pub fn get_name(&self, name: Name<A>) -> Option<&str> {
-        name.as_str(&self.vectors)
-    }
-
-    pub fn decode(wasm_bytes: &[u8], vectors: V) -> Result<Self, DecodeError> {
+    pub fn decode(wasm_bytes: &[u8]) -> Result<Self, DecodeError> {
         let mut this = Self {
             _allocator: PhantomData,
-            vectors,
             type_section: TypeSection::new(),
             import_section: ImportSection::new(),
-            function_section: FunctionSection::default(),
-            table_section: TableSection::default(),
+            function_section: FunctionSection::new(),
+            table_section: TableSection::new(),
             memory_section: MemorySection::default(),
-            global_section: GlobalSection::default(),
-            export_section: ExportSection::default(),
+            global_section: GlobalSection::new(),
+            export_section: ExportSection::new(),
             start_section: StartSection::default(),
-            element_section: ElementSection::default(),
-            code_section: CodeSection::default(),
-            data_section: DataSection::default(),
+            element_section: ElementSection::new(),
+            code_section: CodeSection::new(),
+            data_section: DataSection::new(),
         };
         let mut reader = Reader::new(wasm_bytes);
 
@@ -138,35 +127,24 @@ impl<V: Vectors, A: Allocator> Module<V, A> {
                     self.import_section = ImportSection::decode(&mut section_reader)?
                 }
                 SectionId::Function => {
-                    self.function_section =
-                        FunctionSection::decode(&mut section_reader, &mut self.vectors)?
+                    self.function_section = FunctionSection::decode(&mut section_reader)?
                 }
-                SectionId::Table => {
-                    self.table_section =
-                        TableSection::decode(&mut section_reader, &mut self.vectors)?
-                }
+                SectionId::Table => self.table_section = TableSection::decode(&mut section_reader)?,
                 SectionId::Memory => {
                     self.memory_section = MemorySection::decode(&mut section_reader)?
                 }
                 SectionId::Global => {
-                    self.global_section =
-                        GlobalSection::decode(&mut section_reader, &mut self.vectors)?
+                    self.global_section = GlobalSection::decode(&mut section_reader)?
                 }
                 SectionId::Export => {
-                    self.export_section =
-                        ExportSection::decode(&mut section_reader, &mut self.vectors)?
+                    self.export_section = ExportSection::decode(&mut section_reader)?
                 }
                 SectionId::Start => self.start_section = StartSection::decode(&mut section_reader)?,
                 SectionId::Element => {
-                    self.element_section =
-                        ElementSection::decode(&mut section_reader, &mut self.vectors)?
+                    self.element_section = ElementSection::decode(&mut section_reader)?
                 }
-                SectionId::Code => {
-                    self.code_section = CodeSection::decode(&mut section_reader, &mut self.vectors)?
-                }
-                SectionId::Data => {
-                    self.data_section = DataSection::decode(&mut section_reader, &mut self.vectors)?
-                }
+                SectionId::Code => self.code_section = CodeSection::decode(&mut section_reader)?,
+                SectionId::Data => self.data_section = DataSection::decode(&mut section_reader)?,
             }
             last_section_id = section_id;
 

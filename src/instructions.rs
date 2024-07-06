@@ -1,23 +1,23 @@
 #[cfg(feature = "sign_extension")]
 use crate::instructions_sign_extension::SignExtensionInstr;
+use crate::vectors::Vector;
 use crate::{
     reader::Reader,
     symbols::{BlockType, FuncIdx, GlobalIdx, LabelIdx, LocalIdx, MemArg, TypeIdx},
-    vectors::{VectorKind, Vectors},
-    DecodeError,
+    Allocator, DecodeError,
 };
 
-#[derive(Debug, Clone, Copy)]
-pub enum Instr {
+#[derive(Debug, Clone)]
+pub enum Instr<A: Allocator> {
     // Control Instructions
     Unreachable,
     Nop,
-    Block(BlockInstr),
-    Loop(LoopInstr),
-    If(IfInstr),
+    Block(BlockInstr<A>),
+    Loop(LoopInstr<A>),
+    If(IfInstr<A>),
     Br(LabelIdx),
     BrIf(LabelIdx),
-    BrTable(BrTableInstr),
+    BrTable(BrTableInstr<A>),
     Return,
     Call(FuncIdx),
     CallIndirect(TypeIdx),
@@ -194,19 +194,19 @@ pub enum Instr {
     SignExtension(SignExtensionInstr),
 }
 
-impl Instr {
-    pub fn decode(reader: &mut Reader, vectors: &mut impl Vectors) -> Result<Self, DecodeError> {
+impl<A: Allocator> Instr<A> {
+    pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         let opcode = reader.read_u8()?;
         match opcode {
             // Control Instructions
             0x00 => Ok(Self::Unreachable),
             0x01 => Ok(Self::Nop),
-            0x02 => Ok(Self::Block(BlockInstr::decode(reader, vectors)?)),
-            0x03 => Ok(Self::Loop(LoopInstr::decode(reader, vectors)?)),
-            0x04 => Ok(Self::If(IfInstr::decode(reader, vectors)?)),
+            0x02 => Ok(Self::Block(BlockInstr::decode(reader)?)),
+            0x03 => Ok(Self::Loop(LoopInstr::decode(reader)?)),
+            0x04 => Ok(Self::If(IfInstr::decode(reader)?)),
             0x0c => Ok(Self::Br(LabelIdx::decode(reader)?)),
             0x0d => Ok(Self::BrIf(LabelIdx::decode(reader)?)),
-            0x0e => Ok(Self::BrTable(BrTableInstr::decode(reader, vectors)?)),
+            0x0e => Ok(Self::BrTable(BrTableInstr::decode(reader)?)),
             0x0f => Ok(Self::Return),
             0x10 => Ok(Self::Call(FuncIdx::decode(reader)?)),
             0x11 => {
@@ -409,84 +409,58 @@ impl Instr {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-pub struct BlockInstr {
+#[derive(Debug, Clone)]
+pub struct BlockInstr<A: Allocator> {
     pub block_type: BlockType,
-    pub instrs_start: usize,
-    pub instrs_len: usize,
+    pub instrs: A::Vector<Instr<A>>,
 }
 
-impl BlockInstr {
-    pub fn decode(reader: &mut Reader, vectors: &mut impl Vectors) -> Result<Self, DecodeError> {
+impl<A: Allocator> BlockInstr<A> {
+    pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         let block_type = BlockType::decode(reader)?;
-        let instrs_start = vectors.instrs().len();
+        let mut instrs = A::allocate_vector();
         while reader.peek_u8()? != 0x0b {
-            let instr = Instr::decode(reader, vectors)?;
-            if !vectors.instrs_append(&[instr]) {
-                return Err(DecodeError::FullVector {
-                    kind: VectorKind::Instrs,
-                });
-            }
+            instrs.push(Instr::decode(reader)?);
         }
         reader.read_u8()?;
-        Ok(Self {
-            block_type,
-            instrs_start,
-            instrs_len: vectors.instrs().len() - instrs_start,
-        })
+        Ok(Self { block_type, instrs })
     }
 
     pub fn len(self) -> usize {
-        self.instrs_len
+        self.instrs.as_ref().len()
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-pub struct LoopInstr {
+#[derive(Debug, Clone)]
+pub struct LoopInstr<A: Allocator> {
     pub block_type: BlockType,
-
-    // TODO: VecRef<Instr> or VecSlice<Instr>
-    pub instr_start: usize,
-    pub instr_end: usize,
+    pub instrs: A::Vector<Instr<A>>,
 }
 
-impl LoopInstr {
-    pub fn decode(reader: &mut Reader, vectors: &mut impl Vectors) -> Result<Self, DecodeError> {
+impl<A: Allocator> LoopInstr<A> {
+    pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         let block_type = BlockType::decode(reader)?;
-        let instr_start = vectors.instrs().len();
+        let mut instrs = A::allocate_vector();
         while reader.peek_u8()? != 0x0b {
-            let instr = Instr::decode(reader, vectors)?;
-            if !vectors.instrs_append(&[instr]) {
-                return Err(DecodeError::FullVector {
-                    kind: VectorKind::Instrs,
-                });
-            }
+            instrs.push(Instr::decode(reader)?);
         }
         reader.read_u8()?;
-        Ok(Self {
-            block_type,
-            instr_start,
-            instr_end: vectors.instrs().len() - instr_start,
-        })
+        Ok(Self { block_type, instrs })
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-pub struct IfInstr {
+#[derive(Debug, Clone)]
+pub struct IfInstr<A: Allocator> {
     pub block_type: BlockType,
-
-    // TODO
-    pub then_instr_start: usize,
-    pub then_instr_end: usize,
-    pub else_instr_start: usize,
-    pub else_instr_end: usize,
+    pub then_instrs: A::Vector<Instr<A>>,
+    pub else_instrs: A::Vector<Instr<A>>,
 }
 
-impl IfInstr {
-    pub fn decode(reader: &mut Reader, vectors: &mut impl Vectors) -> Result<Self, DecodeError> {
+impl<A: Allocator> IfInstr<A> {
+    pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         let block_type = BlockType::decode(reader)?;
-        let mut then_instrs = 0;
-        let mut else_instrs = 0;
+        let mut then_instrs = A::allocate_vector();
+        let mut else_instrs = A::allocate_vector();
 
         loop {
             let b = reader.peek_u8()?;
@@ -494,75 +468,46 @@ impl IfInstr {
                 reader.read_u8()?;
                 return Ok(Self {
                     block_type,
-                    then_instr_start: 0,
-                    then_instr_end: then_instrs,
-                    else_instr_start: then_instrs,
-                    else_instr_end: then_instrs + else_instrs,
+                    then_instrs,
+                    else_instrs,
                 });
             } else if b == 0x05 {
                 reader.read_u8()?;
                 break;
             }
 
-            let instr = Instr::decode(reader, vectors)?;
-            if !vectors.instrs_append(&[instr]) {
-                return Err(DecodeError::FullVector {
-                    kind: VectorKind::Instrs,
-                });
-            }
-            then_instrs += 1; // TODO
+            then_instrs.push(Instr::decode(reader)?);
         }
 
         while reader.peek_u8()? != 0x0B {
-            let instr = Instr::decode(reader, vectors)?;
-            if !vectors.instrs_append(&[instr]) {
-                return Err(DecodeError::FullVector {
-                    kind: VectorKind::Instrs,
-                });
-            }
-            else_instrs += 1; // TODO
+            else_instrs.push(Instr::decode(reader)?);
         }
         reader.read_u8()?;
 
         Ok(Self {
             block_type,
-            then_instr_start: 0,
-            then_instr_end: then_instrs,
-            else_instr_start: then_instrs,
-            else_instr_end: then_instrs + else_instrs,
+            then_instrs,
+            else_instrs,
         })
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-pub struct BrTableInstr {
-    pub label_idx_start: usize,
-    pub label_idx_end: usize,
-
-    // TODO: rename
-    pub last_label_idx: LabelIdx,
+#[derive(Debug, Clone)]
+pub struct BrTableInstr<A: Allocator> {
+    pub labels: A::Vector<LabelIdx>,
 }
 
-impl BrTableInstr {
-    pub fn decode(reader: &mut Reader, vectors: &mut impl Vectors) -> Result<Self, DecodeError> {
-        let n = reader.read_u32()? as usize;
-        let label_idx_start = vectors.idxs().len();
+impl<A: Allocator> BrTableInstr<A> {
+    pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
+        let n = reader.read_u32()? as usize + 1;
+        let mut labels = A::allocate_vector();
         for _ in 0..n {
-            let idx = LabelIdx::decode(reader)?;
-            if !vectors.idxs_append(&[idx.get()]) {
-                return Err(DecodeError::FullVector {
-                    kind: VectorKind::Idxs,
-                });
-            }
+            labels.push(LabelIdx::decode(reader)?);
         }
-        Ok(Self {
-            label_idx_start,
-            label_idx_end: vectors.idxs().len(),
-            last_label_idx: LabelIdx::decode(reader)?,
-        })
+        Ok(Self { labels })
     }
 
     pub fn idx_len(self) -> usize {
-        self.label_idx_end - self.label_idx_start
+        self.labels.as_ref().len()
     }
 }

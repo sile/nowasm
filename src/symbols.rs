@@ -1,7 +1,7 @@
 use crate::execution::{ExecutionError, Value};
 use crate::instructions::Instr;
 use crate::reader::Reader;
-use crate::vectors::{VectorItem, VectorKind, Vectors};
+use crate::vectors::Vector;
 use crate::{Allocator, DecodeError, DecodeVector, Module};
 
 #[derive(Debug)]
@@ -40,31 +40,22 @@ pub struct Name<A: Allocator> {
 }
 
 impl<A: Allocator> Name<A> {
-    pub fn decode(reader: &mut Reader, vectors: &mut impl Vectors) -> Result<Self, DecodeError> {
-        let start = vectors.bytes().len();
+    pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         let len = reader.read_usize()?;
-        let name = reader.read(len)?;
-        let _ = core::str::from_utf8(name).map_err(DecodeError::InvalidUtf8)?;
-        if !vectors.bytes_append(name) {
-            return Err(DecodeError::FullVector {
-                kind: VectorKind::Bytes,
-            });
+        let mut bytes = A::allocate_vector();
+        for &b in reader.read(len)? {
+            bytes.push(b);
         }
-        Ok(Self { start, len })
+        let _ = core::str::from_utf8(bytes.as_ref()).map_err(DecodeError::InvalidUtf8)?;
+        Ok(Self { bytes })
     }
 
-    pub fn as_str(self, vectors: &impl Vectors) -> Option<&str> {
-        let bytes = vectors.bytes();
-        let start = self.start;
-        let end = start + self.len;
-        if bytes.len() < end {
-            return None;
-        }
-        core::str::from_utf8(&bytes[start..end]).ok()
+    pub fn as_str(&self) -> &str {
+        core::str::from_utf8(self.bytes.as_ref()).expect("unreachable")
     }
 
-    pub fn len(self) -> usize {
-        self.len
+    pub fn len(&self) -> usize {
+        self.bytes.as_ref().len()
     }
 }
 
@@ -76,15 +67,19 @@ pub struct Import<A: Allocator> {
 }
 
 impl<A: Allocator> Import<A> {
-    pub fn decode(reader: &mut Reader, vectors: &mut impl Vectors) -> Result<Self, DecodeError> {
-        let module = Name::decode(reader, vectors)?;
-        let name = Name::decode(reader, vectors)?;
+    pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
+        let module = Name::decode(reader)?;
+        let name = Name::decode(reader)?;
         let desc = ImportDesc::decode(reader)?;
         Ok(Self { module, name, desc })
     }
 }
 
-impl<A: Allocator> VectorItem for Import<A> {}
+impl<A: Allocator> DecodeVector<A> for Import<A> {
+    fn decode_item(reader: &mut Reader) -> Result<Self, DecodeError> {
+        Self::decode(reader)
+    }
+}
 
 #[derive(Debug, Clone, Copy)]
 pub enum ImportDesc {
@@ -119,32 +114,18 @@ pub struct Export<A: Allocator> {
 }
 
 impl<A: Allocator> Export<A> {
-    pub fn decode(reader: &mut Reader, vectors: &mut impl Vectors) -> Result<Self, DecodeError> {
-        let name = Name::decode(reader, vectors)?;
+    pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
+        let name = Name::decode(reader)?;
         let desc = ExportDesc::decode(reader)?;
         Ok(Self { name, desc })
     }
 }
 
-// TODO
-// impl VectorItem for Export {
-//     fn decode<V: Vectors>(reader: &mut Reader, vectors: &mut V) -> Result<Self, DecodeError> {
-//         Self::decode(reader, vectors)
-//     }
-
-//     fn append<V: Vectors>(items: &[Self], vectors: &mut V) -> Result<usize, DecodeError> {
-//         if !vectors.exports_append(items) {
-//             return Err(DecodeError::FullVector {
-//                 kind: VectorKind::Exports,
-//             });
-//         }
-//         Ok(vectors.exports().len())
-//     }
-
-//     fn get(index: usize, vectors: &impl Vectors) -> Option<Self> {
-//         vectors.exports().get(index).copied()
-//     }
-// }
+impl<A: Allocator> DecodeVector<A> for Export<A> {
+    fn decode_item(reader: &mut Reader) -> Result<Self, DecodeError> {
+        Self::decode(reader)
+    }
+}
 
 #[derive(Debug, Clone, Copy)]
 pub enum ExportDesc {
@@ -180,11 +161,12 @@ impl TypeIdx {
         reader.read_u32().map(Self)
     }
 
-    pub fn get_type<A: Allocator>(self, module: &Module<impl Vectors, A>) -> Option<&FuncType<A>> {
+    pub fn get_type<A: Allocator>(self, module: &Module<A>) -> Option<&FuncType<A>> {
         let type_idx = module
             .function_section()
             .idxs
-            .get(self.0 as usize, module.vectors())?;
+            .as_ref()
+            .get(self.0 as usize)?;
         module
             .type_section()
             .types
@@ -192,12 +174,8 @@ impl TypeIdx {
             .get(type_idx.0 as usize)
     }
 
-    pub fn get_code(self, module: &Module<impl Vectors, impl Allocator>) -> Option<Code> {
-        let code = module
-            .code_section()
-            .codes
-            .get(self.0 as usize, module.vectors())?;
-        Some(code)
+    pub fn get_code<A: Allocator>(self, module: &Module<A>) -> Option<&Code<A>> {
+        module.code_section().codes.as_ref().get(self.0 as usize)
     }
 }
 
@@ -207,22 +185,9 @@ impl From<TypeIdx> for u32 {
     }
 }
 
-impl VectorItem for TypeIdx {
-    fn decode<V: Vectors>(reader: &mut Reader, _vectors: &mut V) -> Result<Self, DecodeError> {
+impl<A: Allocator> DecodeVector<A> for TypeIdx {
+    fn decode_item(reader: &mut Reader) -> Result<Self, DecodeError> {
         Self::decode(reader)
-    }
-
-    fn append<V: Vectors>(items: &[Self], vectors: &mut V) -> Result<usize, DecodeError> {
-        if !vectors.idxs_append(items) {
-            return Err(DecodeError::FullVector {
-                kind: VectorKind::Idxs,
-            });
-        }
-        Ok(vectors.idxs().len())
-    }
-
-    fn get(index: usize, vectors: &impl Vectors) -> Option<Self> {
-        vectors.idxs().get(index).copied().map(Self)
     }
 }
 
@@ -232,6 +197,10 @@ pub struct FuncIdx(u32);
 impl FuncIdx {
     pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         reader.read_u32().map(Self)
+    }
+
+    pub fn get(self) -> u32 {
+        self.0
     }
 }
 
@@ -320,22 +289,9 @@ impl TableType {
     }
 }
 
-impl VectorItem for TableType {
-    fn decode<V: Vectors>(reader: &mut Reader, _vectors: &mut V) -> Result<Self, DecodeError> {
+impl<A: Allocator> DecodeVector<A> for TableType {
+    fn decode_item(reader: &mut Reader) -> Result<Self, DecodeError> {
         Self::decode(reader)
-    }
-
-    fn append<V: Vectors>(items: &[Self], vectors: &mut V) -> Result<usize, DecodeError> {
-        if !vectors.table_types_append(items) {
-            return Err(DecodeError::FullVector {
-                kind: VectorKind::TableTypes,
-            });
-        }
-        Ok(vectors.table_types().len())
-    }
-
-    fn get(index: usize, vectors: &impl Vectors) -> Option<Self> {
-        vectors.table_types().get(index).copied()
     }
 }
 
@@ -441,7 +397,7 @@ impl<A: Allocator> FuncType<A> {
     pub fn validate_args(
         &self,
         args: &[Value],
-        _module: &Module<impl Vectors, impl Allocator>,
+        _module: &Module<impl Allocator>,
     ) -> Result<(), ExecutionError> {
         if args.len() != self.rt1.len() {
             return Err(ExecutionError::InvalidFuncArgs);
@@ -469,20 +425,6 @@ impl<A: Allocator> DecodeVector<A> for FuncType<A> {
     }
 }
 
-impl<A: Allocator> VectorItem for FuncType<A> {
-    fn decode<V: Vectors>(_reader: &mut Reader, _vectors: &mut V) -> Result<Self, DecodeError> {
-        todo!()
-    }
-
-    fn append<V: Vectors>(_items: &[Self], _vectors: &mut V) -> Result<usize, DecodeError> {
-        todo!()
-    }
-
-    fn get(_index: usize, _vectors: &impl Vectors) -> Option<Self> {
-        todo!()
-    }
-}
-
 #[derive(Debug, Clone)]
 pub struct ResultType<A: Allocator> {
     pub types: A::Vector<ValType>,
@@ -503,92 +445,63 @@ impl<A: Allocator> ResultType<A> {
     }
 }
 
-#[derive(Debug, Default, Clone, Copy)]
-pub struct Global {
+#[derive(Debug, Clone)]
+pub struct Global<A: Allocator> {
     pub ty: GlobalType,
-    pub init: Expr,
+    pub init: Expr<A>,
 }
 
-impl Global {
-    pub fn decode(reader: &mut Reader, vectors: &mut impl Vectors) -> Result<Self, DecodeError> {
+impl<A: Allocator> Global<A> {
+    pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         let ty = GlobalType::decode(reader)?;
-        let init = Expr::decode(reader, vectors)?;
+        let init = Expr::decode(reader)?;
         Ok(Self { ty, init })
     }
 
-    pub fn init(
-        &self,
-        module: &Module<impl Vectors, impl Allocator>,
-    ) -> Result<Value, ExecutionError> {
-        if self.init.len != 1 {
+    pub fn init(&self) -> Result<Value, ExecutionError> {
+        if self.init.len() != 1 {
             return Err(ExecutionError::InvalidGlobalInitializer);
         }
-        let Some(instr) = self.init.iter(module).next() else {
+        let Some(instr) = self.init.iter().next() else {
             return Err(ExecutionError::InvalidGlobalInitializer);
         };
         match (self.ty.val_type(), instr) {
-            (ValType::I32, Instr::I32Const(x)) => Ok(Value::I32(x)),
-            (ValType::I64, Instr::I64Const(x)) => Ok(Value::I64(x)),
-            (ValType::F32, Instr::F32Const(x)) => Ok(Value::F32(x)),
-            (ValType::F64, Instr::F64Const(x)) => Ok(Value::F64(x)),
+            (ValType::I32, Instr::I32Const(x)) => Ok(Value::I32(*x)),
+            (ValType::I64, Instr::I64Const(x)) => Ok(Value::I64(*x)),
+            (ValType::F32, Instr::F32Const(x)) => Ok(Value::F32(*x)),
+            (ValType::F64, Instr::F64Const(x)) => Ok(Value::F64(*x)),
             _ => Err(ExecutionError::InvalidGlobalInitializer),
         }
     }
 }
 
-impl VectorItem for Global {
-    fn decode<V: Vectors>(reader: &mut Reader, vectors: &mut V) -> Result<Self, DecodeError> {
-        Self::decode(reader, vectors)
-    }
-
-    fn append<V: Vectors>(items: &[Self], vectors: &mut V) -> Result<usize, DecodeError> {
-        if !vectors.globals_append(items) {
-            return Err(DecodeError::FullVector {
-                kind: VectorKind::Globals,
-            });
-        }
-        Ok(vectors.globals().len())
-    }
-
-    fn get(index: usize, vectors: &impl Vectors) -> Option<Self> {
-        vectors.globals().get(index).copied()
+impl<A: Allocator> DecodeVector<A> for Global<A> {
+    fn decode_item(reader: &mut Reader) -> Result<Self, DecodeError> {
+        Self::decode(reader)
     }
 }
 
-#[derive(Debug, Default, Clone, Copy)]
-pub struct Expr {
-    pub start: usize, // TODO
-    len: usize,
+#[derive(Debug, Clone)]
+pub struct Expr<A: Allocator> {
+    instrs: A::Vector<Instr<A>>,
 }
 
-impl Expr {
-    pub fn decode(reader: &mut Reader, vectors: &mut impl Vectors) -> Result<Self, DecodeError> {
-        let start = vectors.instrs().len();
+impl<A: Allocator> Expr<A> {
+    pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
+        let mut instrs = A::allocate_vector();
         while reader.peek_u8()? != 0x0b {
-            let instr = Instr::decode(reader, vectors)?;
-            if !vectors.instrs_append(&[instr]) {
-                return Err(DecodeError::FullVector {
-                    kind: VectorKind::Instrs,
-                });
-            }
+            instrs.push(Instr::decode(reader)?);
         }
         reader.read_u8()?;
-        let end = vectors.instrs().len();
-        let len = end - start;
-        Ok(Self { start, len })
+        Ok(Self { instrs })
     }
 
-    pub fn len(self) -> usize {
-        self.len
+    pub fn len(&self) -> usize {
+        self.instrs.as_ref().len()
     }
 
-    pub fn iter(
-        self,
-        module: &Module<impl Vectors, impl Allocator>,
-    ) -> impl '_ + Iterator<Item = Instr> {
-        module.vectors().instrs()[self.start..self.start + self.len]
-            .iter()
-            .copied()
+    pub fn iter(&self) -> impl '_ + Iterator<Item = &Instr<A>> {
+        self.instrs.as_ref().iter()
     }
 }
 
@@ -606,18 +519,18 @@ impl MemArg {
     }
 }
 
-#[derive(Debug, Default, Clone, Copy)]
-pub struct Elem {
+#[derive(Debug, Clone)]
+pub struct Elem<A: Allocator> {
     pub table: TableIdx,
-    pub offset: Expr,
-    pub init: FuncIdxVec,
+    pub offset: Expr<A>,
+    pub init: FuncIdxVec<A>,
 }
 
-impl Elem {
-    pub fn decode(reader: &mut Reader, vectors: &mut impl Vectors) -> Result<Self, DecodeError> {
+impl<A: Allocator> Elem<A> {
+    pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         let table = TableIdx::decode(reader)?;
-        let offset = Expr::decode(reader, vectors)?;
-        let init = FuncIdxVec::decode(reader, vectors)?;
+        let offset = Expr::decode(reader)?;
+        let init = FuncIdxVec::decode(reader)?;
         Ok(Self {
             table,
             offset,
@@ -626,131 +539,66 @@ impl Elem {
     }
 }
 
-impl VectorItem for Elem {
-    fn decode<V: Vectors>(reader: &mut Reader, vectors: &mut V) -> Result<Self, DecodeError> {
-        Self::decode(reader, vectors)
-    }
-
-    fn append<V: Vectors>(items: &[Self], vectors: &mut V) -> Result<usize, DecodeError> {
-        if !vectors.elems_append(items) {
-            return Err(DecodeError::FullVector {
-                kind: VectorKind::Elems,
-            });
-        }
-        Ok(vectors.elems().len())
-    }
-
-    fn get(index: usize, vectors: &impl Vectors) -> Option<Self> {
-        vectors.elems().get(index).copied()
+impl<A: Allocator> DecodeVector<A> for Elem<A> {
+    fn decode_item(reader: &mut Reader) -> Result<Self, DecodeError> {
+        Self::decode(reader)
     }
 }
 
 #[derive(Debug, Default, Clone, Copy)]
-pub struct FuncIdxVec {
-    pub start: usize,
-    len: usize,
+pub struct FuncIdxVec<A: Allocator> {
+    indices: A::Vector<FuncIdx>,
 }
 
-impl FuncIdxVec {
-    pub fn decode(reader: &mut Reader, vectors: &mut impl Vectors) -> Result<Self, DecodeError> {
-        let start = vectors.idxs().len();
+impl<A: Allocator> FuncIdxVec<A> {
+    pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
+        let mut indices = A::allocate_vector();
         let len = reader.read_usize()?;
         for _ in 0..len {
-            let idx = FuncIdx::decode(reader)?;
-            if !vectors.idxs_append(&[idx.0]) {
-                return Err(DecodeError::FullVector {
-                    kind: VectorKind::Idxs,
-                });
-            }
+            indices.push(FuncIdx::decode(reader)?);
         }
-        Ok(Self { start, len })
+        Ok(Self { indices })
     }
 
     pub fn len(self) -> usize {
-        self.len
+        self.indices.as_ref().len()
     }
 }
 
-#[derive(Debug, Default, Clone, Copy)]
-pub struct Code {
-    // TODO: func: Func
-    pub locals_start: usize, // TODO: use VectorSlice
-    pub locals_len: usize,
-    pub body: Expr,
+#[derive(Debug, Clone)]
+pub struct Code<A: Allocator> {
+    pub locals: A::Vector<ValType>,
+    pub body: Expr<A>,
 }
 
-impl Code {
-    pub fn decode(reader: &mut Reader, vectors: &mut impl Vectors) -> Result<Self, DecodeError> {
+impl<A: Allocator> Code<A> {
+    pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         let code_size = reader.read_usize()?;
         let mut reader = Reader::new(reader.read(code_size)?);
-
-        let locals_start = vectors.locals().len();
+        let mut locals = A::allocate_vector();
         let locals_len = reader.read_usize()?;
         for _ in 0..locals_len {
-            let locals = Locals::decode(&mut reader)?;
-            if !vectors.locals_append(&[locals]) {
-                return Err(DecodeError::FullVector {
-                    kind: VectorKind::Locals,
-                });
+            let val_types_len = reader.read_usize()?;
+            for _ in 0..val_types_len {
+                locals.push(ValType::decode(&mut reader)?);
             }
         }
-        let body = Expr::decode(&mut reader, vectors)?;
-        Ok(Self {
-            locals_start,
-            locals_len,
-            body,
-        })
+        let body = Expr::decode(&mut reader)?;
+        Ok(Self { locals, body })
     }
 
-    pub fn locals(
-        self,
-        module: &Module<impl Vectors, impl Allocator>,
-    ) -> impl '_ + Iterator<Item = ValType> {
-        module.vectors().locals()[self.locals_start..self.locals_start + self.locals_len]
-            .iter()
-            .copied()
-            .flat_map(|locals| std::iter::repeat(locals.t).take(locals.n as usize))
+    pub fn locals(&self) -> impl '_ + Iterator<Item = ValType> {
+        self.locals.as_ref().iter().copied()
     }
 
-    pub fn instrs(
-        self,
-        module: &Module<impl Vectors, impl Allocator>,
-    ) -> impl '_ + Iterator<Item = Instr> {
-        self.body.iter(module)
+    pub fn instrs(&self) -> impl '_ + Iterator<Item = &Instr<A>> {
+        self.body.iter()
     }
 }
 
-impl VectorItem for Code {
-    fn decode<V: Vectors>(reader: &mut Reader, vectors: &mut V) -> Result<Self, DecodeError> {
-        Self::decode(reader, vectors)
-    }
-
-    fn append<V: Vectors>(items: &[Self], vectors: &mut V) -> Result<usize, DecodeError> {
-        if !vectors.codes_append(items) {
-            return Err(DecodeError::FullVector {
-                kind: VectorKind::Codes,
-            });
-        }
-        Ok(vectors.codes().len())
-    }
-
-    fn get(index: usize, vectors: &impl Vectors) -> Option<Self> {
-        vectors.codes().get(index).copied()
-    }
-}
-
-// TODO: flatten(?)
-#[derive(Debug, Clone, Copy)]
-pub struct Locals {
-    pub n: u32,
-    pub t: ValType,
-}
-
-impl Locals {
-    pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
-        let n = reader.read_u32()?;
-        let t = ValType::decode(reader)?;
-        Ok(Self { n, t })
+impl<A: Allocator> DecodeVector<A> for Code<A> {
+    fn decode_item(reader: &mut Reader) -> Result<Self, DecodeError> {
+        Self::decode(reader)
     }
 }
 
@@ -786,46 +634,28 @@ impl S33 {
     }
 }
 
-#[derive(Debug, Default, Clone, Copy)]
-pub struct Data {
+#[derive(Debug, Clone)]
+pub struct Data<A: Allocator> {
     pub data: MemIdx,
-    pub offset: Expr,
-    pub init_start: usize,
-    pub init_end: usize,
+    pub offset: Expr<A>,
+    pub init: A::Vector<u8>,
 }
 
-impl Data {
-    pub fn decode(reader: &mut Reader, vectors: &mut impl Vectors) -> Result<Self, DecodeError> {
+impl<A: Allocator> Data<A> {
+    pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         let data = MemIdx::decode(reader)?;
-        let offset = Expr::decode(reader, vectors)?;
-        let init_start = vectors.bytes().len();
+        let offset = Expr::decode(reader)?;
+        let mut init = A::allocate_vector();
         let init_len = reader.read_usize()?;
-        vectors.bytes_append(reader.read(init_len)?);
-        let init_end = vectors.bytes().len();
-        Ok(Self {
-            data,
-            offset,
-            init_start,
-            init_end,
-        })
+        for _ in 0..init_len {
+            init.push(reader.read_u8()?);
+        }
+        Ok(Self { data, offset, init })
     }
 }
 
-impl VectorItem for Data {
-    fn decode<V: Vectors>(reader: &mut Reader, vectors: &mut V) -> Result<Self, DecodeError> {
-        Self::decode(reader, vectors)
-    }
-
-    fn append<V: Vectors>(items: &[Self], vectors: &mut V) -> Result<usize, DecodeError> {
-        if !vectors.datas_append(items) {
-            return Err(DecodeError::FullVector {
-                kind: VectorKind::Datas,
-            });
-        }
-        Ok(vectors.datas().len())
-    }
-
-    fn get(index: usize, vectors: &impl Vectors) -> Option<Self> {
-        vectors.datas().get(index).copied()
+impl<A: Allocator> DecodeVector<A> for Data<A> {
+    fn decode_item(reader: &mut Reader) -> Result<Self, DecodeError> {
+        Self::decode(reader)
     }
 }
