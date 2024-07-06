@@ -546,8 +546,9 @@ impl<A: Allocator> Decode for Code<A> {
         let locals_len = reader.read_usize()?;
         for _ in 0..locals_len {
             let val_types_len = reader.read_usize()?;
+            let val_type = ValType::decode(&mut reader)?;
             for _ in 0..val_types_len {
-                locals.push(ValType::decode(&mut reader)?);
+                locals.push(val_type);
             }
         }
         let body = Expr::decode(&mut reader)?;
