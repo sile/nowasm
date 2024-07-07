@@ -1,6 +1,5 @@
 use crate::{
     symbols::{Code, ExportDesc, GlobalIdx, ValType},
-    vectors::Vector,
     Allocator, Instr, Module,
 };
 use std::marker::PhantomData;
@@ -39,10 +38,6 @@ pub trait Store {
     fn get_global(&self, i: GlobalIdx) -> Value;
 }
 
-pub trait ImportObject {
-    fn mem(&mut self) -> &mut [u8];
-}
-
 // TODO: Add trap_handler()
 
 // TODO: Rename
@@ -51,8 +46,9 @@ pub struct State<A: Allocator> {
     _allocator: PhantomData<A>,
     pub mem: A::Vector<u8>,
     pub globals: A::Vector<Value>,
-    pub frame_stack: A::Vector<Frame>,
-    pub value_stack: A::Vector<Value>,
+    pub locals: A::Vector<Value>,
+    pub frames: A::Vector<Frame>,
+    pub values: A::Vector<Value>,
 }
 
 impl<A: Allocator> State<A> {
@@ -61,52 +57,51 @@ impl<A: Allocator> State<A> {
             _allocator: PhantomData,
             mem,
             globals: A::allocate_vector(),
-            frame_stack: A::allocate_vector(),
-            value_stack: A::allocate_vector(),
+            locals: A::allocate_vector(),
+            frames: A::allocate_vector(),
+            values: A::allocate_vector(),
         }
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct Frame {}
+pub struct Frame {
+    pub locals_start: usize,
+    pub values_start: usize,
+    pub labels_start: usize,
+}
 
 // TODO: #[derive(Debug)]
-pub struct ModuleInstance<G, S, I, A: Allocator> {
+pub struct ModuleInstance<G, S, A: Allocator> {
     pub module: Module<A>,
     pub state: State<A>,
     pub store: G,
     pub stacks: S,
-    pub import_object: I,
 }
 
-impl<G, S, I, A> ModuleInstance<G, S, I, A>
+impl<G, S, A> ModuleInstance<G, S, A>
 where
     G: Store,
     S: Stacks,
-    I: ImportObject,
     A: Allocator,
 {
     pub fn new(
         module: Module<A>,
         mut store: G,
         stacks: S,
-        mut import_object: I,
+
+        // TODO: Use builder
+        mem: A::Vector<u8>,
     ) -> Result<Self, ExecutionError> {
         if module.start_section().start.is_some() {
             todo!()
         }
 
-        // TODO: check import_object
-
         for global in module.global_section().globals.as_ref().iter() {
             store.push_global(global.init()?);
         }
 
-        // TODO
-        let mut mem = A::allocate_vector();
-        for b in import_object.mem() {
-            mem.push(*b);
-        }
+        // TODO: check mem (min, max, pagesize)
         let state = State::new(mem);
 
         Ok(Self {
@@ -114,7 +109,6 @@ where
             state,
             store,
             stacks,
-            import_object,
         })
     }
 
@@ -238,7 +232,7 @@ where
                     let i = self.stacks.pop_value_i32();
                     let start = (i + arg.offset as i32) as usize;
                     let end = start + v.byte_size();
-                    let mem = self.import_object.mem();
+                    let mem = self.state.mem.as_mut();
                     if mem.len() < end {
                         return Err(ExecutionError::Trapped);
                     }

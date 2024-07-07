@@ -1,6 +1,6 @@
 use clap::Parser;
 use nowasm::{
-    execution::{FrameRef, ImportObject, ModuleInstance, Stacks, Store, Value},
+    execution::{FrameRef, ModuleInstance, Stacks, Store, Value},
     symbols::GlobalIdx,
     Allocator, Module, Vector,
 };
@@ -22,14 +22,12 @@ pub fn main() -> orfail::Result<()> {
         .map_err(|e| Failure::new(format!("{e:?}")))
         .or_fail()?;
 
-    let mut import_object = ExampleImportObject::default();
-    import_object.mem.resize(1024 * 1024, 0);
-
+    let mem = StdVec(vec![0; 1024 * 1024]);
     let mut instance = ModuleInstance::new(
         module,
         ExampleStore::default(),
         ExampleStacks::default(),
-        import_object,
+        mem,
     )
     .map_err(|e| Failure::new(format!("{e:?}")))
     .or_fail()?;
@@ -106,17 +104,6 @@ struct ExampleFrame {
     values_start: usize,
 }
 
-#[derive(Debug, Default)]
-pub struct ExampleImportObject {
-    mem: Vec<u8>,
-}
-
-impl ImportObject for ExampleImportObject {
-    fn mem(&mut self) -> &mut [u8] {
-        &mut self.mem
-    }
-}
-
 #[derive(Debug, Clone)]
 pub struct StdAllocator;
 
@@ -135,6 +122,10 @@ pub struct StdVec<T>(pub Vec<T>);
 impl<T: Debug + Clone> Vector<T> for StdVec<T> {
     fn push(&mut self, item: T) {
         self.0.push(item);
+    }
+
+    fn pop(&mut self) -> Option<T> {
+        self.0.pop()
     }
 }
 
