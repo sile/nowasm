@@ -1,6 +1,6 @@
 use clap::Parser;
 use nowasm::{
-    execution::{Frame, ImportObject, ModuleInstance, Stacks, Store, Value},
+    execution::{FrameRef, ImportObject, ModuleInstance, Stacks, Store, Value},
     symbols::GlobalIdx,
     Allocator, Module, Vector,
 };
@@ -82,11 +82,11 @@ impl Stacks for ExampleStacks {
         self.values.truncate(frame.values_start);
     }
 
-    fn current_frame(&mut self) -> Frame {
+    fn current_frame(&mut self) -> FrameRef {
         let Some(last) = self.frames.last_mut() else {
-            return Frame { locals: &mut [] };
+            return FrameRef { locals: &mut [] };
         };
-        Frame {
+        FrameRef {
             locals: &mut last.locals,
         }
     }

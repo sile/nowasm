@@ -1,7 +1,9 @@
 use crate::{
     symbols::{Code, ExportDesc, GlobalIdx, ValType},
+    vectors::Vector,
     Allocator, Instr, Module,
 };
+use std::marker::PhantomData;
 
 #[derive(Debug, Clone, Copy)]
 pub enum ExecutionError {
@@ -17,7 +19,7 @@ pub trait Stacks {
     // TODO: Return Result
     fn push_frame(&mut self, locals: usize);
     fn pop_frame(&mut self);
-    fn current_frame(&mut self) -> Frame;
+    fn current_frame(&mut self) -> FrameRef;
 
     fn push_value(&mut self, value: Value);
     fn pop_value(&mut self) -> Value;
@@ -43,18 +45,35 @@ pub trait ImportObject {
 
 // TODO: Add trap_handler()
 
+// TODO: Rename
 #[derive(Debug)]
 pub struct State<A: Allocator> {
+    _allocator: PhantomData<A>,
     pub mem: A::Vector<u8>,
     pub globals: A::Vector<Value>,
-    //    pub frame_stack: A::Vector<Frame>,
+    pub frame_stack: A::Vector<Frame>,
     pub value_stack: A::Vector<Value>,
 }
+
+impl<A: Allocator> State<A> {
+    pub fn new(mem: A::Vector<u8>) -> Self {
+        Self {
+            _allocator: PhantomData,
+            mem,
+            globals: A::allocate_vector(),
+            frame_stack: A::allocate_vector(),
+            value_stack: A::allocate_vector(),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Frame {}
 
 // TODO: #[derive(Debug)]
 pub struct ModuleInstance<G, S, I, A: Allocator> {
     pub module: Module<A>,
-    // TODO: state
+    pub state: State<A>,
     pub store: G,
     pub stacks: S,
     pub import_object: I,
@@ -71,7 +90,7 @@ where
         module: Module<A>,
         mut store: G,
         stacks: S,
-        import_object: I,
+        mut import_object: I,
     ) -> Result<Self, ExecutionError> {
         if module.start_section().start.is_some() {
             todo!()
@@ -83,8 +102,16 @@ where
             store.push_global(global.init()?);
         }
 
+        // TODO
+        let mut mem = A::allocate_vector();
+        for b in import_object.mem() {
+            mem.push(*b);
+        }
+        let state = State::new(mem);
+
         Ok(Self {
             module,
+            state,
             store,
             stacks,
             import_object,
@@ -259,7 +286,7 @@ where
 }
 
 #[derive(Debug)]
-pub struct Frame<'a> {
+pub struct FrameRef<'a> {
     pub locals: &'a mut [Value],
 }
 
