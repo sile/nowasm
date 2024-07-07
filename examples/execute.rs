@@ -1,6 +1,6 @@
 use clap::Parser;
 use nowasm::{
-    execution::{FrameRef, ModuleInstance, Stacks, Value},
+    execution::{ModuleInstance, Value},
     Allocator, Module, Vector,
 };
 use orfail::{Failure, OrFail};
@@ -22,7 +22,7 @@ pub fn main() -> orfail::Result<()> {
         .or_fail()?;
 
     let mem = StdVec(vec![0; 1024 * 1024]);
-    let mut instance = ModuleInstance::new(module, ExampleStacks::default(), mem)
+    let mut instance = ModuleInstance::new(module, mem)
         .map_err(|e| Failure::new(format!("{e:?}")))
         .or_fail()?;
 
@@ -34,49 +34,6 @@ pub fn main() -> orfail::Result<()> {
     println!("=> {:?}", result);
 
     Ok(())
-}
-
-#[derive(Debug, Default)]
-pub struct ExampleStacks {
-    frames: Vec<ExampleFrame>,
-    values: Vec<Value>,
-}
-
-impl Stacks for ExampleStacks {
-    fn push_frame(&mut self, locals: usize) {
-        self.frames.push(ExampleFrame {
-            locals: vec![Value::I32(0); locals],
-            values_start: self.values.len(),
-        });
-    }
-
-    fn pop_frame(&mut self) {
-        let frame = self.frames.pop().expect("unreachable");
-        self.values.truncate(frame.values_start);
-    }
-
-    fn current_frame(&mut self) -> FrameRef {
-        let Some(last) = self.frames.last_mut() else {
-            return FrameRef { locals: &mut [] };
-        };
-        FrameRef {
-            locals: &mut last.locals,
-        }
-    }
-
-    fn push_value(&mut self, value: Value) {
-        self.values.push(value);
-    }
-
-    fn pop_value(&mut self) -> Value {
-        self.values.pop().expect("unreachable")
-    }
-}
-
-#[derive(Debug, Clone)]
-struct ExampleFrame {
-    locals: Vec<Value>,
-    values_start: usize,
 }
 
 #[derive(Debug, Clone)]

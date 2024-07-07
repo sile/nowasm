@@ -11,4 +11,14 @@ pub trait Allocator: Debug + Clone {
 pub trait Vector<T: Clone>: Debug + Clone + AsRef<[T]> + AsMut<[T]> {
     fn push(&mut self, item: T);
     fn pop(&mut self) -> Option<T>;
+
+    fn len(&self) -> usize {
+        self.as_ref().len()
+    }
+
+    fn truncate(&mut self, n: usize) {
+        for _ in n..self.len() {
+            self.pop();
+        }
+    }
 }

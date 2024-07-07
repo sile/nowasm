@@ -1,5 +1,5 @@
 use crate::{
-    symbols::{Code, ExportDesc, ValType},
+    symbols::{Code, ExportDesc, LocalIdx, ValType},
     Allocator, Instr, Module, Vector,
 };
 use std::marker::PhantomData;
@@ -12,27 +12,6 @@ pub enum ExecutionError {
     InvalidGlobalInitializer,
     Trapped, // TODO: Add reason
 }
-
-// TODO: s/Stacks/Stack/
-pub trait Stacks {
-    // TODO: Return Result
-    fn push_frame(&mut self, locals: usize);
-    fn pop_frame(&mut self);
-    fn current_frame(&mut self) -> FrameRef;
-
-    fn push_value(&mut self, value: Value);
-    fn pop_value(&mut self) -> Value;
-
-    fn pop_value_i32(&mut self) -> i32 {
-        let Value::I32(v) = self.pop_value() else {
-            // TODO: Implement validation phases
-            unreachable!();
-        };
-        v
-    }
-}
-
-// TODO: Add trap_handler()
 
 // TODO: Rename
 #[derive(Debug)]
@@ -56,9 +35,61 @@ impl<A: Allocator> State<A> {
             values: A::allocate_vector(),
         }
     }
+
+    pub fn push_frame(&mut self) {
+        let frame = Frame {
+            locals_start: self.locals.len(),
+            values_start: self.values.len(),
+            labels_start: 0, // TODO
+        };
+        self.frames.push(frame);
+    }
+
+    pub fn pop_frame(&mut self) {
+        let Some(frame) = self.frames.pop() else {
+            unreachable!();
+        };
+
+        assert!(frame.locals_start <= self.locals.len());
+        self.locals.truncate(frame.locals_start);
+
+        assert!(frame.values_start <= self.values.len());
+        self.values.truncate(frame.values_start);
+
+        // TODO: Add labels handling
+    }
+
+    fn current_frame(&self) -> Frame {
+        self.frames.as_ref().last().copied().expect("unreachable")
+    }
+
+    pub fn set_local(&mut self, i: LocalIdx, v: Value) {
+        let i = self.current_frame().locals_start + i.get() as usize;
+        self.locals.as_mut()[i] = v;
+    }
+
+    pub fn get_local(&self, i: LocalIdx) -> Value {
+        let i = self.current_frame().locals_start + i.get() as usize;
+        self.locals.as_ref()[i]
+    }
+
+    pub fn push_value(&mut self, v: Value) {
+        self.values.push(v);
+    }
+
+    pub fn pop_value(&mut self) -> Value {
+        self.values.pop().expect("unreachable")
+    }
+
+    pub fn pop_value_i32(&mut self) -> i32 {
+        let Some(Value::I32(v)) = self.values.pop() else {
+            unreachable!();
+        };
+        v
+    }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct Frame {
     pub locals_start: usize,
     pub values_start: usize,
@@ -66,21 +97,14 @@ pub struct Frame {
 }
 
 // TODO: #[derive(Debug)]
-pub struct ModuleInstance<S, A: Allocator> {
+pub struct ModuleInstance<A: Allocator> {
     pub module: Module<A>,
     pub state: State<A>,
-
-    pub stacks: S,
 }
 
-impl<S, A> ModuleInstance<S, A>
-where
-    S: Stacks,
-    A: Allocator,
-{
+impl<A: Allocator> ModuleInstance<A> {
     pub fn new(
         module: Module<A>,
-        stacks: S,
 
         // TODO: Use builder
         mem: A::Vector<u8>,
@@ -96,11 +120,7 @@ where
             state.globals.push(global.init()?);
         }
 
-        Ok(Self {
-            module,
-            state,
-            stacks,
-        })
+        Ok(Self { module, state })
     }
 
     pub fn invoke(
@@ -128,8 +148,8 @@ where
             .ok_or(ExecutionError::InvalidFuncIdx)?
             .clone(); // TODO: remove clone
 
-        let locals = args.len() + code.locals().count();
-        self.stacks.push_frame(locals);
+        // TODO: delete let locals = args.len() + code.locals().count();
+        self.state.push_frame();
         let result = match self.call(&code, args, returns) {
             Err(e) => Err(e),
             Ok(()) => {
@@ -137,7 +157,7 @@ where
                 if returns == 0 {
                     Ok(None)
                 } else {
-                    Ok(Some(self.stacks.pop_value()))
+                    Ok(Some(self.state.pop_value()))
                 }
             }
         };
@@ -152,75 +172,69 @@ where
         args: &[Value],
         return_values: usize,
     ) -> Result<(), ExecutionError> {
-        let frame = self.stacks.current_frame();
-        for (i, arg) in args
-            .iter()
-            .copied()
-            .chain(code.locals().map(Value::zero))
-            .enumerate()
-        {
-            frame.locals[i] = arg;
+        for v in args.iter().copied().chain(code.locals().map(Value::zero)) {
+            self.state.locals.push(v);
         }
 
         for instr in code.instrs() {
             match instr {
                 Instr::GlobalSet(idx) => {
-                    let v = self.stacks.pop_value();
+                    let v = self.state.pop_value();
                     self.state.globals.as_mut()[idx.as_usize()] = v;
                 }
                 Instr::GlobalGet(idx) => {
                     let v = self.state.globals.as_ref()[idx.as_usize()];
-                    self.stacks.push_value(v);
+                    self.state.push_value(v);
                 }
                 Instr::LocalSet(idx) => {
-                    let v = self.stacks.pop_value();
-                    self.stacks.current_frame().locals[idx.as_usize()] = v;
+                    let v = self.state.pop_value();
+                    self.state.set_local(*idx, v);
                 }
                 Instr::LocalGet(idx) => {
-                    let v = self.stacks.current_frame().locals[idx.as_usize()];
-                    self.stacks.push_value(v);
+                    let v = self.state.get_local(*idx);
+                    self.state.push_value(v);
                 }
                 Instr::I32Const(v) => {
-                    self.stacks.push_value(Value::I32(*v));
+                    self.state.push_value(Value::I32(*v));
                 }
                 Instr::I64Const(v) => {
-                    self.stacks.push_value(Value::I64(*v));
+                    self.state.push_value(Value::I64(*v));
                 }
                 Instr::F32Const(v) => {
-                    self.stacks.push_value(Value::F32(*v));
+                    self.state.push_value(Value::F32(*v));
                 }
                 Instr::F64Const(v) => {
-                    self.stacks.push_value(Value::F64(*v));
+                    self.state.push_value(Value::F64(*v));
                 }
                 Instr::I32Add => {
-                    let v0 = self.stacks.pop_value_i32();
-                    let v1 = self.stacks.pop_value_i32();
-                    self.stacks.push_value(Value::I32(v1 + v0));
+                    let v0 = self.state.pop_value_i32();
+                    let v1 = self.state.pop_value_i32();
+                    self.state.push_value(Value::I32(v1 + v0));
                 }
                 Instr::I32Sub => {
-                    let v0 = self.stacks.pop_value_i32();
-                    let v1 = self.stacks.pop_value_i32();
-                    self.stacks.push_value(Value::I32(v1 - v0));
+                    let v0 = self.state.pop_value_i32();
+                    let v1 = self.state.pop_value_i32();
+                    self.state.push_value(Value::I32(v1 - v0));
                 }
                 Instr::I32Xor => {
-                    let v0 = self.stacks.pop_value_i32();
-                    let v1 = self.stacks.pop_value_i32();
-                    self.stacks.push_value(Value::I32(v1 ^ v0));
+                    let v0 = self.state.pop_value_i32();
+                    let v1 = self.state.pop_value_i32();
+                    self.state.push_value(Value::I32(v1 ^ v0));
                 }
                 Instr::I32And => {
-                    let v0 = self.stacks.pop_value_i32();
-                    let v1 = self.stacks.pop_value_i32();
-                    self.stacks.push_value(Value::I32(v1 & v0));
+                    let v0 = self.state.pop_value_i32();
+                    let v1 = self.state.pop_value_i32();
+                    self.state.push_value(Value::I32(v1 & v0));
                 }
                 Instr::I32LtS => {
-                    let v0 = self.stacks.pop_value_i32();
-                    let v1 = self.stacks.pop_value_i32();
+                    let v0 = self.state.pop_value_i32();
+                    let v1 = self.state.pop_value_i32();
                     let r = if v1 < v0 { 1 } else { 0 };
-                    self.stacks.push_value(Value::I32(r));
+                    self.state.push_value(Value::I32(r));
                 }
                 Instr::I32Store(arg) => {
-                    let v = self.stacks.pop_value();
-                    let i = self.stacks.pop_value_i32();
+                    let v = self.state.pop_value();
+                    let i = self.state.pop_value_i32();
                     let start = (i + arg.offset as i32) as usize;
                     let end = start + v.byte_size();
                     let mem = self.state.mem.as_mut();
@@ -230,7 +244,7 @@ where
                     v.copy_to(&mut mem[start..end]);
                 }
                 Instr::BrIf(label) => {
-                    let c = self.stacks.pop_value_i32();
+                    let c = self.state.pop_value_i32();
                     if c != 0 {
                         dbg!(label);
                         todo!();
@@ -259,20 +273,15 @@ where
         }
 
         if return_values == 0 {
-            self.stacks.pop_frame();
+            self.state.pop_frame();
         } else {
             assert_eq!(return_values, 1);
-            let v = self.stacks.pop_value();
-            self.stacks.pop_frame();
-            self.stacks.push_value(v);
+            let v = self.state.pop_value();
+            self.state.pop_frame();
+            self.state.push_value(v);
         }
         Ok(())
     }
-}
-
-#[derive(Debug)]
-pub struct FrameRef<'a> {
-    pub locals: &'a mut [Value],
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
