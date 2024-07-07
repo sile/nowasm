@@ -1,5 +1,5 @@
 use crate::{
-    symbols::{Code, ExportDesc, LocalIdx, ValType},
+    symbols::{BlockType, Code, ExportDesc, LocalIdx, ValType},
     Allocator, Instr, Module, Vector,
 };
 use std::marker::PhantomData;
@@ -181,6 +181,7 @@ impl<A: Allocator> ModuleInstance<A> {
 
         for instr in code.instrs() {
             match instr {
+                Instr::Nop => {}
                 Instr::GlobalSet(idx) => {
                     let v = self.state.pop_value();
                     self.state.globals.as_mut()[idx.as_usize()] = v;
@@ -265,7 +266,14 @@ impl<A: Allocator> ModuleInstance<A> {
                     return Err(ExecutionError::Trapped);
                 }
                 Instr::Block(block) => {
+                    // TODO: Add block_type handling
+                    assert!(matches!(
+                        block.block_type,
+                        BlockType::Empty | BlockType::Val(_)
+                    ));
+                    // push label
                     dbg!(block);
+
                     todo!();
                 }
                 _ => {
