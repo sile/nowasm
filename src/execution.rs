@@ -1,6 +1,6 @@
 use crate::{
-    symbols::{Code, ExportDesc, GlobalIdx, ValType},
-    Allocator, Instr, Module,
+    symbols::{Code, ExportDesc, ValType},
+    Allocator, Instr, Module, Vector,
 };
 use std::marker::PhantomData;
 
@@ -30,12 +30,6 @@ pub trait Stacks {
         };
         v
     }
-}
-
-pub trait Store {
-    fn push_global(&mut self, value: Value);
-    fn set_global(&mut self, i: GlobalIdx, value: Value);
-    fn get_global(&self, i: GlobalIdx) -> Value;
 }
 
 // TODO: Add trap_handler()
@@ -72,22 +66,20 @@ pub struct Frame {
 }
 
 // TODO: #[derive(Debug)]
-pub struct ModuleInstance<G, S, A: Allocator> {
+pub struct ModuleInstance<S, A: Allocator> {
     pub module: Module<A>,
     pub state: State<A>,
-    pub store: G,
+
     pub stacks: S,
 }
 
-impl<G, S, A> ModuleInstance<G, S, A>
+impl<S, A> ModuleInstance<S, A>
 where
-    G: Store,
     S: Stacks,
     A: Allocator,
 {
     pub fn new(
         module: Module<A>,
-        mut store: G,
         stacks: S,
 
         // TODO: Use builder
@@ -97,17 +89,16 @@ where
             todo!()
         }
 
-        for global in module.global_section().globals.as_ref().iter() {
-            store.push_global(global.init()?);
-        }
-
         // TODO: check mem (min, max, pagesize)
-        let state = State::new(mem);
+        let mut state = State::<A>::new(mem);
+
+        for global in module.global_section().globals.as_ref().iter() {
+            state.globals.push(global.init()?);
+        }
 
         Ok(Self {
             module,
             state,
-            store,
             stacks,
         })
     }
@@ -175,10 +166,10 @@ where
             match instr {
                 Instr::GlobalSet(idx) => {
                     let v = self.stacks.pop_value();
-                    self.store.set_global(*idx, v);
+                    self.state.globals.as_mut()[idx.as_usize()] = v;
                 }
                 Instr::GlobalGet(idx) => {
-                    let v = self.store.get_global(*idx);
+                    let v = self.state.globals.as_ref()[idx.as_usize()];
                     self.stacks.push_value(v);
                 }
                 Instr::LocalSet(idx) => {

@@ -1,7 +1,6 @@
 use clap::Parser;
 use nowasm::{
-    execution::{FrameRef, ModuleInstance, Stacks, Store, Value},
-    symbols::GlobalIdx,
+    execution::{FrameRef, ModuleInstance, Stacks, Value},
     Allocator, Module, Vector,
 };
 use orfail::{Failure, OrFail};
@@ -23,14 +22,9 @@ pub fn main() -> orfail::Result<()> {
         .or_fail()?;
 
     let mem = StdVec(vec![0; 1024 * 1024]);
-    let mut instance = ModuleInstance::new(
-        module,
-        ExampleStore::default(),
-        ExampleStacks::default(),
-        mem,
-    )
-    .map_err(|e| Failure::new(format!("{e:?}")))
-    .or_fail()?;
+    let mut instance = ModuleInstance::new(module, ExampleStacks::default(), mem)
+        .map_err(|e| Failure::new(format!("{e:?}")))
+        .or_fail()?;
 
     let func_args: Vec<_> = args.func_args.iter().copied().map(Value::I32).collect();
     let result = instance
@@ -40,25 +34,6 @@ pub fn main() -> orfail::Result<()> {
     println!("=> {:?}", result);
 
     Ok(())
-}
-
-#[derive(Debug, Default)]
-pub struct ExampleStore {
-    globals: Vec<Value>,
-}
-
-impl Store for ExampleStore {
-    fn push_global(&mut self, value: Value) {
-        self.globals.push(value);
-    }
-
-    fn set_global(&mut self, i: GlobalIdx, value: Value) {
-        self.globals[i.get() as usize] = value;
-    }
-
-    fn get_global(&self, i: GlobalIdx) -> Value {
-        self.globals[i.get() as usize]
-    }
 }
 
 #[derive(Debug, Default)]

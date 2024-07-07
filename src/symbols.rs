@@ -224,6 +224,10 @@ impl GlobalIdx {
     pub fn get(self) -> u32 {
         self.0
     }
+
+    pub fn as_usize(self) -> usize {
+        self.0 as usize
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
