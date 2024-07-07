@@ -22,6 +22,7 @@ pub struct State<A: Allocator> {
     pub locals: A::Vector<Value>,
     pub frames: A::Vector<Frame>,
     pub values: A::Vector<Value>,
+    pub labels: A::Vector<Label>,
 }
 
 impl<A: Allocator> State<A> {
@@ -33,6 +34,7 @@ impl<A: Allocator> State<A> {
             locals: A::allocate_vector(),
             frames: A::allocate_vector(),
             values: A::allocate_vector(),
+            labels: A::allocate_vector(),
         }
     }
 
@@ -40,7 +42,7 @@ impl<A: Allocator> State<A> {
         let frame = Frame {
             locals_start: self.locals.len(),
             values_start: self.values.len(),
-            labels_start: 0, // TODO
+            labels_start: self.labels.len(),
         };
         self.frames.push(frame);
     }
@@ -56,7 +58,8 @@ impl<A: Allocator> State<A> {
         assert!(frame.values_start <= self.values.len());
         self.values.truncate(frame.values_start);
 
-        // TODO: Add labels handling
+        assert!(frame.labels_start <= self.labels.len());
+        self.labels.truncate(frame.labels_start);
     }
 
     fn current_frame(&self) -> Frame {
@@ -327,5 +330,16 @@ impl Value {
             Value::F32(v) => mem.copy_from_slice(&v.to_le_bytes()),
             Value::F64(v) => mem.copy_from_slice(&v.to_le_bytes()),
         }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct Label {
+    pub instr_position: usize,
+}
+
+impl Label {
+    pub fn new(instr_position: usize) -> Self {
+        Self { instr_position }
     }
 }
