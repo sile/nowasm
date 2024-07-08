@@ -7,8 +7,8 @@ use crate::{
     validation::ValidateError,
     Allocator, DecodeError, FuncType,
 };
+use core::fmt::{Debug, Formatter};
 
-// TODO: #[derive(Debug)]
 pub struct Module<A: Allocator> {
     function_types: A::Vector<FuncType<A>>,
     imports: A::Vector<Import<A>>,
@@ -171,6 +171,42 @@ impl<A: Allocator> Module<A> {
     pub fn instantiate(&self) -> Result<(), ValidateError> {
         // TODO
         Ok(())
+    }
+}
+
+impl<A: Allocator> Debug for Module<A> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("Module")
+            .field("function_types", &self.function_types.as_ref())
+            .field("imports", &self.imports.as_ref())
+            .field("functions", &self.functions.as_ref())
+            .field("table_types", &self.table_types.as_ref())
+            .field("memory_type", &self.memory_type)
+            .field("globals", &self.globals.as_ref())
+            .field("exports", &self.exports.as_ref())
+            .field("start_function", &self.start_function)
+            .field("elements", &self.elements.as_ref())
+            .field("function_codes", &self.function_codes.as_ref())
+            .field("data_segments", &self.data_segments.as_ref())
+            .finish()
+    }
+}
+
+impl<A: Allocator> Clone for Module<A> {
+    fn clone(&self) -> Self {
+        Self {
+            function_types: A::clone_vector(&self.function_types),
+            imports: A::clone_vector(&self.imports),
+            functions: A::clone_vector(&self.functions),
+            table_types: A::clone_vector(&self.table_types),
+            memory_type: self.memory_type,
+            globals: A::clone_vector(&self.globals),
+            exports: A::clone_vector(&self.exports),
+            start_function: self.start_function,
+            elements: A::clone_vector(&self.elements),
+            function_codes: A::clone_vector(&self.function_codes),
+            data_segments: A::clone_vector(&self.data_segments),
+        }
     }
 }
 

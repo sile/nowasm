@@ -736,11 +736,11 @@ pub struct S33(i64);
 
 impl S33 {
     pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
+        // TODO: check sign
         reader.read_integer_s(33).map(Self)
     }
 }
 
-#[derive(Debug, Clone)]
 pub struct Data<A: Allocator> {
     pub data: MemIdx,
     pub offset: Expr<A>,
@@ -753,5 +753,25 @@ impl<A: Allocator> Decode for Data<A> {
         let offset = Expr::decode(reader)?;
         let init = u8::decode_vector::<A>(reader)?;
         Ok(Self { data, offset, init })
+    }
+}
+
+impl<A: Allocator> Debug for Data<A> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("Data")
+            .field("data", &self.data)
+            .field("offset", &self.offset)
+            .field("init", &self.init.as_ref())
+            .finish()
+    }
+}
+
+impl<A: Allocator> Clone for Data<A> {
+    fn clone(&self) -> Self {
+        Self {
+            data: self.data,
+            offset: self.offset.clone(),
+            init: A::clone_vector(&self.init),
+        }
     }
 }
