@@ -1,7 +1,7 @@
 use crate::{
     decode::Decode,
     reader::Reader,
-    symbols::{Code, Data, Elem, Export, FuncIdx},
+    symbols::{Code, Data, Elem, FuncIdx},
     Allocator, DecodeError,
 };
 
@@ -38,24 +38,6 @@ impl SectionId {
             11 => Ok(Self::Data),
             value => Err(DecodeError::InvalidSectionId { value }),
         }
-    }
-}
-
-#[derive(Debug, Default, Clone)]
-pub struct ExportSection<A: Allocator> {
-    pub exports: A::Vector<Export<A>>,
-}
-
-impl<A: Allocator> ExportSection<A> {
-    pub(crate) fn new() -> Self {
-        Self {
-            exports: A::allocate_vector(),
-        }
-    }
-
-    pub(crate) fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
-        let exports = Decode::decode_vector::<A>(reader)?;
-        Ok(Self { exports })
     }
 }
 

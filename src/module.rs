@@ -1,7 +1,7 @@
 use crate::{
     decode::Decode,
     reader::Reader,
-    sections::{CodeSection, DataSection, ElementSection, ExportSection, SectionId, StartSection},
+    sections::{CodeSection, DataSection, ElementSection, SectionId, StartSection},
     symbols::{Export, FuncIdx, Global, Import, Magic, MemType, TableType, Version},
     validation::ValidateError,
     Allocator, DecodeError, FuncType,
@@ -15,7 +15,7 @@ pub struct Module<A: Allocator> {
     table_types: A::Vector<TableType>,
     memory_type: Option<MemType>,
     globals: A::Vector<Global<A>>,
-    export_section: ExportSection<A>,
+    exports: A::Vector<Export<A>>,
     start_section: StartSection,
     element_section: ElementSection<A>,
     code_section: CodeSection<A>,
@@ -47,8 +47,8 @@ impl<A: Allocator> Module<A> {
         self.globals.as_ref()
     }
 
-    pub fn export_section(&self) -> &ExportSection<A> {
-        &self.export_section
+    pub fn exports(&self) -> &[Export<A>] {
+        self.exports.as_ref()
     }
 
     pub fn start_section(&self) -> &StartSection {
@@ -67,10 +67,6 @@ impl<A: Allocator> Module<A> {
         &self.data_section
     }
 
-    pub fn exports(&self) -> &[Export<A>] {
-        self.export_section.exports.as_ref()
-    }
-
     pub fn decode(wasm_bytes: &[u8]) -> Result<Self, DecodeError> {
         let mut this = Self {
             function_types: A::allocate_vector(),
@@ -79,7 +75,7 @@ impl<A: Allocator> Module<A> {
             table_types: A::allocate_vector(),
             memory_type: None,
             globals: A::allocate_vector(),
-            export_section: ExportSection::new(),
+            exports: A::allocate_vector(),
             start_section: StartSection::default(),
             element_section: ElementSection::new(),
             code_section: CodeSection::new(),
@@ -143,7 +139,7 @@ impl<A: Allocator> Module<A> {
                     self.globals = Decode::decode_vector::<A>(&mut section_reader)?;
                 }
                 SectionId::Export => {
-                    self.export_section = ExportSection::decode(&mut section_reader)?
+                    self.exports = Decode::decode_vector::<A>(&mut section_reader)?;
                 }
                 SectionId::Start => self.start_section = StartSection::decode(&mut section_reader)?,
                 SectionId::Element => {
