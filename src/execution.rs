@@ -44,6 +44,7 @@ impl<A: Allocator> State<A> {
             let v = self.pop_value();
             self.locals.push(v);
         }
+        self.locals.as_mut()[locals_start..].reverse();
         let values_start = self.values.len();
 
         let prev = self.current_frame;
@@ -57,7 +58,7 @@ impl<A: Allocator> State<A> {
     pub fn exit_frame(&mut self, ty: &FuncType<A>, succeeded: bool, prev: Frame) {
         let frame = self.current_frame;
 
-        let return_value = match ty.return_values_len() {
+        let return_value = match ty.return_arity() {
             0 => None,
             1 => Some(self.pop_value()),
             _ => unreachable!(),
@@ -158,6 +159,7 @@ impl<A: Allocator> State<A> {
     }
 }
 
+// TODO: Activation(?)
 #[derive(Debug, Clone, Copy)]
 pub struct Frame {
     pub locals_start: usize,
@@ -224,14 +226,14 @@ impl<A: Allocator> ModuleInstance<A> {
             .ok_or(ExecutionError::InvalidFuncIdx)?;
         func_type.validate_args(args, &self.module)?;
 
-        for v in args.iter().rev().copied() {
+        for v in args.iter().copied() {
             self.state.push_value(v);
         }
 
         self.state.call_function(func_idx, &self.module)?;
 
         // TODO: validate return value type
-        match func_type.return_values_len() {
+        match func_type.return_arity() {
             0 => Ok(None),
             1 => Ok(Some(self.state.pop_value())),
             _ => unreachable!(),

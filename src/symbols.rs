@@ -399,7 +399,7 @@ impl<A: Allocator> FuncType<A> {
         self.rt1.len()
     }
 
-    pub fn return_values_len(&self) -> usize {
+    pub fn return_arity(&self) -> usize {
         self.rt2.len()
     }
 }
