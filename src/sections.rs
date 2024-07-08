@@ -1,7 +1,7 @@
 use crate::{
     decode::Decode,
     reader::Reader,
-    symbols::{Code, Data, Elem, FuncIdx},
+    symbols::{Code, Data, Elem},
     Allocator, DecodeError,
 };
 
@@ -38,18 +38,6 @@ impl SectionId {
             11 => Ok(Self::Data),
             value => Err(DecodeError::InvalidSectionId { value }),
         }
-    }
-}
-
-#[derive(Debug, Default, Clone)]
-pub struct StartSection {
-    pub start: Option<FuncIdx>,
-}
-
-impl StartSection {
-    pub(crate) fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
-        let start = FuncIdx::decode(reader)?;
-        Ok(Self { start: Some(start) })
     }
 }
 

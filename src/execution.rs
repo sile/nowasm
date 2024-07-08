@@ -259,7 +259,7 @@ impl<A: Allocator> ModuleInstance<A> {
         // TODO: Use builder
         mem: A::Vector<u8>,
     ) -> Result<Self, ExecutionError> {
-        if module.start_section().start.is_some() {
+        if module.start_function().is_some() {
             todo!()
         }
 
