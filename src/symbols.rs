@@ -213,7 +213,7 @@ impl FuncIdx {
     }
 
     pub fn get_code<A: Allocator>(self, module: &Module<A>) -> Option<&Code<A>> {
-        module.code_section().codes.as_ref().get(self.0 as usize)
+        module.function_codes().get(self.0 as usize)
     }
 }
 
