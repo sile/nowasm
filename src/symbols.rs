@@ -119,12 +119,6 @@ impl ImportDesc {
     }
 }
 
-impl Default for ImportDesc {
-    fn default() -> Self {
-        Self::Func(Default::default())
-    }
-}
-
 pub struct Export<A: Allocator> {
     pub name: Name<A>,
     pub desc: ExportDesc,
@@ -173,12 +167,6 @@ impl ExportDesc {
             0x03 => Ok(Self::Global(GlobalIdx::decode(reader)?)),
             value => Err(DecodeError::InvalidExportDescTag { value }),
         }
-    }
-}
-
-impl Default for ExportDesc {
-    fn default() -> Self {
-        Self::Func(Default::default())
     }
 }
 
@@ -304,7 +292,7 @@ impl LabelIdx {
     }
 }
 
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub struct TableType {
     pub limits: Limits,
 }
@@ -320,7 +308,7 @@ impl Decode for TableType {
     }
 }
 
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub struct Limits {
     pub min: u32,
     pub max: Option<u32>,
@@ -377,12 +365,6 @@ impl GlobalType {
             Self::Const(t) => t,
             Self::Var(t) => t,
         }
-    }
-}
-
-impl Default for GlobalType {
-    fn default() -> Self {
-        Self::Const(ValType::I32)
     }
 }
 
