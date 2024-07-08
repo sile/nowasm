@@ -208,12 +208,8 @@ impl FuncIdx {
 
 impl FuncIdx {
     pub fn get_type<A: Allocator>(self, module: &Module<A>) -> Option<&FuncType<A>> {
-        let type_idx = module
-            .function_section()
-            .idxs
-            .as_ref()
-            .get(self.0 as usize)?;
-        module.func_types().get(type_idx.0 as usize)
+        let type_idx = module.functions().get(self.0 as usize)?;
+        module.function_types().get(type_idx.0 as usize)
     }
 
     pub fn get_code<A: Allocator>(self, module: &Module<A>) -> Option<&Code<A>> {

@@ -2,10 +2,10 @@ use crate::{
     decode::Decode,
     reader::Reader,
     sections::{
-        CodeSection, DataSection, ElementSection, ExportSection, FunctionSection, GlobalSection,
-        MemorySection, SectionId, StartSection, TableSection,
+        CodeSection, DataSection, ElementSection, ExportSection, GlobalSection, MemorySection,
+        SectionId, StartSection, TableSection,
     },
-    symbols::{Export, Import, Magic, Version},
+    symbols::{Export, FuncIdx, Import, Magic, Version},
     validation::ValidateError,
     Allocator, DecodeError, FuncType,
 };
@@ -14,9 +14,9 @@ use std::marker::PhantomData;
 // TODO: #[derive(Debug)]
 pub struct Module<A: Allocator> {
     _allocator: PhantomData<A>,
-    func_types: A::Vector<FuncType<A>>,
+    function_types: A::Vector<FuncType<A>>,
     imports: A::Vector<Import<A>>,
-    function_section: FunctionSection<A>,
+    functions: A::Vector<FuncIdx>,
     table_section: TableSection<A>,
     memory_section: MemorySection,
     global_section: GlobalSection<A>,
@@ -28,16 +28,16 @@ pub struct Module<A: Allocator> {
 }
 
 impl<A: Allocator> Module<A> {
-    pub fn func_types(&self) -> &[FuncType<A>] {
-        self.func_types.as_ref()
+    pub fn function_types(&self) -> &[FuncType<A>] {
+        self.function_types.as_ref()
     }
 
     pub fn imports(&self) -> &[Import<A>] {
         self.imports.as_ref()
     }
 
-    pub fn function_section(&self) -> &FunctionSection<A> {
-        &self.function_section
+    pub fn functions(&self) -> &[FuncIdx] {
+        self.functions.as_ref()
     }
 
     pub fn table_section(&self) -> &TableSection<A> {
@@ -79,9 +79,9 @@ impl<A: Allocator> Module<A> {
     pub fn decode(wasm_bytes: &[u8]) -> Result<Self, DecodeError> {
         let mut this = Self {
             _allocator: PhantomData,
-            func_types: A::allocate_vector(),
+            function_types: A::allocate_vector(),
             imports: A::allocate_vector(),
-            function_section: FunctionSection::new(),
+            functions: A::allocate_vector(),
             table_section: TableSection::new(),
             memory_section: MemorySection::default(),
             global_section: GlobalSection::new(),
@@ -124,13 +124,13 @@ impl<A: Allocator> Module<A> {
             match section_id {
                 SectionId::Custom => unreachable!(),
                 SectionId::Type => {
-                    self.func_types = Decode::decode_vector::<A>(reader)?;
+                    self.function_types = Decode::decode_vector::<A>(reader)?;
                 }
                 SectionId::Import => {
                     self.imports = Decode::decode_vector::<A>(reader)?;
                 }
                 SectionId::Function => {
-                    self.function_section = FunctionSection::decode(&mut section_reader)?
+                    self.functions = Decode::decode_vector::<A>(reader)?;
                 }
                 SectionId::Table => self.table_section = TableSection::decode(&mut section_reader)?,
                 SectionId::Memory => {
