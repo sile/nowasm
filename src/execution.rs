@@ -21,6 +21,7 @@ pub struct State<A: Allocator> {
     pub globals: A::Vector<Value>,
     pub locals: A::Vector<Value>,
     pub values: A::Vector<Value>,
+    pub return_values: A::Vector<Value>, // TODO: rename
     pub current_frame: Frame,
     pub current_block: Block,
 }
@@ -33,6 +34,7 @@ impl<A: Allocator> State<A> {
             globals: A::allocate_vector(),
             locals: A::allocate_vector(),
             values: A::allocate_vector(),
+            return_values: A::allocate_vector(),
             current_frame: Frame::root(),
             current_block: Block::default(),
         }
@@ -50,34 +52,33 @@ impl<A: Allocator> State<A> {
         let prev = self.current_frame;
         self.current_frame = Frame {
             level,
+            arity: ty.return_arity(),
             locals_start,
             values_start,
         };
         prev
     }
 
-    pub fn exit_frame(&mut self, ty: &FuncType<A>, succeeded: bool, prev: Frame) {
+    // TODO: delete unused parameter
+    pub fn exit_frame(&mut self, _ty: &FuncType<A>, succeeded: bool, prev: Frame) {
         let frame = self.current_frame;
-
-        let return_value = match ty.return_arity() {
-            0 => None,
-            1 => Some(self.pop_value()),
-            _ => unreachable!(),
-        };
 
         assert!(frame.locals_start <= self.locals.len());
         self.locals.truncate(frame.locals_start);
 
-        assert!(frame.values_start <= self.values.len());
-        self.values.truncate(frame.values_start);
+        // TODO: remove
+        if succeeded {
+            assert!(frame.values_start == self.values.len());
+        }
+        // assert!(frame.values_start <= self.values.len());
+        // self.values.truncate(frame.values_start);
 
         self.current_frame = prev;
 
-        if succeeded {
-            if let Some(v) = return_value {
-                self.push_value(v);
-            }
+        for &v in self.return_values.as_ref() {
+            self.values.push(v);
         }
+        self.return_values.truncate(0); // TODO: optimize
     }
 
     pub fn enter_block(&mut self, ty: BlockType) -> Block {
@@ -90,13 +91,21 @@ impl<A: Allocator> State<A> {
         prev
     }
 
-    pub fn exit_block(&mut self, ty: BlockType, prev: Block) {
+    // TODO: rename skipped
+    pub fn exit_block(&mut self, ty: BlockType, skipped: bool, prev: Block) {
         assert!(matches!(ty, BlockType::Empty)); // TODO
 
         let block = self.current_block;
 
-        assert!(block.values_start <= self.values.len());
-        self.values.truncate(block.values_start);
+        if skipped {
+            assert!(block.values_start <= self.values.len());
+            self.values.truncate(block.values_start);
+        } else {
+            for &v in self.return_values.as_ref() {
+                self.values.push(v);
+            }
+            self.return_values.truncate(0); // TODO: optimize
+        }
 
         self.current_block = prev;
     }
@@ -198,7 +207,7 @@ impl<A: Allocator> State<A> {
                     let prev_block = self.enter_block(block.block_type);
                     let return_level =
                         self.execute_instrs(block.instrs.as_ref(), level + 1, module)?;
-                    self.exit_block(block.block_type, prev_block);
+                    self.exit_block(block.block_type, return_level <= level, prev_block);
                     if return_level <= level {
                         return Ok(return_level);
                     }
@@ -211,6 +220,10 @@ impl<A: Allocator> State<A> {
                     }
                 }
                 Instr::Return => {
+                    for _ in 0..self.current_frame.arity {
+                        let v = self.pop_value();
+                        self.return_values.push(v);
+                    }
                     return Ok(self.current_frame.level);
                 }
                 _ => todo!("{instr:?}"),
@@ -230,20 +243,17 @@ impl<A: Allocator> State<A> {
 }
 
 // TODO: Activation(?)
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy)]
 pub struct Frame {
     pub level: usize,
+    pub arity: usize,
     pub locals_start: usize,
     pub values_start: usize,
 }
 
 impl Frame {
     pub fn root() -> Self {
-        Self {
-            level: 0,
-            locals_start: 0,
-            values_start: 0,
-        }
+        Self::default()
     }
 }
 
@@ -311,44 +321,6 @@ impl<A: Allocator> ModuleInstance<A> {
             _ => unreachable!(),
         }
     }
-
-    // fn call(
-    //     &mut self,
-    //     code: &Code<A>,
-    //     args: &[Value],
-    //     _return_values: usize,
-    // ) -> Result<(), ExecutionError> {
-    //     for v in args.iter().copied().chain(code.locals().map(Value::zero)) {
-    //         self.state.locals.push(v);
-    //     }
-
-    //     for instr in code.body_iter() {
-    //         match instr {
-    //             Instr::Return => {
-    //                 break;
-    //             }
-    //             Instr::Call(idx) => {
-    //                 dbg!(idx);
-    //                 dbg!(&self.module.code_section().codes.as_ref()[idx.get() as usize]);
-    //                 todo!();
-    //             }
-    //             _ => {
-    //                 dbg!(instr);
-    //                 todo!();
-    //             }
-    //         }
-    //     }
-
-    //     // if return_values == 0 {
-    //     //     self.state.pop_frame();
-    //     // } else {
-    //     //     assert_eq!(return_values, 1);
-    //     //     let v = self.state.pop_value();
-    //     //     self.state.pop_frame();
-    //     //     self.state.push_value(v);
-    //     // }
-    //     Ok(())
-    // }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
