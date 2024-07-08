@@ -5,8 +5,9 @@ edition = "2021"
 categories = ["no-std"]
 
 [features]
-default = ["sign_extension"]
+default = ["std", "sign_extension"]
 sign_extension = []
+std = []
 
 [[example]]
 name = "add"

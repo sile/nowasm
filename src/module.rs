@@ -159,8 +159,30 @@ impl<A: Allocator> Module<A> {
         Ok(())
     }
 
-    pub fn validate(&self) -> Result<(), ValidateError> {
+    pub fn instantiate(&self) -> Result<(), ValidateError> {
         // TODO
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn empty_module() {
+        // (module)
+        let input = [0, 97, 115, 109, 1, 0, 0, 0];
+        Module::decode(&input).expect("decode module");
+    }
+
+    #[test]
+    fn add_two() {
+
+        // (module
+        //   (func (export "addTwo") (param i32 i32) (result i32)
+        //     local.get 0
+        //     local.get 1
+        //     i32.add))
     }
 }

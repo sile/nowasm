@@ -1,5 +1,5 @@
-// TODO
-//#![no_std]
+#![forbid(unsafe_code)]
+#![cfg_attr(not(feature = "std"), no_std)]
 
 pub(crate) mod decode;
 pub(crate) mod instructions;
@@ -10,7 +10,7 @@ pub mod symbols; // TODO: pub (crate) components
 pub(crate) mod vectors; // TODO: rename
 
 pub mod execution; // TODO
-pub mod module; // TODO: pub (crate)
+pub(crate) mod module;
 pub mod sections;
 pub mod validation; // TODO: pub (crate)
 

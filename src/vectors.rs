@@ -4,6 +4,7 @@ use core::fmt::Debug;
 pub trait Allocator: Debug + Clone {
     type Vector<T: Clone + Debug>: Vector<T>;
 
+    // TODO: Add capacity: Option<usize>
     fn allocate_vector<T: Clone + Debug>() -> Self::Vector<T>;
 }
 
