@@ -266,7 +266,7 @@ impl<A: Allocator> ModuleInstance<A> {
         // TODO: check mem (min, max, pagesize)
         let mut state = State::<A>::new(mem);
 
-        for global in module.global_section().globals.as_ref().iter() {
+        for global in module.globals().iter() {
             state.globals.push(global.init()?);
         }
 
