@@ -36,13 +36,13 @@ pub fn main() -> orfail::Result<()> {
     Ok(())
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct StdAllocator;
 
 impl Allocator for StdAllocator {
-    type Vector<T: Clone + Debug> = StdVec<T>;
+    type Vector<T> = StdVec<T>;
 
-    fn allocate_vector<T: Clone + Debug>() -> Self::Vector<T> {
+    fn allocate_vector<T>() -> Self::Vector<T> {
         StdVec(Vec::new())
     }
 }
@@ -50,8 +50,7 @@ impl Allocator for StdAllocator {
 #[derive(Debug, Clone)]
 pub struct StdVec<T>(pub Vec<T>);
 
-// TODO: remove Debug
-impl<T: Debug + Clone> Vector<T> for StdVec<T> {
+impl<T> Vector<T> for StdVec<T> {
     fn push(&mut self, item: T) {
         self.0.push(item);
     }

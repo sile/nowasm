@@ -1,11 +1,10 @@
-use core::fmt::{Debug, Formatter};
-
 use crate::decode::Decode;
 use crate::execution::{ExecutionError, Value};
 use crate::instructions::Instr;
 use crate::reader::Reader;
 use crate::vectors::Vector;
 use crate::{Allocator, DecodeError, Module};
+use core::fmt::{Debug, Formatter};
 
 #[derive(Debug)]
 pub struct Magic;
@@ -128,7 +127,6 @@ impl Default for ImportDesc {
     }
 }
 
-#[derive(Debug, Clone)]
 pub struct Export<A: Allocator> {
     pub name: Name<A>,
     pub desc: ExportDesc,
@@ -139,6 +137,24 @@ impl<A: Allocator> Decode for Export<A> {
         let name = Name::decode(reader)?;
         let desc = ExportDesc::decode(reader)?;
         Ok(Self { name, desc })
+    }
+}
+
+impl<A: Allocator> Debug for Export<A> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("Export")
+            .field("name", &self.name)
+            .field("desc", &self.desc)
+            .finish()
+    }
+}
+
+impl<A: Allocator> Clone for Export<A> {
+    fn clone(&self) -> Self {
+        Self {
+            name: self.name.clone(),
+            desc: self.desc.clone(),
+        }
     }
 }
 
@@ -400,7 +416,6 @@ impl Decode for ValType {
     }
 }
 
-#[derive(Debug, Clone)]
 pub struct FuncType<A: Allocator> {
     pub rt1: ResultType<A>,
     pub rt2: ResultType<A>,
@@ -446,7 +461,24 @@ impl<A: Allocator> Decode for FuncType<A> {
     }
 }
 
-#[derive(Debug, Clone)]
+impl<A: Allocator> Debug for FuncType<A> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("FuncType")
+            .field("rt1", &self.rt1)
+            .field("rt2", &self.rt2)
+            .finish()
+    }
+}
+
+impl<A: Allocator> Clone for FuncType<A> {
+    fn clone(&self) -> Self {
+        Self {
+            rt1: self.rt1.clone(),
+            rt2: self.rt2.clone(),
+        }
+    }
+}
+
 pub struct ResultType<A: Allocator> {
     pub types: A::Vector<ValType>,
 }
@@ -466,9 +498,24 @@ impl<A: Allocator> ResultType<A> {
     }
 }
 
-#[derive(Debug, Clone)]
+impl<A: Allocator> Debug for ResultType<A> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("ResultType")
+            .field("types", &self.types.as_ref())
+            .finish()
+    }
+}
+
+impl<A: Allocator> Clone for ResultType<A> {
+    fn clone(&self) -> Self {
+        Self {
+            types: A::clone_vector(&self.types),
+        }
+    }
+}
+
 pub struct Global<A: Allocator> {
-    pub ty: GlobalType,
+    pub ty: GlobalType, // TODO: global_type
     pub init: Expr<A>,
 }
 
@@ -498,7 +545,24 @@ impl<A: Allocator> Decode for Global<A> {
     }
 }
 
-#[derive(Debug, Clone)]
+impl<A: Allocator> Debug for Global<A> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("Global")
+            .field("ty", &self.ty)
+            .field("init", &self.init)
+            .finish()
+    }
+}
+
+impl<A: Allocator> Clone for Global<A> {
+    fn clone(&self) -> Self {
+        Self {
+            ty: self.ty.clone(),
+            init: self.init.clone(),
+        }
+    }
+}
+
 pub struct Expr<A: Allocator> {
     instrs: A::Vector<Instr<A>>,
 }
@@ -522,6 +586,22 @@ impl<A: Allocator> Expr<A> {
     }
 }
 
+impl<A: Allocator> Debug for Expr<A> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("Expr")
+            .field("instrs", &self.instrs.as_ref())
+            .finish()
+    }
+}
+
+impl<A: Allocator> Clone for Expr<A> {
+    fn clone(&self) -> Self {
+        Self {
+            instrs: A::clone_vector(&self.instrs),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy)]
 pub struct MemArg {
     pub align: u32,
@@ -536,18 +616,17 @@ impl MemArg {
     }
 }
 
-#[derive(Debug, Clone)]
 pub struct Elem<A: Allocator> {
     pub table: TableIdx,
     pub offset: Expr<A>,
-    pub init: FuncIdxVec<A>,
+    pub init: A::Vector<FuncIdx>,
 }
 
 impl<A: Allocator> Decode for Elem<A> {
     fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         let table = TableIdx::decode(reader)?;
         let offset = Expr::decode(reader)?;
-        let init = FuncIdxVec::decode(reader)?;
+        let init = FuncIdx::decode_vector::<A>(reader)?;
         Ok(Self {
             table,
             offset,
@@ -556,23 +635,26 @@ impl<A: Allocator> Decode for Elem<A> {
     }
 }
 
-#[derive(Debug, Default, Clone, Copy)]
-pub struct FuncIdxVec<A: Allocator> {
-    indices: A::Vector<FuncIdx>,
-}
-
-impl<A: Allocator> FuncIdxVec<A> {
-    pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
-        let indices = FuncIdx::decode_vector::<A>(reader)?;
-        Ok(Self { indices })
-    }
-
-    pub fn len(self) -> usize {
-        self.indices.as_ref().len()
+impl<A: Allocator> Debug for Elem<A> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("Elem")
+            .field("table", &self.table)
+            .field("offset", &self.offset)
+            .field("init", &self.init.as_ref())
+            .finish()
     }
 }
 
-#[derive(Debug, Clone)]
+impl<A: Allocator> Clone for Elem<A> {
+    fn clone(&self) -> Self {
+        Self {
+            table: self.table,
+            offset: self.offset.clone(),
+            init: A::clone_vector(&self.init),
+        }
+    }
+}
+
 pub struct Code<A: Allocator> {
     pub locals: A::Vector<ValType>,
     pub body: Expr<A>,
@@ -607,6 +689,24 @@ impl<A: Allocator> Decode for Code<A> {
         }
         let body = Expr::decode(&mut reader)?;
         Ok(Self { locals, body })
+    }
+}
+
+impl<A: Allocator> Debug for Code<A> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("Code")
+            .field("locals", &self.locals.as_ref())
+            .field("body", &self.body)
+            .finish()
+    }
+}
+
+impl<A: Allocator> Clone for Code<A> {
+    fn clone(&self) -> Self {
+        Self {
+            locals: A::clone_vector(&self.locals),
+            body: self.body.clone(),
+        }
     }
 }
 
