@@ -1,3 +1,5 @@
+use core::fmt::{Debug, Formatter};
+
 use crate::decode::Decode;
 use crate::execution::{ExecutionError, Value};
 use crate::instructions::Instr;
@@ -33,30 +35,38 @@ impl Version {
     }
 }
 
-pub use crate::sections::SectionId;
+pub use crate::sections::SectionId; // TODO
 
-#[derive(Debug, Clone)]
-pub struct Name<A: Allocator> {
-    bytes: A::Vector<u8>, // TODO: A::String
-}
+pub struct Name<A: Allocator>(A::Vector<u8>);
 
 impl<A: Allocator> Name<A> {
     pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         let bytes = u8::decode_vector::<A>(reader)?;
         let _ = core::str::from_utf8(bytes.as_ref()).map_err(DecodeError::InvalidUtf8)?;
-        Ok(Self { bytes })
+        Ok(Self(bytes))
     }
 
     pub fn as_str(&self) -> &str {
-        core::str::from_utf8(self.bytes.as_ref()).expect("unreachable")
+        core::str::from_utf8(self.0.as_ref()).expect("unreachable")
     }
 
     pub fn len(&self) -> usize {
-        self.bytes.as_ref().len()
+        self.0.as_ref().len()
     }
 }
 
-#[derive(Debug, Clone)]
+impl<A: Allocator> Debug for Name<A> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        f.debug_tuple("Name").field(&self.as_str()).finish()
+    }
+}
+
+impl<A: Allocator> Clone for Name<A> {
+    fn clone(&self) -> Self {
+        Self(A::clone_vector(&self.0))
+    }
+}
+
 pub struct Import<A: Allocator> {
     pub module: Name<A>,
     pub name: Name<A>,
@@ -69,6 +79,26 @@ impl<A: Allocator> Decode for Import<A> {
         let name = Name::decode(reader)?;
         let desc = ImportDesc::decode(reader)?;
         Ok(Self { module, name, desc })
+    }
+}
+
+impl<A: Allocator> Debug for Import<A> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("Import")
+            .field("module", &self.module)
+            .field("name", &self.name)
+            .field("desc", &self.desc)
+            .finish()
+    }
+}
+
+impl<A: Allocator> Clone for Import<A> {
+    fn clone(&self) -> Self {
+        Self {
+            module: self.module.clone(),
+            name: self.name.clone(),
+            desc: self.desc.clone(),
+        }
     }
 }
 

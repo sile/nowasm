@@ -1,3 +1,5 @@
+use core::fmt::{Debug, Formatter};
+
 #[cfg(feature = "sign_extension")]
 use crate::instructions_sign_extension::SignExtensionInstr;
 use crate::vectors::Vector;
@@ -8,7 +10,6 @@ use crate::{
     Allocator, DecodeError,
 };
 
-#[derive(Debug, Clone)]
 pub enum Instr<A: Allocator> {
     // Control Instructions
     Unreachable,
@@ -410,7 +411,362 @@ impl<A: Allocator> Instr<A> {
     }
 }
 
-#[derive(Debug, Clone)]
+impl<A: Allocator> Debug for Instr<A> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        match self {
+            Self::Unreachable => write!(f, "Unreachable"),
+            Self::Nop => write!(f, "Nop"),
+            Self::Block(v) => write!(f, "Block({v:?})"),
+            Self::Loop(v) => write!(f, "Loop({v:?})"),
+            Self::If(v) => write!(f, "If({v:?})"),
+            Self::Br(v) => write!(f, "Br({v:?})"),
+            Self::BrIf(v) => write!(f, "BrIf({v:?})"),
+            Self::BrTable(v) => write!(f, "BrTable({v:?})"),
+            Self::Return => write!(f, "Return"),
+            Self::Call(v) => write!(f, "Call({v:?})"),
+            Self::CallIndirect(v) => write!(f, "CallIndirect({v:?})"),
+            Self::Drop => write!(f, "Drop"),
+            Self::Select => write!(f, "Select"),
+            Self::LocalGet(v) => write!(f, "LocalGet({v:?})"),
+            Self::LocalSet(v) => write!(f, "LocalSet({v:?})"),
+            Self::LocalTee(v) => write!(f, "LocalTee({v:?})"),
+            Self::GlobalGet(v) => write!(f, "GlobalGet({v:?})"),
+            Self::GlobalSet(v) => write!(f, "GlobalSet({v:?})"),
+            Self::I32Load(v) => write!(f, "I32Load({v:?})"),
+            Self::I64Load(v) => write!(f, "I64Load({v:?})"),
+            Self::F32Load(v) => write!(f, "F32Load({v:?})"),
+            Self::F64Load(v) => write!(f, "F64Load({v:?})"),
+            Self::I32Load8S(v) => write!(f, "I32Load8S({v:?})"),
+            Self::I32Load8U(v) => write!(f, "I32Load8U({v:?})"),
+            Self::I32Load16S(v) => write!(f, "I32Load16S({v:?})"),
+            Self::I32Load16U(v) => write!(f, "I32Load16U({v:?})"),
+            Self::I64Load8S(v) => write!(f, "I64Load8S({v:?})"),
+            Self::I64Load8U(v) => write!(f, "I64Load8U({v:?})"),
+            Self::I64Load16S(v) => write!(f, "I64Load16S({v:?})"),
+            Self::I64Load16U(v) => write!(f, "I64Load16U({v:?})"),
+            Self::I64Load32S(v) => write!(f, "I64Load32S({v:?})"),
+            Self::I64Load32U(v) => write!(f, "I64Load32U({v:?})"),
+            Self::I32Store(v) => write!(f, "I32Store({v:?})"),
+            Self::I64Store(v) => write!(f, "I64Store({v:?})"),
+            Self::F32Store(v) => write!(f, "F32Store({v:?})"),
+            Self::F64Store(v) => write!(f, "F64Store({v:?})"),
+            Self::I32Store8(v) => write!(f, "I32Store8({v:?})"),
+            Self::I32Store16(v) => write!(f, "I32Store16({v:?})"),
+            Self::I64Store8(v) => write!(f, "I64Store8({v:?})"),
+            Self::I64Store16(v) => write!(f, "I64Store16({v:?})"),
+            Self::I64Store32(v) => write!(f, "I64Store32({v:?})"),
+            Self::MemorySize => write!(f, "MemorySize"),
+            Self::MemoryGrow => write!(f, "MemoryGrow"),
+            Self::I32Const(v) => write!(f, "I32Const({v:?})"),
+            Self::I64Const(v) => write!(f, "I64Const({v:?})"),
+            Self::F32Const(v) => write!(f, "F32Const({v:?})"),
+            Self::F64Const(v) => write!(f, "F64Const({v:?})"),
+            Self::I32Eqz => write!(f, "I32Eqz"),
+            Self::I32Eq => write!(f, "I32Eq"),
+            Self::I32Ne => write!(f, "I32Ne"),
+            Self::I32LtS => write!(f, "I32LtS"),
+            Self::I32LtU => write!(f, "I32LtU"),
+            Self::I32GtS => write!(f, "I32GtS"),
+            Self::I32GtU => write!(f, "I32GtU"),
+            Self::I32LeS => write!(f, "I32LeS"),
+            Self::I32LeU => write!(f, "I32LeU"),
+            Self::I32GeS => write!(f, "I32GeS"),
+            Self::I32GeU => write!(f, "I32GeU"),
+            Self::I64Eqz => write!(f, "I64Eqz"),
+            Self::I64Eq => write!(f, "I64Eq"),
+            Self::I64Ne => write!(f, "I64Ne"),
+            Self::I64LtS => write!(f, "I64LtS"),
+            Self::I64LtU => write!(f, "I64LtU"),
+            Self::I64GtS => write!(f, "I64GtS"),
+            Self::I64GtU => write!(f, "I64GtU"),
+            Self::I64LeS => write!(f, "I64LeS"),
+            Self::I64LeU => write!(f, "I64LeU"),
+            Self::I64GeS => write!(f, "I64GeS"),
+            Self::I64GeU => write!(f, "I64GeU"),
+            Self::F32Eq => write!(f, "F32Eq"),
+            Self::F32Ne => write!(f, "F32Ne"),
+            Self::F32Lt => write!(f, "F32Lt"),
+            Self::F32Gt => write!(f, "F32Gt"),
+            Self::F32Le => write!(f, "F32Le"),
+            Self::F32Ge => write!(f, "F32Ge"),
+            Self::F64Eq => write!(f, "F64Eq"),
+            Self::F64Ne => write!(f, "F64Ne"),
+            Self::F64Lt => write!(f, "F64Lt"),
+            Self::F64Gt => write!(f, "F64Gt"),
+            Self::F64Le => write!(f, "F64Le"),
+            Self::F64Ge => write!(f, "F64Ge"),
+            Self::I32Clz => write!(f, "I32Clz"),
+            Self::I32Ctz => write!(f, "I32Ctz"),
+            Self::I32Popcnt => write!(f, "I32Popcnt"),
+            Self::I32Add => write!(f, "I32Add"),
+            Self::I32Sub => write!(f, "I32Sub"),
+            Self::I32Mul => write!(f, "I32Mul"),
+            Self::I32DivS => write!(f, "I32DivS"),
+            Self::I32DivU => write!(f, "I32DivU"),
+            Self::I32RemS => write!(f, "I32RemS"),
+            Self::I32RemU => write!(f, "I32RemU"),
+            Self::I32And => write!(f, "I32And"),
+            Self::I32Or => write!(f, "I32Or"),
+            Self::I32Xor => write!(f, "I32Xor"),
+            Self::I32Shl => write!(f, "I32Shl"),
+            Self::I32ShrS => write!(f, "I32ShrS"),
+            Self::I32ShrU => write!(f, "I32ShrU"),
+            Self::I32Rotl => write!(f, "I32Rotl"),
+            Self::I32Rotr => write!(f, "I32Rotr"),
+            Self::I64Clz => write!(f, "I64Clz"),
+            Self::I64Ctz => write!(f, "I64Ctz"),
+            Self::I64Popcnt => write!(f, "I64Popcnt"),
+            Self::I64Add => write!(f, "I64Add"),
+            Self::I64Sub => write!(f, "I64Sub"),
+            Self::I64Mul => write!(f, "I64Mul"),
+            Self::I64DivS => write!(f, "I64DivS"),
+            Self::I64DivU => write!(f, "I64DivU"),
+            Self::I64RemS => write!(f, "I64RemS"),
+            Self::I64RemU => write!(f, "I64RemU"),
+            Self::I64And => write!(f, "I64And"),
+            Self::I64Or => write!(f, "I64Or"),
+            Self::I64Xor => write!(f, "I64Xor"),
+            Self::I64Shl => write!(f, "I64Shl"),
+            Self::I64ShrS => write!(f, "I64ShrS"),
+            Self::I64ShrU => write!(f, "I64ShrU"),
+            Self::I64Rotl => write!(f, "I64Rotl"),
+            Self::I64Rotr => write!(f, "I64Rotr"),
+            Self::F32Abs => write!(f, "F32Abs"),
+            Self::F32Neg => write!(f, "F32Neg"),
+            Self::F32Ceil => write!(f, "F32Ceil"),
+            Self::F32Floor => write!(f, "F32Floor"),
+            Self::F32Trunc => write!(f, "F32Trunc"),
+            Self::F32Nearest => write!(f, "F32Nearest"),
+            Self::F32Sqrt => write!(f, "F32Sqrt"),
+            Self::F32Add => write!(f, "F32Add"),
+            Self::F32Sub => write!(f, "F32Sub"),
+            Self::F32Mul => write!(f, "F32Mul"),
+            Self::F32Div => write!(f, "F32Div"),
+            Self::F32Min => write!(f, "F32Min"),
+            Self::F32Max => write!(f, "F32Max"),
+            Self::F32Copysign => write!(f, "F32Copysign"),
+            Self::F64Abs => write!(f, "F64Abs"),
+            Self::F64Neg => write!(f, "F64Neg"),
+            Self::F64Ceil => write!(f, "F64Ceil"),
+            Self::F64Floor => write!(f, "F64Floor"),
+            Self::F64Trunc => write!(f, "F64Trunc"),
+            Self::F64Nearest => write!(f, "F64Nearest"),
+            Self::F64Sqrt => write!(f, "F64Sqrt"),
+            Self::F64Add => write!(f, "F64Add"),
+            Self::F64Sub => write!(f, "F64Sub"),
+            Self::F64Mul => write!(f, "F64Mul"),
+            Self::F64Div => write!(f, "F64Div"),
+            Self::F64Min => write!(f, "F64Min"),
+            Self::F64Max => write!(f, "F64Max"),
+            Self::F64Copysign => write!(f, "F64Copysign"),
+            Self::I32WrapI64 => write!(f, "I32WrapI64"),
+            Self::I32TruncF32S => write!(f, "I32TruncF32S"),
+            Self::I32TruncF32U => write!(f, "I32TruncF32U"),
+            Self::I32TruncF64S => write!(f, "I32TruncF64S"),
+            Self::I32TruncF64U => write!(f, "I32TruncF64U"),
+            Self::I64ExtendI32S => write!(f, "I64ExtendI32S"),
+            Self::I64ExtendI32U => write!(f, "I64ExtendI32U"),
+            Self::I64TruncF32S => write!(f, "I64TruncF32S"),
+            Self::I64TruncF32U => write!(f, "I64TruncF32U"),
+            Self::I64TruncF64S => write!(f, "I64TruncF64S"),
+            Self::I64TruncF64U => write!(f, "I64TruncF64U"),
+            Self::F32ConvertI32S => write!(f, "F32ConvertI32S"),
+            Self::F32ConvertI32U => write!(f, "F32ConvertI32U"),
+            Self::F32ConvertI64S => write!(f, "F32ConvertI64S"),
+            Self::F32ConvertI64U => write!(f, "F32ConvertI64U"),
+            Self::F32DemoteF64 => write!(f, "F32DemoteF64"),
+            Self::F64ConvertI32S => write!(f, "F64ConvertI32S"),
+            Self::F64ConvertI32U => write!(f, "F64ConvertI32U"),
+            Self::F64ConvertI64S => write!(f, "F64ConvertI64S"),
+            Self::F64ConvertI64U => write!(f, "F64ConvertI64U"),
+            Self::F64PromoteF32 => write!(f, "F64PromoteF32"),
+            Self::I32ReinterpretF32 => write!(f, "I32ReinterpretF32"),
+            Self::I64ReinterpretF64 => write!(f, "I64ReinterpretF64"),
+            Self::F32ReinterpretI32 => write!(f, "F32ReinterpretI32"),
+            Self::F64ReinterpretI64 => write!(f, "F64ReinterpretI64"),
+            Self::SignExtension(v) => write!(f, "SignExtension({v:?})"),
+        }
+    }
+}
+
+impl<A: Allocator> Clone for Instr<A> {
+    fn clone(&self) -> Self {
+        match self {
+            Self::Unreachable => Self::Unreachable,
+            Self::Nop => Self::Nop,
+            Self::Block(v) => Self::Block(v.clone()),
+            Self::Loop(v) => Self::Loop(v.clone()),
+            Self::If(v) => Self::If(v.clone()),
+            Self::Br(v) => Self::Br(v.clone()),
+            Self::BrIf(v) => Self::BrIf(v.clone()),
+            Self::BrTable(v) => Self::BrTable(v.clone()),
+            Self::Return => Self::Return,
+            Self::Call(v) => Self::Call(v.clone()),
+            Self::CallIndirect(v) => Self::CallIndirect(v.clone()),
+            Self::Drop => Self::Drop,
+            Self::Select => Self::Select,
+            Self::LocalGet(v) => Self::LocalGet(v.clone()),
+            Self::LocalSet(v) => Self::LocalSet(v.clone()),
+            Self::LocalTee(v) => Self::LocalTee(v.clone()),
+            Self::GlobalGet(v) => Self::GlobalGet(v.clone()),
+            Self::GlobalSet(v) => Self::GlobalSet(v.clone()),
+            Self::I32Load(v) => Self::I32Load(v.clone()),
+            Self::I64Load(v) => Self::I64Load(v.clone()),
+            Self::F32Load(v) => Self::F32Load(v.clone()),
+            Self::F64Load(v) => Self::F64Load(v.clone()),
+            Self::I32Load8S(v) => Self::I32Load8S(v.clone()),
+            Self::I32Load8U(v) => Self::I32Load8U(v.clone()),
+            Self::I32Load16S(v) => Self::I32Load16S(v.clone()),
+            Self::I32Load16U(v) => Self::I32Load16U(v.clone()),
+            Self::I64Load8S(v) => Self::I64Load8S(v.clone()),
+            Self::I64Load8U(v) => Self::I64Load8U(v.clone()),
+            Self::I64Load16S(v) => Self::I64Load16S(v.clone()),
+            Self::I64Load16U(v) => Self::I64Load16U(v.clone()),
+            Self::I64Load32S(v) => Self::I64Load32S(v.clone()),
+            Self::I64Load32U(v) => Self::I64Load32U(v.clone()),
+            Self::I32Store(v) => Self::I32Store(v.clone()),
+            Self::I64Store(v) => Self::I64Store(v.clone()),
+            Self::F32Store(v) => Self::F32Store(v.clone()),
+            Self::F64Store(v) => Self::F64Store(v.clone()),
+            Self::I32Store8(v) => Self::I32Store8(v.clone()),
+            Self::I32Store16(v) => Self::I32Store16(v.clone()),
+            Self::I64Store8(v) => Self::I64Store8(v.clone()),
+            Self::I64Store16(v) => Self::I64Store16(v.clone()),
+            Self::I64Store32(v) => Self::I64Store32(v.clone()),
+            Self::MemorySize => Self::MemorySize,
+            Self::MemoryGrow => Self::MemoryGrow,
+            Self::I32Const(v) => Self::I32Const(v.clone()),
+            Self::I64Const(v) => Self::I64Const(v.clone()),
+            Self::F32Const(v) => Self::F32Const(v.clone()),
+            Self::F64Const(v) => Self::F64Const(v.clone()),
+            Self::I32Eqz => Self::I32Eqz,
+            Self::I32Eq => Self::I32Eq,
+            Self::I32Ne => Self::I32Ne,
+            Self::I32LtS => Self::I32LtS,
+            Self::I32LtU => Self::I32LtU,
+            Self::I32GtS => Self::I32GtS,
+            Self::I32GtU => Self::I32GtU,
+            Self::I32LeS => Self::I32LeS,
+            Self::I32LeU => Self::I32LeU,
+            Self::I32GeS => Self::I32GeS,
+            Self::I32GeU => Self::I32GeU,
+            Self::I64Eqz => Self::I64Eqz,
+            Self::I64Eq => Self::I64Eq,
+            Self::I64Ne => Self::I64Ne,
+            Self::I64LtS => Self::I64LtS,
+            Self::I64LtU => Self::I64LtU,
+            Self::I64GtS => Self::I64GtS,
+            Self::I64GtU => Self::I64GtU,
+            Self::I64LeS => Self::I64LeS,
+            Self::I64LeU => Self::I64LeU,
+            Self::I64GeS => Self::I64GeS,
+            Self::I64GeU => Self::I64GeU,
+            Self::F32Eq => Self::F32Eq,
+            Self::F32Ne => Self::F32Ne,
+            Self::F32Lt => Self::F32Lt,
+            Self::F32Gt => Self::F32Gt,
+            Self::F32Le => Self::F32Le,
+            Self::F32Ge => Self::F32Ge,
+            Self::F64Eq => Self::F64Eq,
+            Self::F64Ne => Self::F64Ne,
+            Self::F64Lt => Self::F64Lt,
+            Self::F64Gt => Self::F64Gt,
+            Self::F64Le => Self::F64Le,
+            Self::F64Ge => Self::F64Ge,
+            Self::I32Clz => Self::I32Clz,
+            Self::I32Ctz => Self::I32Ctz,
+            Self::I32Popcnt => Self::I32Popcnt,
+            Self::I32Add => Self::I32Add,
+            Self::I32Sub => Self::I32Sub,
+            Self::I32Mul => Self::I32Mul,
+            Self::I32DivS => Self::I32DivS,
+            Self::I32DivU => Self::I32DivU,
+            Self::I32RemS => Self::I32RemS,
+            Self::I32RemU => Self::I32RemU,
+            Self::I32And => Self::I32And,
+            Self::I32Or => Self::I32Or,
+            Self::I32Xor => Self::I32Xor,
+            Self::I32Shl => Self::I32Shl,
+            Self::I32ShrS => Self::I32ShrS,
+            Self::I32ShrU => Self::I32ShrU,
+            Self::I32Rotl => Self::I32Rotl,
+            Self::I32Rotr => Self::I32Rotr,
+            Self::I64Clz => Self::I64Clz,
+            Self::I64Ctz => Self::I64Ctz,
+            Self::I64Popcnt => Self::I64Popcnt,
+            Self::I64Add => Self::I64Add,
+            Self::I64Sub => Self::I64Sub,
+            Self::I64Mul => Self::I64Mul,
+            Self::I64DivS => Self::I64DivS,
+            Self::I64DivU => Self::I64DivU,
+            Self::I64RemS => Self::I64RemS,
+            Self::I64RemU => Self::I64RemU,
+            Self::I64And => Self::I64And,
+            Self::I64Or => Self::I64Or,
+            Self::I64Xor => Self::I64Xor,
+            Self::I64Shl => Self::I64Shl,
+            Self::I64ShrS => Self::I64ShrS,
+            Self::I64ShrU => Self::I64ShrU,
+            Self::I64Rotl => Self::I64Rotl,
+            Self::I64Rotr => Self::I64Rotr,
+            Self::F32Abs => Self::F32Abs,
+            Self::F32Neg => Self::F32Neg,
+            Self::F32Ceil => Self::F32Ceil,
+            Self::F32Floor => Self::F32Floor,
+            Self::F32Trunc => Self::F32Trunc,
+            Self::F32Nearest => Self::F32Nearest,
+            Self::F32Sqrt => Self::F32Sqrt,
+            Self::F32Add => Self::F32Add,
+            Self::F32Sub => Self::F32Sub,
+            Self::F32Mul => Self::F32Mul,
+            Self::F32Div => Self::F32Div,
+            Self::F32Min => Self::F32Min,
+            Self::F32Max => Self::F32Max,
+            Self::F32Copysign => Self::F32Copysign,
+            Self::F64Abs => Self::F64Abs,
+            Self::F64Neg => Self::F64Neg,
+            Self::F64Ceil => Self::F64Ceil,
+            Self::F64Floor => Self::F64Floor,
+            Self::F64Trunc => Self::F64Trunc,
+            Self::F64Nearest => Self::F64Nearest,
+            Self::F64Sqrt => Self::F64Sqrt,
+            Self::F64Add => Self::F64Add,
+            Self::F64Sub => Self::F64Sub,
+            Self::F64Mul => Self::F64Mul,
+            Self::F64Div => Self::F64Div,
+            Self::F64Min => Self::F64Min,
+            Self::F64Max => Self::F64Max,
+            Self::F64Copysign => Self::F64Copysign,
+            Self::I32WrapI64 => Self::I32WrapI64,
+            Self::I32TruncF32S => Self::I32TruncF32S,
+            Self::I32TruncF32U => Self::I32TruncF32U,
+            Self::I32TruncF64S => Self::I32TruncF64S,
+            Self::I32TruncF64U => Self::I32TruncF64U,
+            Self::I64ExtendI32S => Self::I64ExtendI32S,
+            Self::I64ExtendI32U => Self::I64ExtendI32U,
+            Self::I64TruncF32S => Self::I64TruncF32S,
+            Self::I64TruncF32U => Self::I64TruncF32U,
+            Self::I64TruncF64S => Self::I64TruncF64S,
+            Self::I64TruncF64U => Self::I64TruncF64U,
+            Self::F32ConvertI32S => Self::F32ConvertI32S,
+            Self::F32ConvertI32U => Self::F32ConvertI32U,
+            Self::F32ConvertI64S => Self::F32ConvertI64S,
+            Self::F32ConvertI64U => Self::F32ConvertI64U,
+            Self::F32DemoteF64 => Self::F32DemoteF64,
+            Self::F64ConvertI32S => Self::F64ConvertI32S,
+            Self::F64ConvertI32U => Self::F64ConvertI32U,
+            Self::F64ConvertI64S => Self::F64ConvertI64S,
+            Self::F64ConvertI64U => Self::F64ConvertI64U,
+            Self::F64PromoteF32 => Self::F64PromoteF32,
+            Self::I32ReinterpretF32 => Self::I32ReinterpretF32,
+            Self::I64ReinterpretF64 => Self::I64ReinterpretF64,
+            Self::F32ReinterpretI32 => Self::F32ReinterpretI32,
+            Self::F64ReinterpretI64 => Self::F64ReinterpretI64,
+            Self::SignExtension(v) => Self::SignExtension(v.clone()),
+        }
+    }
+}
+
 pub struct BlockInstr<A: Allocator> {
     pub block_type: BlockType,
     pub instrs: A::Vector<Instr<A>>,
@@ -432,7 +788,24 @@ impl<A: Allocator> BlockInstr<A> {
     }
 }
 
-#[derive(Debug, Clone)]
+impl<A: Allocator> Debug for BlockInstr<A> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("BlockInstr")
+            .field("block_type", &self.block_type)
+            .field("instrs", &self.instrs.as_ref())
+            .finish()
+    }
+}
+
+impl<A: Allocator> Clone for BlockInstr<A> {
+    fn clone(&self) -> Self {
+        Self {
+            block_type: self.block_type.clone(),
+            instrs: A::clone_vector(&self.instrs),
+        }
+    }
+}
+
 pub struct LoopInstr<A: Allocator> {
     pub block_type: BlockType,
     pub instrs: A::Vector<Instr<A>>,
@@ -450,7 +823,24 @@ impl<A: Allocator> LoopInstr<A> {
     }
 }
 
-#[derive(Debug, Clone)]
+impl<A: Allocator> Debug for LoopInstr<A> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("LoopInstr")
+            .field("block_type", &self.block_type)
+            .field("instrs", &self.instrs.as_ref())
+            .finish()
+    }
+}
+
+impl<A: Allocator> Clone for LoopInstr<A> {
+    fn clone(&self) -> Self {
+        Self {
+            block_type: self.block_type.clone(),
+            instrs: A::clone_vector(&self.instrs),
+        }
+    }
+}
+
 pub struct IfInstr<A: Allocator> {
     pub block_type: BlockType,
     pub then_instrs: A::Vector<Instr<A>>,
@@ -493,7 +883,26 @@ impl<A: Allocator> IfInstr<A> {
     }
 }
 
-#[derive(Debug, Clone)]
+impl<A: Allocator> Debug for IfInstr<A> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("IfInstr")
+            .field("block_type", &self.block_type)
+            .field("then_instrs", &self.then_instrs.as_ref())
+            .field("else_instrs", &self.else_instrs.as_ref())
+            .finish()
+    }
+}
+
+impl<A: Allocator> Clone for IfInstr<A> {
+    fn clone(&self) -> Self {
+        Self {
+            block_type: self.block_type.clone(),
+            then_instrs: A::clone_vector(&self.then_instrs),
+            else_instrs: A::clone_vector(&self.else_instrs),
+        }
+    }
+}
+
 pub struct BrTableInstr<A: Allocator> {
     pub labels: A::Vector<LabelIdx>,
 }
@@ -510,5 +919,21 @@ impl<A: Allocator> BrTableInstr<A> {
 
     pub fn idx_len(self) -> usize {
         self.labels.as_ref().len()
+    }
+}
+
+impl<A: Allocator> Debug for BrTableInstr<A> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("BrTableInstr")
+            .field("labels", &self.labels.as_ref())
+            .finish()
+    }
+}
+
+impl<A: Allocator> Clone for BrTableInstr<A> {
+    fn clone(&self) -> Self {
+        Self {
+            labels: A::clone_vector(&self.labels),
+        }
     }
 }

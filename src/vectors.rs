@@ -1,15 +1,19 @@
-use core::fmt::Debug;
-
-// TODO: Remove Debug and Clone bound
-pub trait Allocator: Debug + Clone {
-    type Vector<T: Clone + Debug>: Vector<T>;
+pub trait Allocator {
+    type Vector<T>: Vector<T>;
 
     // TODO: Add capacity: Option<usize>
-    fn allocate_vector<T: Clone + Debug>() -> Self::Vector<T>;
+    fn allocate_vector<T>() -> Self::Vector<T>;
+
+    fn clone_vector<T: Clone>(vs: &Self::Vector<T>) -> Self::Vector<T> {
+        let mut cloned = Self::allocate_vector();
+        for v in vs.as_ref() {
+            cloned.push(v.clone());
+        }
+        cloned
+    }
 }
 
-// TODO: Remove Debug and Clone bound
-pub trait Vector<T: Clone>: Debug + Clone + AsRef<[T]> + AsMut<[T]> {
+pub trait Vector<T>: AsRef<[T]> + AsMut<[T]> {
     fn push(&mut self, item: T);
     fn pop(&mut self) -> Option<T>;
 
@@ -25,3 +29,5 @@ pub trait Vector<T: Clone>: Debug + Clone + AsRef<[T]> + AsMut<[T]> {
 
     fn truncate_range(&mut self, start: usize, end: usize);
 }
+
+//#[cfg(feature="std")]
