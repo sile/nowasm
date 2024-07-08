@@ -3,21 +3,19 @@ use crate::{
     reader::Reader,
     sections::{
         CodeSection, DataSection, ElementSection, ExportSection, GlobalSection, MemorySection,
-        SectionId, StartSection, TableSection,
+        SectionId, StartSection,
     },
-    symbols::{Export, FuncIdx, Import, Magic, Version},
+    symbols::{Export, FuncIdx, Import, Magic, TableType, Version},
     validation::ValidateError,
     Allocator, DecodeError, FuncType,
 };
-use std::marker::PhantomData;
 
 // TODO: #[derive(Debug)]
 pub struct Module<A: Allocator> {
-    _allocator: PhantomData<A>,
     function_types: A::Vector<FuncType<A>>,
     imports: A::Vector<Import<A>>,
     functions: A::Vector<FuncIdx>,
-    table_section: TableSection<A>,
+    table_types: A::Vector<TableType>,
     memory_section: MemorySection,
     global_section: GlobalSection<A>,
     export_section: ExportSection<A>,
@@ -40,8 +38,8 @@ impl<A: Allocator> Module<A> {
         self.functions.as_ref()
     }
 
-    pub fn table_section(&self) -> &TableSection<A> {
-        &self.table_section
+    pub fn table_types(&self) -> &[TableType] {
+        self.table_types.as_ref()
     }
 
     pub fn memory_section(&self) -> &MemorySection {
@@ -78,11 +76,10 @@ impl<A: Allocator> Module<A> {
 
     pub fn decode(wasm_bytes: &[u8]) -> Result<Self, DecodeError> {
         let mut this = Self {
-            _allocator: PhantomData,
             function_types: A::allocate_vector(),
             imports: A::allocate_vector(),
             functions: A::allocate_vector(),
-            table_section: TableSection::new(),
+            table_types: A::allocate_vector(),
             memory_section: MemorySection::default(),
             global_section: GlobalSection::new(),
             export_section: ExportSection::new(),
@@ -132,7 +129,9 @@ impl<A: Allocator> Module<A> {
                 SectionId::Function => {
                     self.functions = Decode::decode_vector::<A>(reader)?;
                 }
-                SectionId::Table => self.table_section = TableSection::decode(&mut section_reader)?,
+                SectionId::Table => {
+                    self.table_types = Decode::decode_vector::<A>(reader)?;
+                }
                 SectionId::Memory => {
                     self.memory_section = MemorySection::decode(&mut section_reader)?
                 }
