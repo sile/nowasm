@@ -1,4 +1,4 @@
-use crate::sections::SectionId;
+use crate::module::SectionId;
 use crate::vectors::Vector;
 use crate::{reader::Reader, Allocator};
 use core::str::Utf8Error;
