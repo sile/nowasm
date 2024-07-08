@@ -278,7 +278,7 @@ impl<A: Allocator> ModuleInstance<A> {
         function_name: &str,
         args: &[Value],
     ) -> Result<Option<Value>, ExecutionError> {
-        let Some(export) = self.module.exports().find(|export| {
+        let Some(export) = self.module.exports().iter().find(|export| {
             matches!(export.desc, ExportDesc::Func(_)) && function_name == export.name.as_str()
         }) else {
             return Err(ExecutionError::NotExportedFunction);

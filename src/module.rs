@@ -71,8 +71,8 @@ impl<A: Allocator> Module<A> {
         &self.data_section
     }
 
-    pub fn exports(&self) -> impl '_ + Iterator<Item = &Export<A>> {
-        self.export_section.exports.as_ref().iter()
+    pub fn exports(&self) -> &[Export<A>] {
+        self.export_section.exports.as_ref()
     }
 
     pub fn decode(wasm_bytes: &[u8]) -> Result<Self, DecodeError> {
@@ -168,21 +168,32 @@ impl<A: Allocator> Module<A> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::StdAllocator;
 
-    #[test]
-    fn empty_module() {
-        // (module)
-        let input = [0, 97, 115, 109, 1, 0, 0, 0];
-        Module::decode(&input).expect("decode module");
+    fn decode(wasm: &[u8]) -> Module<StdAllocator> {
+        Module::decode(wasm).expect("decode module")
     }
 
     #[test]
-    fn add_two() {
+    fn decode_empty_module() {
+        // (module)
+        let input = [0, 97, 115, 109, 1, 0, 0, 0];
+        decode(&input);
+    }
 
+    #[test]
+    fn decode_add_two() {
         // (module
         //   (func (export "addTwo") (param i32 i32) (result i32)
         //     local.get 0
         //     local.get 1
         //     i32.add))
+        let input = [
+            0, 97, 115, 109, 1, 0, 0, 0, 1, 7, 1, 96, 2, 127, 127, 1, 127, 3, 2, 1, 0, 7, 10, 1, 6,
+            97, 100, 100, 84, 119, 111, 0, 0, 10, 9, 1, 7, 0, 32, 0, 32, 1, 106, 11,
+        ];
+        let module = decode(&input);
+        assert_eq!(1, module.exports().len());
+        assert_eq!("addTwo", module.exports()[0].name.as_str());
     }
 }
