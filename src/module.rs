@@ -2,10 +2,10 @@ use crate::{
     decode::Decode,
     reader::Reader,
     sections::{
-        CodeSection, DataSection, ElementSection, ExportSection, GlobalSection, MemorySection,
-        SectionId, StartSection,
+        CodeSection, DataSection, ElementSection, ExportSection, GlobalSection, SectionId,
+        StartSection,
     },
-    symbols::{Export, FuncIdx, Import, Magic, TableType, Version},
+    symbols::{Export, FuncIdx, Import, Magic, MemType, TableType, Version},
     validation::ValidateError,
     Allocator, DecodeError, FuncType,
 };
@@ -16,7 +16,7 @@ pub struct Module<A: Allocator> {
     imports: A::Vector<Import<A>>,
     functions: A::Vector<FuncIdx>,
     table_types: A::Vector<TableType>,
-    memory_section: MemorySection,
+    memory_type: Option<MemType>,
     global_section: GlobalSection<A>,
     export_section: ExportSection<A>,
     start_section: StartSection,
@@ -42,8 +42,8 @@ impl<A: Allocator> Module<A> {
         self.table_types.as_ref()
     }
 
-    pub fn memory_section(&self) -> &MemorySection {
-        &self.memory_section
+    pub fn memory_type(&self) -> Option<MemType> {
+        self.memory_type
     }
 
     pub fn global_section(&self) -> &GlobalSection<A> {
@@ -80,7 +80,7 @@ impl<A: Allocator> Module<A> {
             imports: A::allocate_vector(),
             functions: A::allocate_vector(),
             table_types: A::allocate_vector(),
-            memory_section: MemorySection::default(),
+            memory_type: None,
             global_section: GlobalSection::new(),
             export_section: ExportSection::new(),
             start_section: StartSection::default(),
@@ -121,19 +121,26 @@ impl<A: Allocator> Module<A> {
             match section_id {
                 SectionId::Custom => unreachable!(),
                 SectionId::Type => {
-                    self.function_types = Decode::decode_vector::<A>(reader)?;
+                    self.function_types = Decode::decode_vector::<A>(&mut section_reader)?;
                 }
                 SectionId::Import => {
-                    self.imports = Decode::decode_vector::<A>(reader)?;
+                    self.imports = Decode::decode_vector::<A>(&mut section_reader)?;
                 }
                 SectionId::Function => {
-                    self.functions = Decode::decode_vector::<A>(reader)?;
+                    self.functions = Decode::decode_vector::<A>(&mut section_reader)?;
                 }
                 SectionId::Table => {
-                    self.table_types = Decode::decode_vector::<A>(reader)?;
+                    self.table_types = Decode::decode_vector::<A>(&mut section_reader)?;
                 }
                 SectionId::Memory => {
-                    self.memory_section = MemorySection::decode(&mut section_reader)?
+                    let value = section_reader.read_u32()? as usize;
+                    if value > 1 {
+                        return Err(DecodeError::InvalidMemoryCount { value });
+                    }
+                    if value == 1 {
+                        let mem = MemType::decode(&mut section_reader)?;
+                        self.memory_type = Some(mem);
+                    }
                 }
                 SectionId::Global => {
                     self.global_section = GlobalSection::decode(&mut section_reader)?

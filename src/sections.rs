@@ -1,7 +1,7 @@
 use crate::{
     decode::Decode,
     reader::Reader,
-    symbols::{Code, Data, Elem, Export, FuncIdx, Global, MemType},
+    symbols::{Code, Data, Elem, Export, FuncIdx, Global},
     Allocator, DecodeError,
 };
 
@@ -37,26 +37,6 @@ impl SectionId {
             10 => Ok(Self::Code),
             11 => Ok(Self::Data),
             value => Err(DecodeError::InvalidSectionId { value }),
-        }
-    }
-}
-
-#[derive(Debug, Default, Clone)]
-pub struct MemorySection {
-    pub mem: Option<MemType>,
-}
-
-impl MemorySection {
-    pub(crate) fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
-        let value = reader.read_u32()? as usize;
-        if value > 1 {
-            return Err(DecodeError::InvalidMemoryCount { value });
-        }
-        if value == 0 {
-            Ok(Self { mem: None })
-        } else {
-            let mem = MemType::decode(reader)?;
-            Ok(Self { mem: Some(mem) })
         }
     }
 }
