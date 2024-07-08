@@ -588,6 +588,14 @@ pub enum BlockType {
 }
 
 impl BlockType {
+    pub fn arity(self) -> usize {
+        match self {
+            BlockType::Empty => 0,
+            BlockType::Val(_) => 1,
+            BlockType::TypeIndex(_) => todo!(),
+        }
+    }
+
     pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         if reader.read_u8()? == 0x40 {
             return Ok(Self::Empty);

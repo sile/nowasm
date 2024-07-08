@@ -21,7 +21,6 @@ pub struct State<A: Allocator> {
     pub globals: A::Vector<Value>,
     pub locals: A::Vector<Value>,
     pub values: A::Vector<Value>,
-    pub return_values: A::Vector<Value>, // TODO: rename
     pub current_frame: Frame,
     pub current_block: Block,
 }
@@ -34,7 +33,6 @@ impl<A: Allocator> State<A> {
             globals: A::allocate_vector(),
             locals: A::allocate_vector(),
             values: A::allocate_vector(),
-            return_values: A::allocate_vector(),
             current_frame: Frame::root(),
             current_block: Block::default(),
         }
@@ -60,25 +58,16 @@ impl<A: Allocator> State<A> {
     }
 
     // TODO: delete unused parameter
-    pub fn exit_frame(&mut self, _ty: &FuncType<A>, succeeded: bool, prev: Frame) {
+    pub fn exit_frame(&mut self, _ty: &FuncType<A>, prev: Frame) {
         let frame = self.current_frame;
 
         assert!(frame.locals_start <= self.locals.len());
         self.locals.truncate(frame.locals_start);
 
-        // TODO: remove
-        if succeeded {
-            assert!(frame.values_start == self.values.len());
-        }
-        // assert!(frame.values_start <= self.values.len());
-        // self.values.truncate(frame.values_start);
+        self.values
+            .truncate_range(frame.values_start, self.values.len() - frame.arity);
 
         self.current_frame = prev;
-
-        for &v in self.return_values.as_ref() {
-            self.values.push(v);
-        }
-        self.return_values.truncate(0); // TODO: optimize
     }
 
     pub fn enter_block(&mut self, ty: BlockType) -> Block {
@@ -86,6 +75,7 @@ impl<A: Allocator> State<A> {
 
         let prev = self.current_block;
         self.current_block = Block {
+            arity: ty.arity(),
             values_start: self.values.len(),
         };
         prev
@@ -97,14 +87,9 @@ impl<A: Allocator> State<A> {
 
         let block = self.current_block;
 
-        if skipped {
-            assert!(block.values_start <= self.values.len());
-            self.values.truncate(block.values_start);
-        } else {
-            for &v in self.return_values.as_ref() {
-                self.values.push(v);
-            }
-            self.return_values.truncate(0); // TODO: optimize
+        if !skipped {
+            self.values
+                .truncate_range(block.values_start, self.values.len() - block.arity);
         }
 
         self.current_block = prev;
@@ -140,6 +125,8 @@ impl<A: Allocator> State<A> {
         func_idx: FuncIdx,
         module: &Module<A>,
     ) -> Result<usize, ExecutionError> {
+        // TODO: check trapped flag
+
         // TODO: Add validation phase
         let func_type = func_idx
             .get_type(module)
@@ -152,9 +139,9 @@ impl<A: Allocator> State<A> {
         for v in code.locals().map(Value::zero) {
             self.locals.push(v);
         }
-        let result = self.execute_instrs(code.instrs(), 0, module);
-        self.exit_frame(func_type, result.is_ok(), prev_frame);
-        result
+        let value = self.execute_instrs(code.instrs(), 0, module)?; // TODO: set trapped flag if needed
+        self.exit_frame(func_type, prev_frame);
+        Ok(value)
     }
 
     pub fn execute_instrs(
@@ -220,10 +207,6 @@ impl<A: Allocator> State<A> {
                     }
                 }
                 Instr::Return => {
-                    for _ in 0..self.current_frame.arity {
-                        let v = self.pop_value();
-                        self.return_values.push(v);
-                    }
                     return Ok(self.current_frame.level);
                 }
                 _ => todo!("{instr:?}"),
@@ -259,6 +242,7 @@ impl Frame {
 
 #[derive(Debug, Default, Clone, Copy)]
 pub struct Block {
+    pub arity: usize,
     pub values_start: usize,
 }
 

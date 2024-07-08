@@ -59,6 +59,10 @@ impl<T: Debug + Clone> Vector<T> for StdVec<T> {
     fn pop(&mut self) -> Option<T> {
         self.0.pop()
     }
+
+    fn truncate_range(&mut self, start: usize, end: usize) {
+        self.0.drain(start..end);
+    }
 }
 
 impl<T> AsRef<[T]> for StdVec<T> {

@@ -21,4 +21,6 @@ pub trait Vector<T: Clone>: Debug + Clone + AsRef<[T]> + AsMut<[T]> {
             self.pop();
         }
     }
+
+    fn truncate_range(&mut self, start: usize, end: usize);
 }
