@@ -1,5 +1,5 @@
 use crate::{
-    symbols::{BlockType, Code, ExportDesc, FuncIdx, LocalIdx, ValType},
+    symbols::{ExportDesc, FuncIdx, LocalIdx, ValType},
     Allocator, FuncType, Instr, Module, Vector,
 };
 use std::marker::PhantomData;
@@ -54,7 +54,7 @@ impl<A: Allocator> State<A> {
         prev
     }
 
-    pub fn exit_frame(&mut self, ty: &FuncType<A>, prev: Frame) {
+    pub fn exit_frame(&mut self, ty: &FuncType<A>, succeeded: bool, prev: Frame) {
         let frame = self.current_frame;
 
         let return_value = match ty.return_values_len() {
@@ -71,8 +71,10 @@ impl<A: Allocator> State<A> {
 
         self.current_frame = prev;
 
-        if let Some(v) = return_value {
-            self.push_value(v);
+        if succeeded {
+            if let Some(v) = return_value {
+                self.push_value(v);
+            }
         }
     }
 
@@ -138,7 +140,7 @@ impl<A: Allocator> State<A> {
             self.locals.push(v);
         }
         let result = self.execute_instrs(code.instrs(), module);
-        self.exit_frame(func_type, prev_frame);
+        self.exit_frame(func_type, result.is_ok(), prev_frame);
         result
     }
 
@@ -217,159 +219,149 @@ impl<A: Allocator> ModuleInstance<A> {
             unreachable!();
         };
 
-        let fun_type = func_idx
+        let func_type = func_idx
             .get_type(&self.module)
             .ok_or(ExecutionError::InvalidFuncIdx)?;
-        fun_type.validate_args(args, &self.module)?;
-        let returns = fun_type.rt2.len();
+        func_type.validate_args(args, &self.module)?;
 
-        let code = func_idx
-            .get_code(&self.module)
-            .ok_or(ExecutionError::InvalidFuncIdx)?
-            .clone(); // TODO: remove clone
-
-        // TODO: delete let locals = args.len() + code.locals().count();
-        //self.state.push_frame();
-        let result = match self.call(&code, args, returns) {
-            Err(e) => Err(e),
-            Ok(()) => {
-                // TODO: validate result type
-                if returns == 0 {
-                    Ok(None)
-                } else {
-                    Ok(Some(self.state.pop_value()))
-                }
-            }
-        };
-
-        // TODO: Clear all stacks when error
-        result
-    }
-
-    fn call(
-        &mut self,
-        code: &Code<A>,
-        args: &[Value],
-        _return_values: usize,
-    ) -> Result<(), ExecutionError> {
-        for v in args.iter().copied().chain(code.locals().map(Value::zero)) {
-            self.state.locals.push(v);
+        for v in args.iter().rev().copied() {
+            self.state.push_value(v);
         }
 
-        for instr in code.body_iter() {
-            match instr {
-                Instr::Nop => {}
-                Instr::GlobalSet(idx) => {
-                    let v = self.state.pop_value();
-                    self.state.globals.as_mut()[idx.as_usize()] = v;
-                }
-                Instr::GlobalGet(idx) => {
-                    let v = self.state.globals.as_ref()[idx.as_usize()];
-                    self.state.push_value(v);
-                }
-                Instr::LocalSet(idx) => {
-                    let v = self.state.pop_value();
-                    self.state.set_local(*idx, v);
-                }
-                Instr::LocalGet(idx) => {
-                    let v = self.state.get_local(*idx);
-                    self.state.push_value(v);
-                }
-                Instr::I32Const(v) => {
-                    self.state.push_value(Value::I32(*v));
-                }
-                Instr::I64Const(v) => {
-                    self.state.push_value(Value::I64(*v));
-                }
-                Instr::F32Const(v) => {
-                    self.state.push_value(Value::F32(*v));
-                }
-                Instr::F64Const(v) => {
-                    self.state.push_value(Value::F64(*v));
-                }
-                Instr::I32Add => {
-                    let v0 = self.state.pop_value_i32();
-                    let v1 = self.state.pop_value_i32();
-                    self.state.push_value(Value::I32(v1 + v0));
-                }
-                Instr::I32Sub => {
-                    let v0 = self.state.pop_value_i32();
-                    let v1 = self.state.pop_value_i32();
-                    self.state.push_value(Value::I32(v1 - v0));
-                }
-                Instr::I32Xor => {
-                    let v0 = self.state.pop_value_i32();
-                    let v1 = self.state.pop_value_i32();
-                    self.state.push_value(Value::I32(v1 ^ v0));
-                }
-                Instr::I32And => {
-                    let v0 = self.state.pop_value_i32();
-                    let v1 = self.state.pop_value_i32();
-                    self.state.push_value(Value::I32(v1 & v0));
-                }
-                Instr::I32LtS => {
-                    let v0 = self.state.pop_value_i32();
-                    let v1 = self.state.pop_value_i32();
-                    let r = if v1 < v0 { 1 } else { 0 };
-                    self.state.push_value(Value::I32(r));
-                }
-                Instr::I32Store(arg) => {
-                    let v = self.state.pop_value();
-                    let i = self.state.pop_value_i32();
-                    let start = (i + arg.offset as i32) as usize;
-                    let end = start + v.byte_size();
-                    let mem = self.state.mem.as_mut();
-                    if mem.len() < end {
-                        return Err(ExecutionError::Trapped);
-                    }
-                    v.copy_to(&mut mem[start..end]);
-                }
-                Instr::BrIf(label) => {
-                    let c = self.state.pop_value_i32();
-                    if c != 0 {
-                        dbg!(label);
-                        todo!();
-                    }
-                }
-                Instr::Return => {
-                    break;
-                }
-                Instr::Call(idx) => {
-                    dbg!(idx);
-                    dbg!(&self.module.code_section().codes.as_ref()[idx.get() as usize]);
-                    todo!();
-                }
-                Instr::Unreachable => {
-                    return Err(ExecutionError::Trapped);
-                }
-                Instr::Block(block) => {
-                    // TODO: Add block_type handling
-                    assert!(matches!(
-                        block.block_type,
-                        BlockType::Empty | BlockType::Val(_)
-                    ));
-                    // push label
-                    dbg!(block);
+        self.state.call_function(func_idx, &self.module)?;
 
-                    todo!();
-                }
-                _ => {
-                    dbg!(instr);
-                    todo!();
-                }
-            }
+        // TODO: validate return value type
+        match func_type.return_values_len() {
+            0 => Ok(None),
+            1 => Ok(Some(self.state.pop_value())),
+            _ => unreachable!(),
         }
-
-        // if return_values == 0 {
-        //     self.state.pop_frame();
-        // } else {
-        //     assert_eq!(return_values, 1);
-        //     let v = self.state.pop_value();
-        //     self.state.pop_frame();
-        //     self.state.push_value(v);
-        // }
-        Ok(())
     }
+
+    // fn call(
+    //     &mut self,
+    //     code: &Code<A>,
+    //     args: &[Value],
+    //     _return_values: usize,
+    // ) -> Result<(), ExecutionError> {
+    //     for v in args.iter().copied().chain(code.locals().map(Value::zero)) {
+    //         self.state.locals.push(v);
+    //     }
+
+    //     for instr in code.body_iter() {
+    //         match instr {
+    //             Instr::Nop => {}
+    //             Instr::GlobalSet(idx) => {
+    //                 let v = self.state.pop_value();
+    //                 self.state.globals.as_mut()[idx.as_usize()] = v;
+    //             }
+    //             Instr::GlobalGet(idx) => {
+    //                 let v = self.state.globals.as_ref()[idx.as_usize()];
+    //                 self.state.push_value(v);
+    //             }
+    //             Instr::LocalSet(idx) => {
+    //                 let v = self.state.pop_value();
+    //                 self.state.set_local(*idx, v);
+    //             }
+    //             Instr::LocalGet(idx) => {
+    //                 let v = self.state.get_local(*idx);
+    //                 self.state.push_value(v);
+    //             }
+    //             Instr::I32Const(v) => {
+    //                 self.state.push_value(Value::I32(*v));
+    //             }
+    //             Instr::I64Const(v) => {
+    //                 self.state.push_value(Value::I64(*v));
+    //             }
+    //             Instr::F32Const(v) => {
+    //                 self.state.push_value(Value::F32(*v));
+    //             }
+    //             Instr::F64Const(v) => {
+    //                 self.state.push_value(Value::F64(*v));
+    //             }
+    //             Instr::I32Add => {
+    //                 let v0 = self.state.pop_value_i32();
+    //                 let v1 = self.state.pop_value_i32();
+    //                 self.state.push_value(Value::I32(v1 + v0));
+    //             }
+    //             Instr::I32Sub => {
+    //                 let v0 = self.state.pop_value_i32();
+    //                 let v1 = self.state.pop_value_i32();
+    //                 self.state.push_value(Value::I32(v1 - v0));
+    //             }
+    //             Instr::I32Xor => {
+    //                 let v0 = self.state.pop_value_i32();
+    //                 let v1 = self.state.pop_value_i32();
+    //                 self.state.push_value(Value::I32(v1 ^ v0));
+    //             }
+    //             Instr::I32And => {
+    //                 let v0 = self.state.pop_value_i32();
+    //                 let v1 = self.state.pop_value_i32();
+    //                 self.state.push_value(Value::I32(v1 & v0));
+    //             }
+    //             Instr::I32LtS => {
+    //                 let v0 = self.state.pop_value_i32();
+    //                 let v1 = self.state.pop_value_i32();
+    //                 let r = if v1 < v0 { 1 } else { 0 };
+    //                 self.state.push_value(Value::I32(r));
+    //             }
+    //             Instr::I32Store(arg) => {
+    //                 let v = self.state.pop_value();
+    //                 let i = self.state.pop_value_i32();
+    //                 let start = (i + arg.offset as i32) as usize;
+    //                 let end = start + v.byte_size();
+    //                 let mem = self.state.mem.as_mut();
+    //                 if mem.len() < end {
+    //                     return Err(ExecutionError::Trapped);
+    //                 }
+    //                 v.copy_to(&mut mem[start..end]);
+    //             }
+    //             Instr::BrIf(label) => {
+    //                 let c = self.state.pop_value_i32();
+    //                 if c != 0 {
+    //                     dbg!(label);
+    //                     todo!();
+    //                 }
+    //             }
+    //             Instr::Return => {
+    //                 break;
+    //             }
+    //             Instr::Call(idx) => {
+    //                 dbg!(idx);
+    //                 dbg!(&self.module.code_section().codes.as_ref()[idx.get() as usize]);
+    //                 todo!();
+    //             }
+    //             Instr::Unreachable => {
+    //                 return Err(ExecutionError::Trapped);
+    //             }
+    //             Instr::Block(block) => {
+    //                 // TODO: Add block_type handling
+    //                 assert!(matches!(
+    //                     block.block_type,
+    //                     BlockType::Empty | BlockType::Val(_)
+    //                 ));
+    //                 // push label
+    //                 dbg!(block);
+
+    //                 todo!();
+    //             }
+    //             _ => {
+    //                 dbg!(instr);
+    //                 todo!();
+    //             }
+    //         }
+    //     }
+
+    //     // if return_values == 0 {
+    //     //     self.state.pop_frame();
+    //     // } else {
+    //     //     assert_eq!(return_values, 1);
+    //     //     let v = self.state.pop_value();
+    //     //     self.state.pop_frame();
+    //     //     self.state.push_value(v);
+    //     // }
+    //     Ok(())
+    // }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
