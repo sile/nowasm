@@ -20,4 +20,7 @@ pub use module::Module;
 pub use symbols::FuncType;
 pub use vectors::{Allocator, Vector};
 
+#[cfg(feature = "std")]
+pub use vectors::{StdAllocator, StdVector};
+
 pub const PAGE_SIZE: u32 = 65536;

@@ -1,7 +1,7 @@
 use clap::Parser;
 use nowasm::{
     execution::{ModuleInstance, Value},
-    Allocator, Module, Vector,
+    Module, StdAllocator, StdVector,
 };
 use orfail::{Failure, OrFail};
 use std::{fmt::Debug, path::PathBuf};
@@ -21,7 +21,7 @@ pub fn main() -> orfail::Result<()> {
         .map_err(|e| Failure::new(format!("{e:?}")))
         .or_fail()?;
 
-    let mem = StdVec(vec![0; 1024 * 1024]);
+    let mem = StdVector::new(vec![0; 1024 * 1024]);
     let mut instance = ModuleInstance::new(module, mem)
         .map_err(|e| Failure::new(format!("{e:?}")))
         .or_fail()?;
@@ -34,44 +34,4 @@ pub fn main() -> orfail::Result<()> {
     println!("=> {:?}", result);
 
     Ok(())
-}
-
-#[derive(Debug)]
-pub struct StdAllocator;
-
-impl Allocator for StdAllocator {
-    type Vector<T> = StdVec<T>;
-
-    fn allocate_vector<T>() -> Self::Vector<T> {
-        StdVec(Vec::new())
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct StdVec<T>(pub Vec<T>);
-
-impl<T> Vector<T> for StdVec<T> {
-    fn push(&mut self, item: T) {
-        self.0.push(item);
-    }
-
-    fn pop(&mut self) -> Option<T> {
-        self.0.pop()
-    }
-
-    fn truncate_range(&mut self, start: usize, end: usize) {
-        self.0.drain(start..end);
-    }
-}
-
-impl<T> AsRef<[T]> for StdVec<T> {
-    fn as_ref(&self) -> &[T] {
-        self.0.as_ref()
-    }
-}
-
-impl<T> AsMut<[T]> for StdVec<T> {
-    fn as_mut(&mut self) -> &mut [T] {
-        self.0.as_mut()
-    }
 }
