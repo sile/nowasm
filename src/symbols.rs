@@ -114,7 +114,7 @@ impl<A: Allocator> Decode for Export<A> {
 
 #[derive(Debug, Clone, Copy)]
 pub enum ExportDesc {
-    Func(TypeIdx),
+    Func(FuncIdx),
     Table(TableIdx),
     Mem(MemIdx),
     Global(GlobalIdx),
@@ -123,7 +123,7 @@ pub enum ExportDesc {
 impl ExportDesc {
     pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         match reader.read_u8()? {
-            0x00 => Ok(Self::Func(TypeIdx::decode(reader)?)),
+            0x00 => Ok(Self::Func(FuncIdx::decode(reader)?)),
             0x01 => Ok(Self::Table(TableIdx::decode(reader)?)),
             0x02 => Ok(Self::Mem(MemIdx::decode(reader)?)),
             0x03 => Ok(Self::Global(GlobalIdx::decode(reader)?)),
@@ -140,25 +140,6 @@ impl Default for ExportDesc {
 
 #[derive(Debug, Default, Clone, Copy)]
 pub struct TypeIdx(u32);
-
-impl TypeIdx {
-    pub fn get_type<A: Allocator>(self, module: &Module<A>) -> Option<&FuncType<A>> {
-        let type_idx = module
-            .function_section()
-            .idxs
-            .as_ref()
-            .get(self.0 as usize)?;
-        module
-            .type_section()
-            .types
-            .as_ref()
-            .get(type_idx.0 as usize)
-    }
-
-    pub fn get_code<A: Allocator>(self, module: &Module<A>) -> Option<&Code<A>> {
-        module.code_section().codes.as_ref().get(self.0 as usize)
-    }
-}
 
 impl From<TypeIdx> for u32 {
     fn from(idx: TypeIdx) -> u32 {
@@ -178,6 +159,25 @@ pub struct FuncIdx(u32);
 impl FuncIdx {
     pub fn get(self) -> u32 {
         self.0
+    }
+}
+
+impl FuncIdx {
+    pub fn get_type<A: Allocator>(self, module: &Module<A>) -> Option<&FuncType<A>> {
+        let type_idx = module
+            .function_section()
+            .idxs
+            .as_ref()
+            .get(self.0 as usize)?;
+        module
+            .type_section()
+            .types
+            .as_ref()
+            .get(type_idx.0 as usize)
+    }
+
+    pub fn get_code<A: Allocator>(self, module: &Module<A>) -> Option<&Code<A>> {
+        module.code_section().codes.as_ref().get(self.0 as usize)
     }
 }
 

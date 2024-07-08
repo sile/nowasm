@@ -1,5 +1,5 @@
 use crate::{
-    symbols::{BlockType, Code, ExportDesc, LocalIdx, ValType},
+    symbols::{BlockType, Code, ExportDesc, FuncIdx, LocalIdx, ValType},
     Allocator, Instr, Module, Vector,
 };
 use std::marker::PhantomData;
@@ -105,13 +105,28 @@ impl<A: Allocator> State<A> {
         v
     }
 
-    pub fn call(&mut self, module: &Module<A>) -> Result<(), ExecutionError> {
+    pub fn call_function(
+        &mut self,
+        func_idx: FuncIdx,
+        module: &Module<A>,
+    ) -> Result<(), ExecutionError> {
+        // let fun_type = func_idx
+        //     .get_type(&self.module)
+        //     .ok_or(ExecutionError::InvalidFuncIdx)?;
+        // fun_type.validate_args(args, &self.module)?;
+        // let returns = fun_type.rt2.len();
+
+        // let code = func_idx
+        //     .get_code(&self.module)
+        //     .ok_or(ExecutionError::InvalidFuncIdx)?
+        //     .clone(); // TODO: remove clone
+
         Ok(())
     }
 
-    pub fn enter(&mut self, module: &Module<A>) -> Result<(), ExecutionError> {
-        Ok(())
-    }
+    // pub fn execute_block(&mut self, module: &Module<A>) -> Result<(), ExecutionError> {
+    //     Ok(())
+    // }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -187,7 +202,7 @@ impl<A: Allocator> ModuleInstance<A> {
             .clone(); // TODO: remove clone
 
         // TODO: delete let locals = args.len() + code.locals().count();
-        self.state.push_frame();
+        //self.state.push_frame();
         let result = match self.call(&code, args, returns) {
             Err(e) => Err(e),
             Ok(()) => {
@@ -318,14 +333,14 @@ impl<A: Allocator> ModuleInstance<A> {
             }
         }
 
-        if return_values == 0 {
-            self.state.pop_frame();
-        } else {
-            assert_eq!(return_values, 1);
-            let v = self.state.pop_value();
-            self.state.pop_frame();
-            self.state.push_value(v);
-        }
+        // if return_values == 0 {
+        //     self.state.pop_frame();
+        // } else {
+        //     assert_eq!(return_values, 1);
+        //     let v = self.state.pop_value();
+        //     self.state.pop_frame();
+        //     self.state.push_value(v);
+        // }
         Ok(())
     }
 }
