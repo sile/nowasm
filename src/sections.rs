@@ -1,4 +1,4 @@
-use crate::{decode::Decode, reader::Reader, symbols::Data, Allocator, DecodeError};
+use crate::{reader::Reader, DecodeError};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum SectionId {
@@ -33,23 +33,5 @@ impl SectionId {
             11 => Ok(Self::Data),
             value => Err(DecodeError::InvalidSectionId { value }),
         }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct DataSection<A: Allocator> {
-    pub datas: A::Vector<Data<A>>,
-}
-
-impl<A: Allocator> DataSection<A> {
-    pub(crate) fn new() -> Self {
-        Self {
-            datas: A::allocate_vector(),
-        }
-    }
-
-    pub(crate) fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
-        let datas = Decode::decode_vector::<A>(reader)?;
-        Ok(Self { datas })
     }
 }
