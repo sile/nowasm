@@ -1,8 +1,8 @@
 use crate::{
     decode::Decode,
     reader::Reader,
-    sections::{CodeSection, DataSection, ElementSection, SectionId},
-    symbols::{Export, FuncIdx, Global, Import, Magic, MemType, TableType, Version},
+    sections::{CodeSection, DataSection, SectionId},
+    symbols::{Elem, Export, FuncIdx, Global, Import, Magic, MemType, TableType, Version},
     validation::ValidateError,
     Allocator, DecodeError, FuncType,
 };
@@ -17,7 +17,7 @@ pub struct Module<A: Allocator> {
     globals: A::Vector<Global<A>>,
     exports: A::Vector<Export<A>>,
     start_function: Option<FuncIdx>,
-    element_section: ElementSection<A>,
+    elements: A::Vector<Elem<A>>,
     code_section: CodeSection<A>,
     data_section: DataSection<A>,
 }
@@ -55,8 +55,8 @@ impl<A: Allocator> Module<A> {
         self.start_function
     }
 
-    pub fn element_section(&self) -> &ElementSection<A> {
-        &self.element_section
+    pub fn elements(&self) -> &[Elem<A>] {
+        self.elements.as_ref()
     }
 
     pub fn code_section(&self) -> &CodeSection<A> {
@@ -77,7 +77,7 @@ impl<A: Allocator> Module<A> {
             globals: A::allocate_vector(),
             exports: A::allocate_vector(),
             start_function: None,
-            element_section: ElementSection::new(),
+            elements: A::allocate_vector(),
             code_section: CodeSection::new(),
             data_section: DataSection::new(),
         };
@@ -145,7 +145,7 @@ impl<A: Allocator> Module<A> {
                     self.start_function = Some(Decode::decode(&mut section_reader)?);
                 }
                 SectionId::Element => {
-                    self.element_section = ElementSection::decode(&mut section_reader)?
+                    self.elements = Decode::decode_vector::<A>(&mut section_reader)?;
                 }
                 SectionId::Code => self.code_section = CodeSection::decode(&mut section_reader)?,
                 SectionId::Data => self.data_section = DataSection::decode(&mut section_reader)?,
