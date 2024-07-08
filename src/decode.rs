@@ -1,5 +1,6 @@
+use crate::sections::SectionId;
 use crate::vectors::Vector;
-use crate::{reader::Reader, symbols::SectionId, Allocator};
+use crate::{reader::Reader, Allocator};
 use core::str::Utf8Error;
 use std::fmt::Debug;
 

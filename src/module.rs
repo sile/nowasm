@@ -1,19 +1,20 @@
 use crate::{
+    decode::Decode,
     reader::Reader,
     sections::{
         CodeSection, DataSection, ElementSection, ExportSection, FunctionSection, GlobalSection,
-        ImportSection, MemorySection, SectionId, StartSection, TableSection, TypeSection,
+        ImportSection, MemorySection, SectionId, StartSection, TableSection,
     },
     symbols::{Export, Magic, Version},
     validation::ValidateError,
-    Allocator, DecodeError,
+    Allocator, DecodeError, FuncType,
 };
 use std::marker::PhantomData;
 
 // TODO: #[derive(Debug)]
 pub struct Module<A: Allocator> {
     _allocator: PhantomData<A>,
-    type_section: TypeSection<A>,
+    func_types: A::Vector<FuncType<A>>,
     import_section: ImportSection<A>,
     function_section: FunctionSection<A>,
     table_section: TableSection<A>,
@@ -27,8 +28,8 @@ pub struct Module<A: Allocator> {
 }
 
 impl<A: Allocator> Module<A> {
-    pub fn type_section(&self) -> &TypeSection<A> {
-        &self.type_section
+    pub fn func_types(&self) -> &[FuncType<A>] {
+        self.func_types.as_ref()
     }
 
     pub fn import_section(&self) -> &ImportSection<A> {
@@ -78,7 +79,7 @@ impl<A: Allocator> Module<A> {
     pub fn decode(wasm_bytes: &[u8]) -> Result<Self, DecodeError> {
         let mut this = Self {
             _allocator: PhantomData,
-            type_section: TypeSection::new(),
+            func_types: A::allocate_vector(),
             import_section: ImportSection::new(),
             function_section: FunctionSection::new(),
             table_section: TableSection::new(),
@@ -122,7 +123,9 @@ impl<A: Allocator> Module<A> {
 
             match section_id {
                 SectionId::Custom => unreachable!(),
-                SectionId::Type => self.type_section = TypeSection::decode(&mut section_reader)?,
+                SectionId::Type => {
+                    self.func_types = FuncType::decode_vector::<A>(reader)?;
+                }
                 SectionId::Import => {
                     self.import_section = ImportSection::decode(&mut section_reader)?
                 }

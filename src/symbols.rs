@@ -34,8 +34,6 @@ impl Version {
     }
 }
 
-pub use crate::sections::SectionId; // TODO
-
 pub struct Name<A: Allocator>(A::Vector<u8>);
 
 impl<A: Allocator> Name<A> {
@@ -215,11 +213,7 @@ impl FuncIdx {
             .idxs
             .as_ref()
             .get(self.0 as usize)?;
-        module
-            .type_section()
-            .types
-            .as_ref()
-            .get(type_idx.0 as usize)
+        module.func_types().get(type_idx.0 as usize)
     }
 
     pub fn get_code<A: Allocator>(self, module: &Module<A>) -> Option<&Code<A>> {
