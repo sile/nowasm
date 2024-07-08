@@ -1,5 +1,5 @@
 use crate::{
-    symbols::{ExportDesc, FuncIdx, LocalIdx, ValType},
+    symbols::{BlockType, ExportDesc, FuncIdx, LocalIdx, ValType},
     Allocator, FuncType, Instr, Module, Vector,
 };
 use std::marker::PhantomData;
@@ -38,7 +38,7 @@ impl<A: Allocator> State<A> {
         }
     }
 
-    pub fn enter_frame(&mut self, ty: &FuncType<A>) -> Frame {
+    pub fn enter_frame(&mut self, ty: &FuncType<A>, level: usize) -> Frame {
         let locals_start = self.locals.len();
         for _ in 0..ty.args_len() {
             let v = self.pop_value();
@@ -49,6 +49,7 @@ impl<A: Allocator> State<A> {
 
         let prev = self.current_frame;
         self.current_frame = Frame {
+            level,
             locals_start,
             values_start,
         };
@@ -79,7 +80,9 @@ impl<A: Allocator> State<A> {
         }
     }
 
-    pub fn enter_block(&mut self) -> Block {
+    pub fn enter_block(&mut self, ty: BlockType) -> Block {
+        assert!(matches!(ty, BlockType::Empty)); // TODO
+
         let prev = self.current_block;
         self.current_block = Block {
             values_start: self.values.len(),
@@ -87,15 +90,15 @@ impl<A: Allocator> State<A> {
         prev
     }
 
-    pub fn exit_block(&mut self, prev: Block) {
+    pub fn exit_block(&mut self, ty: BlockType, prev: Block) {
+        assert!(matches!(ty, BlockType::Empty)); // TODO
+
         let block = self.current_block;
 
         assert!(block.values_start <= self.values.len());
         self.values.truncate(block.values_start);
 
         self.current_block = prev;
-
-        // TODO: return value handling
     }
 
     pub fn set_local(&mut self, i: LocalIdx, v: Value) {
@@ -127,7 +130,7 @@ impl<A: Allocator> State<A> {
         &mut self,
         func_idx: FuncIdx,
         module: &Module<A>,
-    ) -> Result<(), ExecutionError> {
+    ) -> Result<usize, ExecutionError> {
         // TODO: Add validation phase
         let func_type = func_idx
             .get_type(module)
@@ -136,11 +139,11 @@ impl<A: Allocator> State<A> {
             .get_code(module)
             .ok_or(ExecutionError::InvalidFuncIdx)?;
 
-        let prev_frame = self.enter_frame(func_type);
+        let prev_frame = self.enter_frame(func_type, 0);
         for v in code.locals().map(Value::zero) {
             self.locals.push(v);
         }
-        let result = self.execute_instrs(code.instrs(), module);
+        let result = self.execute_instrs(code.instrs(), 0, module);
         self.exit_frame(func_type, result.is_ok(), prev_frame);
         result
     }
@@ -148,20 +151,88 @@ impl<A: Allocator> State<A> {
     pub fn execute_instrs(
         &mut self,
         instrs: &[Instr<A>],
+        level: usize,
         module: &Module<A>,
-    ) -> Result<(), ExecutionError> {
+    ) -> Result<usize, ExecutionError> {
         for instr in instrs {
             match instr {
+                Instr::Nop => {}
+                Instr::Unreachable => return Err(ExecutionError::Trapped),
+                Instr::GlobalSet(idx) => {
+                    let v = self.pop_value();
+                    self.globals.as_mut()[idx.as_usize()] = v;
+                }
+                Instr::GlobalGet(idx) => {
+                    let v = self.globals.as_ref()[idx.as_usize()];
+                    self.push_value(v);
+                }
+                Instr::LocalSet(idx) => {
+                    let v = self.pop_value();
+                    self.set_local(*idx, v);
+                }
+                Instr::LocalGet(idx) => {
+                    let v = self.get_local(*idx);
+                    self.push_value(v);
+                }
+                Instr::I32Const(v) => self.push_value(Value::I32(*v)),
+                Instr::I64Const(v) => self.push_value(Value::I64(*v)),
+                Instr::F32Const(v) => self.push_value(Value::F32(*v)),
+                Instr::F64Const(v) => self.push_value(Value::F64(*v)),
+                Instr::I32Sub => self.apply_binop_i32(|v0, v1| v0 - v1),
+                Instr::I32Add => self.apply_binop_i32(|v0, v1| v0 + v1),
+                Instr::I32Xor => self.apply_binop_i32(|v0, v1| v0 ^ v1),
+                Instr::I32And => self.apply_binop_i32(|v0, v1| v0 & v1),
+                Instr::I32LtS => self.apply_binop_i32(|v0, v1| if v0 < v1 { 1 } else { 0 }),
+                Instr::I32Store(arg) => {
+                    let v = self.pop_value();
+                    let i = self.pop_value_i32();
+                    let start = (i + arg.offset as i32) as usize;
+                    let end = start + v.byte_size();
+                    let mem = self.mem.as_mut();
+                    if mem.len() < end {
+                        return Err(ExecutionError::Trapped);
+                    }
+                    v.copy_to(&mut mem[start..end]);
+                }
+                Instr::Block(block) => {
+                    let prev_block = self.enter_block(block.block_type);
+                    let return_level =
+                        self.execute_instrs(block.instrs.as_ref(), level + 1, module)?;
+                    self.exit_block(block.block_type, prev_block);
+                    if return_level <= level {
+                        return Ok(return_level);
+                    }
+                }
+                Instr::BrIf(label) => {
+                    let c = self.pop_value_i32();
+                    if c != 0 {
+                        dbg!(label);
+                        todo!();
+                    }
+                }
+                Instr::Return => {
+                    return Ok(self.current_frame.level);
+                }
                 _ => todo!("{instr:?}"),
             }
         }
-        Ok(())
+        Ok(level)
+    }
+
+    fn apply_binop_i32<F>(&mut self, f: F)
+    where
+        F: FnOnce(i32, i32) -> i32,
+    {
+        let v0 = self.pop_value_i32();
+        let v1 = self.pop_value_i32();
+        self.push_value(Value::I32(f(v1, v0)));
     }
 }
 
 // TODO: Activation(?)
 #[derive(Debug, Clone, Copy)]
 pub struct Frame {
+    pub level: usize,
     pub locals_start: usize,
     pub values_start: usize,
 }
@@ -169,6 +240,7 @@ pub struct Frame {
 impl Frame {
     pub fn root() -> Self {
         Self {
+            level: 0,
             locals_start: 0,
             values_start: 0,
         }
@@ -252,99 +324,12 @@ impl<A: Allocator> ModuleInstance<A> {
 
     //     for instr in code.body_iter() {
     //         match instr {
-    //             Instr::Nop => {}
-    //             Instr::GlobalSet(idx) => {
-    //                 let v = self.state.pop_value();
-    //                 self.state.globals.as_mut()[idx.as_usize()] = v;
-    //             }
-    //             Instr::GlobalGet(idx) => {
-    //                 let v = self.state.globals.as_ref()[idx.as_usize()];
-    //                 self.state.push_value(v);
-    //             }
-    //             Instr::LocalSet(idx) => {
-    //                 let v = self.state.pop_value();
-    //                 self.state.set_local(*idx, v);
-    //             }
-    //             Instr::LocalGet(idx) => {
-    //                 let v = self.state.get_local(*idx);
-    //                 self.state.push_value(v);
-    //             }
-    //             Instr::I32Const(v) => {
-    //                 self.state.push_value(Value::I32(*v));
-    //             }
-    //             Instr::I64Const(v) => {
-    //                 self.state.push_value(Value::I64(*v));
-    //             }
-    //             Instr::F32Const(v) => {
-    //                 self.state.push_value(Value::F32(*v));
-    //             }
-    //             Instr::F64Const(v) => {
-    //                 self.state.push_value(Value::F64(*v));
-    //             }
-    //             Instr::I32Add => {
-    //                 let v0 = self.state.pop_value_i32();
-    //                 let v1 = self.state.pop_value_i32();
-    //                 self.state.push_value(Value::I32(v1 + v0));
-    //             }
-    //             Instr::I32Sub => {
-    //                 let v0 = self.state.pop_value_i32();
-    //                 let v1 = self.state.pop_value_i32();
-    //                 self.state.push_value(Value::I32(v1 - v0));
-    //             }
-    //             Instr::I32Xor => {
-    //                 let v0 = self.state.pop_value_i32();
-    //                 let v1 = self.state.pop_value_i32();
-    //                 self.state.push_value(Value::I32(v1 ^ v0));
-    //             }
-    //             Instr::I32And => {
-    //                 let v0 = self.state.pop_value_i32();
-    //                 let v1 = self.state.pop_value_i32();
-    //                 self.state.push_value(Value::I32(v1 & v0));
-    //             }
-    //             Instr::I32LtS => {
-    //                 let v0 = self.state.pop_value_i32();
-    //                 let v1 = self.state.pop_value_i32();
-    //                 let r = if v1 < v0 { 1 } else { 0 };
-    //                 self.state.push_value(Value::I32(r));
-    //             }
-    //             Instr::I32Store(arg) => {
-    //                 let v = self.state.pop_value();
-    //                 let i = self.state.pop_value_i32();
-    //                 let start = (i + arg.offset as i32) as usize;
-    //                 let end = start + v.byte_size();
-    //                 let mem = self.state.mem.as_mut();
-    //                 if mem.len() < end {
-    //                     return Err(ExecutionError::Trapped);
-    //                 }
-    //                 v.copy_to(&mut mem[start..end]);
-    //             }
-    //             Instr::BrIf(label) => {
-    //                 let c = self.state.pop_value_i32();
-    //                 if c != 0 {
-    //                     dbg!(label);
-    //                     todo!();
-    //                 }
-    //             }
     //             Instr::Return => {
     //                 break;
     //             }
     //             Instr::Call(idx) => {
     //                 dbg!(idx);
     //                 dbg!(&self.module.code_section().codes.as_ref()[idx.get() as usize]);
-    //                 todo!();
-    //             }
-    //             Instr::Unreachable => {
-    //                 return Err(ExecutionError::Trapped);
-    //             }
-    //             Instr::Block(block) => {
-    //                 // TODO: Add block_type handling
-    //                 assert!(matches!(
-    //                     block.block_type,
-    //                     BlockType::Empty | BlockType::Val(_)
-    //                 ));
-    //                 // push label
-    //                 dbg!(block);
-
     //                 todo!();
     //             }
     //             _ => {
