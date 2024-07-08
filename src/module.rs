@@ -3,9 +3,9 @@ use crate::{
     reader::Reader,
     sections::{
         CodeSection, DataSection, ElementSection, ExportSection, FunctionSection, GlobalSection,
-        ImportSection, MemorySection, SectionId, StartSection, TableSection,
+        MemorySection, SectionId, StartSection, TableSection,
     },
-    symbols::{Export, Magic, Version},
+    symbols::{Export, Import, Magic, Version},
     validation::ValidateError,
     Allocator, DecodeError, FuncType,
 };
@@ -15,7 +15,7 @@ use std::marker::PhantomData;
 pub struct Module<A: Allocator> {
     _allocator: PhantomData<A>,
     func_types: A::Vector<FuncType<A>>,
-    import_section: ImportSection<A>,
+    imports: A::Vector<Import<A>>,
     function_section: FunctionSection<A>,
     table_section: TableSection<A>,
     memory_section: MemorySection,
@@ -32,8 +32,8 @@ impl<A: Allocator> Module<A> {
         self.func_types.as_ref()
     }
 
-    pub fn import_section(&self) -> &ImportSection<A> {
-        &self.import_section
+    pub fn imports(&self) -> &[Import<A>] {
+        self.imports.as_ref()
     }
 
     pub fn function_section(&self) -> &FunctionSection<A> {
@@ -80,7 +80,7 @@ impl<A: Allocator> Module<A> {
         let mut this = Self {
             _allocator: PhantomData,
             func_types: A::allocate_vector(),
-            import_section: ImportSection::new(),
+            imports: A::allocate_vector(),
             function_section: FunctionSection::new(),
             table_section: TableSection::new(),
             memory_section: MemorySection::default(),
@@ -124,10 +124,10 @@ impl<A: Allocator> Module<A> {
             match section_id {
                 SectionId::Custom => unreachable!(),
                 SectionId::Type => {
-                    self.func_types = FuncType::decode_vector::<A>(reader)?;
+                    self.func_types = Decode::decode_vector::<A>(reader)?;
                 }
                 SectionId::Import => {
-                    self.import_section = ImportSection::decode(&mut section_reader)?
+                    self.imports = Decode::decode_vector::<A>(reader)?;
                 }
                 SectionId::Function => {
                     self.function_section = FunctionSection::decode(&mut section_reader)?
