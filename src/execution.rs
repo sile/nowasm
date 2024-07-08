@@ -20,9 +20,9 @@ pub struct State<A: Allocator> {
     pub mem: A::Vector<u8>,
     pub globals: A::Vector<Value>,
     pub locals: A::Vector<Value>,
-    pub frames: A::Vector<Frame>,
     pub values: A::Vector<Value>,
-    pub labels: A::Vector<Label>,
+    pub current_frame: Frame,
+    pub current_block: Block,
 }
 
 impl<A: Allocator> State<A> {
@@ -32,25 +32,23 @@ impl<A: Allocator> State<A> {
             mem,
             globals: A::allocate_vector(),
             locals: A::allocate_vector(),
-            frames: A::allocate_vector(),
             values: A::allocate_vector(),
-            labels: A::allocate_vector(),
+            current_frame: Frame::root(),
+            current_block: Block::default(),
         }
     }
 
-    pub fn push_frame(&mut self) {
-        let frame = Frame {
+    pub fn enter_frame(&mut self) -> Frame {
+        let prev = self.current_frame;
+        self.current_frame = Frame {
             locals_start: self.locals.len(),
             values_start: self.values.len(),
-            labels_start: self.labels.len(),
         };
-        self.frames.push(frame);
+        prev
     }
 
-    pub fn pop_frame(&mut self) {
-        let Some(frame) = self.frames.pop() else {
-            unreachable!();
-        };
+    pub fn exit_frame(&mut self, prev: Frame) {
+        let frame = self.current_frame;
 
         assert!(frame.locals_start <= self.locals.len());
         self.locals.truncate(frame.locals_start);
@@ -58,21 +56,37 @@ impl<A: Allocator> State<A> {
         assert!(frame.values_start <= self.values.len());
         self.values.truncate(frame.values_start);
 
-        assert!(frame.labels_start <= self.labels.len());
-        self.labels.truncate(frame.labels_start);
+        self.current_frame = prev;
+
+        // TODO: return value handling
     }
 
-    fn current_frame(&self) -> Frame {
-        self.frames.as_ref().last().copied().expect("unreachable")
+    pub fn enter_block(&mut self) -> Block {
+        let prev = self.current_block;
+        self.current_block = Block {
+            values_start: self.values.len(),
+        };
+        prev
+    }
+
+    pub fn exit_block(&mut self, prev: Block) {
+        let block = self.current_block;
+
+        assert!(block.values_start <= self.values.len());
+        self.values.truncate(block.values_start);
+
+        self.current_block = prev;
+
+        // TODO: return value handling
     }
 
     pub fn set_local(&mut self, i: LocalIdx, v: Value) {
-        let i = self.current_frame().locals_start + i.get() as usize;
+        let i = self.current_frame.locals_start + i.get() as usize;
         self.locals.as_mut()[i] = v;
     }
 
     pub fn get_local(&self, i: LocalIdx) -> Value {
-        let i = self.current_frame().locals_start + i.get() as usize;
+        let i = self.current_frame.locals_start + i.get() as usize;
         self.locals.as_ref()[i]
     }
 
@@ -90,13 +104,34 @@ impl<A: Allocator> State<A> {
         };
         v
     }
+
+    pub fn call(&mut self, module: &Module<A>) -> Result<(), ExecutionError> {
+        Ok(())
+    }
+
+    pub fn enter(&mut self, module: &Module<A>) -> Result<(), ExecutionError> {
+        Ok(())
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
 pub struct Frame {
     pub locals_start: usize,
     pub values_start: usize,
-    pub labels_start: usize,
+}
+
+impl Frame {
+    pub fn root() -> Self {
+        Self {
+            locals_start: 0,
+            values_start: 0,
+        }
+    }
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+pub struct Block {
+    pub values_start: usize,
 }
 
 // TODO: #[derive(Debug)]
@@ -338,16 +373,5 @@ impl Value {
             Value::F32(v) => mem.copy_from_slice(&v.to_le_bytes()),
             Value::F64(v) => mem.copy_from_slice(&v.to_le_bytes()),
         }
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct Label {
-    pub instr_position: usize,
-}
-
-impl Label {
-    pub fn new(instr_position: usize) -> Self {
-        Self { instr_position }
     }
 }

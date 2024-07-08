@@ -247,16 +247,24 @@ impl LocalIdx {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct LabelIdx(u32);
 
 impl LabelIdx {
+    pub fn new(v: u32) -> Self {
+        Self(v)
+    }
+
     pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         reader.read_u32().map(Self)
     }
 
     pub fn get(self) -> u32 {
         self.0
+    }
+
+    pub fn increment(self) -> Self {
+        Self(self.0 + 1)
     }
 }
 
