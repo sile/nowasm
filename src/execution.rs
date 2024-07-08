@@ -1,6 +1,6 @@
 use crate::{
     symbols::{BlockType, Code, ExportDesc, FuncIdx, LocalIdx, ValType},
-    Allocator, Instr, Module, Vector,
+    Allocator, FuncType, Instr, Module, Vector,
 };
 use std::marker::PhantomData;
 
@@ -38,17 +38,30 @@ impl<A: Allocator> State<A> {
         }
     }
 
-    pub fn enter_frame(&mut self) -> Frame {
+    pub fn enter_frame(&mut self, ty: &FuncType<A>) -> Frame {
+        let locals_start = self.locals.len();
+        for _ in 0..ty.args_len() {
+            let v = self.pop_value();
+            self.locals.push(v);
+        }
+        let values_start = self.values.len();
+
         let prev = self.current_frame;
         self.current_frame = Frame {
-            locals_start: self.locals.len(),
-            values_start: self.values.len(),
+            locals_start,
+            values_start,
         };
         prev
     }
 
-    pub fn exit_frame(&mut self, prev: Frame) {
+    pub fn exit_frame(&mut self, ty: &FuncType<A>, prev: Frame) {
         let frame = self.current_frame;
+
+        let return_value = match ty.return_values_len() {
+            0 => None,
+            1 => Some(self.pop_value()),
+            _ => unreachable!(),
+        };
 
         assert!(frame.locals_start <= self.locals.len());
         self.locals.truncate(frame.locals_start);
@@ -58,7 +71,9 @@ impl<A: Allocator> State<A> {
 
         self.current_frame = prev;
 
-        // TODO: return value handling
+        if let Some(v) = return_value {
+            self.push_value(v);
+        }
     }
 
     pub fn enter_block(&mut self) -> Block {
@@ -110,23 +125,35 @@ impl<A: Allocator> State<A> {
         func_idx: FuncIdx,
         module: &Module<A>,
     ) -> Result<(), ExecutionError> {
-        // let fun_type = func_idx
-        //     .get_type(&self.module)
-        //     .ok_or(ExecutionError::InvalidFuncIdx)?;
-        // fun_type.validate_args(args, &self.module)?;
-        // let returns = fun_type.rt2.len();
+        // TODO: Add validation phase
+        let func_type = func_idx
+            .get_type(module)
+            .ok_or(ExecutionError::InvalidFuncIdx)?;
+        let code = func_idx
+            .get_code(module)
+            .ok_or(ExecutionError::InvalidFuncIdx)?;
 
-        // let code = func_idx
-        //     .get_code(&self.module)
-        //     .ok_or(ExecutionError::InvalidFuncIdx)?
-        //     .clone(); // TODO: remove clone
-
-        Ok(())
+        let prev_frame = self.enter_frame(func_type);
+        for v in code.locals().map(Value::zero) {
+            self.locals.push(v);
+        }
+        let result = self.execute_instrs(code.instrs(), module);
+        self.exit_frame(func_type, prev_frame);
+        result
     }
 
-    // pub fn execute_block(&mut self, module: &Module<A>) -> Result<(), ExecutionError> {
-    //     Ok(())
-    // }
+    pub fn execute_instrs(
+        &mut self,
+        instrs: &[Instr<A>],
+        module: &Module<A>,
+    ) -> Result<(), ExecutionError> {
+        for instr in instrs {
+            match instr {
+                _ => todo!("{instr:?}"),
+            }
+        }
+        Ok(())
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -223,13 +250,13 @@ impl<A: Allocator> ModuleInstance<A> {
         &mut self,
         code: &Code<A>,
         args: &[Value],
-        return_values: usize,
+        _return_values: usize,
     ) -> Result<(), ExecutionError> {
         for v in args.iter().copied().chain(code.locals().map(Value::zero)) {
             self.state.locals.push(v);
         }
 
-        for instr in code.instrs() {
+        for instr in code.body_iter() {
             match instr {
                 Instr::Nop => {}
                 Instr::GlobalSet(idx) => {

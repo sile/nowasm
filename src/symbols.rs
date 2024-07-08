@@ -394,6 +394,14 @@ impl<A: Allocator> FuncType<A> {
 
         Ok(())
     }
+
+    pub fn args_len(&self) -> usize {
+        self.rt1.len()
+    }
+
+    pub fn return_values_len(&self) -> usize {
+        self.rt2.len()
+    }
 }
 
 impl<A: Allocator> Decode for FuncType<A> {
@@ -545,8 +553,12 @@ impl<A: Allocator> Code<A> {
         self.locals.as_ref().iter().copied()
     }
 
-    pub fn instrs(&self) -> impl '_ + Iterator<Item = &Instr<A>> {
+    pub fn body_iter(&self) -> impl '_ + Iterator<Item = &Instr<A>> {
         self.body.iter()
+    }
+
+    pub fn instrs(&self) -> &[Instr<A>] {
+        self.body.instrs.as_ref()
     }
 }
 
