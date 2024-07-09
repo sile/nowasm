@@ -10,7 +10,7 @@ pub trait Decode: Sized {
         reader: &mut Reader,
     ) -> Result<V::Vector<Self>, DecodeError> {
         let len = reader.read_usize()?;
-        let mut items = V::allocate_vector();
+        let mut items = V::create_vector(Some(len));
         for _ in 0..len {
             items.push(Self::decode(reader)?);
         }

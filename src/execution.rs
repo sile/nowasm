@@ -27,9 +27,9 @@ impl<V: VectorFactory> State<V> {
     pub fn new(mem: V::Vector<u8>) -> Self {
         Self {
             mem,
-            globals: V::allocate_vector(),
-            locals: V::allocate_vector(),
-            values: V::allocate_vector(),
+            globals: V::create_vector(None),
+            locals: V::create_vector(None),
+            values: V::create_vector(None),
             current_frame: Frame::root(),
             current_block: Block::default(),
         }

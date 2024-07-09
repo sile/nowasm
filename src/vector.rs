@@ -1,11 +1,10 @@
 pub trait VectorFactory {
     type Vector<T>: Vector<T>;
 
-    // TODO: Add capacity: Option<usize>
-    fn allocate_vector<T>() -> Self::Vector<T>;
+    fn create_vector<T>(capacity: Option<usize>) -> Self::Vector<T>;
 
     fn clone_vector<T: Clone>(vs: &Self::Vector<T>) -> Self::Vector<T> {
-        let mut cloned = Self::allocate_vector();
+        let mut cloned = Self::create_vector(Some(vs.len()));
         for v in vs.as_ref() {
             cloned.push(v.clone());
         }
@@ -38,8 +37,16 @@ pub struct StdVectorFactory;
 impl VectorFactory for StdVectorFactory {
     type Vector<T> = StdVector<T>;
 
-    fn allocate_vector<T>() -> Self::Vector<T> {
-        StdVector(Vec::new())
+    fn create_vector<T>(capacity: Option<usize>) -> Self::Vector<T> {
+        if let Some(capacity) = capacity {
+            StdVector(Vec::with_capacity(capacity))
+        } else {
+            StdVector(Vec::new())
+        }
+    }
+
+    fn clone_vector<T: Clone>(vs: &Self::Vector<T>) -> Self::Vector<T> {
+        vs.clone()
     }
 }
 

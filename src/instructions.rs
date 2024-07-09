@@ -776,7 +776,7 @@ pub struct BlockInstr<V: VectorFactory> {
 impl<V: VectorFactory> BlockInstr<V> {
     pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         let block_type = BlockType::decode(reader)?;
-        let mut instrs = V::allocate_vector();
+        let mut instrs = V::create_vector(None);
         while reader.peek_u8()? != 0x0b {
             instrs.push(Instr::decode(reader)?);
         }
@@ -815,7 +815,7 @@ pub struct LoopInstr<V: VectorFactory> {
 impl<V: VectorFactory> LoopInstr<V> {
     pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         let block_type = BlockType::decode(reader)?;
-        let mut instrs = V::allocate_vector();
+        let mut instrs = V::create_vector(None);
         while reader.peek_u8()? != 0x0b {
             instrs.push(Instr::decode(reader)?);
         }
@@ -851,8 +851,8 @@ pub struct IfInstr<V: VectorFactory> {
 impl<V: VectorFactory> IfInstr<V> {
     pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         let block_type = BlockType::decode(reader)?;
-        let mut then_instrs = V::allocate_vector();
-        let mut else_instrs = V::allocate_vector();
+        let mut then_instrs = V::create_vector(None);
+        let mut else_instrs = V::create_vector(None);
 
         loop {
             let b = reader.peek_u8()?;
@@ -911,7 +911,7 @@ pub struct BrTableInstr<V: VectorFactory> {
 impl<V: VectorFactory> BrTableInstr<V> {
     pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         let n = reader.read_u32()? as usize + 1;
-        let mut labels = V::allocate_vector();
+        let mut labels = V::create_vector(Some(n));
         for _ in 0..n {
             labels.push(LabelIdx::decode(reader)?);
         }

@@ -539,7 +539,7 @@ pub struct Expr<V: VectorFactory> {
 
 impl<V: VectorFactory> Expr<V> {
     pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
-        let mut instrs = V::allocate_vector();
+        let mut instrs = V::create_vector(None);
         while reader.peek_u8()? != 0x0b {
             instrs.push(Instr::decode(reader)?);
         }
@@ -648,7 +648,7 @@ impl<V: VectorFactory> Decode for Code<V> {
     fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         let code_size = reader.read_usize()?;
         let mut reader = Reader::new(reader.read(code_size)?);
-        let mut locals = V::allocate_vector();
+        let mut locals = V::create_vector(None);
         let locals_len = reader.read_usize()?;
         for _ in 0..locals_len {
             let val_types_len = reader.read_usize()?;

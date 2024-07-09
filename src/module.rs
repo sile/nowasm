@@ -27,17 +27,17 @@ pub struct Module<V: VectorFactory> {
 impl<V: VectorFactory> Module<V> {
     pub fn decode(wasm_bytes: &[u8]) -> Result<Self, DecodeError> {
         let mut this = Self {
-            function_types: V::allocate_vector(),
-            imports: V::allocate_vector(),
-            functions: V::allocate_vector(),
-            table_types: V::allocate_vector(),
+            function_types: V::create_vector(None),
+            imports: V::create_vector(None),
+            functions: V::create_vector(None),
+            table_types: V::create_vector(None),
             memory_type: None,
-            globals: V::allocate_vector(),
-            exports: V::allocate_vector(),
+            globals: V::create_vector(None),
+            exports: V::create_vector(None),
             start_function: None,
-            elements: V::allocate_vector(),
-            function_codes: V::allocate_vector(),
-            data_segments: V::allocate_vector(),
+            elements: V::create_vector(None),
+            function_codes: V::create_vector(None),
+            data_segments: V::create_vector(None),
         };
         let mut reader = Reader::new(wasm_bytes);
 
