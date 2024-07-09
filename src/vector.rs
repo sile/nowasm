@@ -1,3 +1,5 @@
+use core::ops::{Deref, DerefMut, RangeBounds};
+
 pub trait VectorFactory {
     type Vector<T>: Vector<T>;
 
@@ -12,21 +14,13 @@ pub trait VectorFactory {
     }
 }
 
-pub trait Vector<T>: AsRef<[T]> + AsMut<[T]> {
+pub trait Vector<T>:
+    AsRef<[T]> + AsMut<[T]> + Deref<Target = [T]> + DerefMut<Target = [T]>
+{
     fn push(&mut self, item: T);
     fn pop(&mut self) -> Option<T>;
-
-    fn len(&self) -> usize {
-        self.as_ref().len()
-    }
-
-    fn truncate(&mut self, n: usize) {
-        for _ in n..self.len() {
-            self.pop();
-        }
-    }
-
-    fn truncate_range(&mut self, start: usize, end: usize);
+    fn truncate(&mut self, len: usize);
+    fn remove_range<R: RangeBounds<usize>>(&mut self, range: R);
 }
 
 #[cfg(feature = "std")]
@@ -75,8 +69,12 @@ impl<T> Vector<T> for StdVector<T> {
         self.0.pop()
     }
 
-    fn truncate_range(&mut self, start: usize, end: usize) {
-        self.0.drain(start..end);
+    fn truncate(&mut self, len: usize) {
+        self.0.truncate(len);
+    }
+
+    fn remove_range<R: RangeBounds<usize>>(&mut self, range: R) {
+        self.0.drain(range);
     }
 }
 
@@ -91,5 +89,21 @@ impl<T> AsRef<[T]> for StdVector<T> {
 impl<T> AsMut<[T]> for StdVector<T> {
     fn as_mut(&mut self) -> &mut [T] {
         self.0.as_mut()
+    }
+}
+
+#[cfg(feature = "std")]
+impl<T> Deref for StdVector<T> {
+    type Target = [T];
+
+    fn deref(&self) -> &Self::Target {
+        self.0.deref()
+    }
+}
+
+#[cfg(feature = "std")]
+impl<T> DerefMut for StdVector<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.0.deref_mut()
     }
 }

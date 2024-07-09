@@ -39,16 +39,16 @@ pub struct Name<V: VectorFactory>(V::Vector<u8>);
 impl<V: VectorFactory> Name<V> {
     pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         let bytes = u8::decode_vector::<V>(reader)?;
-        let _ = core::str::from_utf8(bytes.as_ref()).map_err(DecodeError::InvalidUtf8)?;
+        let _ = core::str::from_utf8(&bytes).map_err(DecodeError::InvalidUtf8)?;
         Ok(Self(bytes))
     }
 
     pub fn as_str(&self) -> &str {
-        core::str::from_utf8(self.0.as_ref()).expect("unreachable")
+        core::str::from_utf8(&self.0).expect("unreachable")
     }
 
     pub fn len(&self) -> usize {
-        self.0.as_ref().len()
+        self.0.len()
     }
 }
 
@@ -460,11 +460,11 @@ impl<V: VectorFactory> ResultType<V> {
     }
 
     pub fn len(&self) -> usize {
-        self.types.as_ref().len()
+        self.types.len()
     }
 
     pub fn iter(&self) -> impl '_ + Iterator<Item = ValType> {
-        self.types.as_ref().iter().copied()
+        self.types.iter().copied()
     }
 }
 
@@ -548,11 +548,11 @@ impl<V: VectorFactory> Expr<V> {
     }
 
     pub fn len(&self) -> usize {
-        self.instrs.as_ref().len()
+        self.instrs.len()
     }
 
     pub fn iter(&self) -> impl '_ + Iterator<Item = &Instr<V>> {
-        self.instrs.as_ref().iter()
+        self.instrs.iter()
     }
 }
 
@@ -632,7 +632,7 @@ pub struct Code<V: VectorFactory> {
 
 impl<V: VectorFactory> Code<V> {
     pub fn locals(&self) -> impl '_ + Iterator<Item = ValType> {
-        self.locals.as_ref().iter().copied()
+        self.locals.iter().copied()
     }
 
     pub fn body_iter(&self) -> impl '_ + Iterator<Item = &Instr<V>> {
@@ -640,7 +640,7 @@ impl<V: VectorFactory> Code<V> {
     }
 
     pub fn instrs(&self) -> &[Instr<V>] {
-        self.body.instrs.as_ref()
+        &self.body.instrs
     }
 }
 

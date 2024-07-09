@@ -785,7 +785,7 @@ impl<V: VectorFactory> BlockInstr<V> {
     }
 
     pub fn len(self) -> usize {
-        self.instrs.as_ref().len()
+        self.instrs.len()
     }
 }
 
@@ -919,7 +919,7 @@ impl<V: VectorFactory> BrTableInstr<V> {
     }
 
     pub fn idx_len(self) -> usize {
-        self.labels.as_ref().len()
+        self.labels.len()
     }
 }
 

@@ -41,7 +41,7 @@ impl<V: VectorFactory> State<V> {
             let v = self.pop_value();
             self.locals.push(v);
         }
-        self.locals.as_mut()[locals_start..].reverse();
+        self.locals[locals_start..].reverse();
         let values_start = self.values.len();
 
         let prev = self.current_frame;
@@ -62,7 +62,7 @@ impl<V: VectorFactory> State<V> {
         self.locals.truncate(frame.locals_start);
 
         self.values
-            .truncate_range(frame.values_start, self.values.len() - frame.arity);
+            .remove_range(frame.values_start..self.values.len() - frame.arity);
 
         self.current_frame = prev;
     }
@@ -86,7 +86,7 @@ impl<V: VectorFactory> State<V> {
 
         if !skipped {
             self.values
-                .truncate_range(block.values_start, self.values.len() - block.arity);
+                .remove_range(block.values_start..self.values.len() - block.arity);
         }
 
         self.current_block = prev;
@@ -94,12 +94,12 @@ impl<V: VectorFactory> State<V> {
 
     pub fn set_local(&mut self, i: LocalIdx, v: Value) {
         let i = self.current_frame.locals_start + i.get() as usize;
-        self.locals.as_mut()[i] = v;
+        self.locals[i] = v;
     }
 
     pub fn get_local(&self, i: LocalIdx) -> Value {
         let i = self.current_frame.locals_start + i.get() as usize;
-        self.locals.as_ref()[i]
+        self.locals[i]
     }
 
     pub fn push_value(&mut self, v: Value) {
@@ -153,10 +153,10 @@ impl<V: VectorFactory> State<V> {
                 Instr::Unreachable => return Err(ExecutionError::Trapped),
                 Instr::GlobalSet(idx) => {
                     let v = self.pop_value();
-                    self.globals.as_mut()[idx.as_usize()] = v;
+                    self.globals[idx.as_usize()] = v;
                 }
                 Instr::GlobalGet(idx) => {
-                    let v = self.globals.as_ref()[idx.as_usize()];
+                    let v = self.globals[idx.as_usize()];
                     self.push_value(v);
                 }
                 Instr::LocalSet(idx) => {
@@ -181,16 +181,14 @@ impl<V: VectorFactory> State<V> {
                     let i = self.pop_value_i32();
                     let start = (i + arg.offset as i32) as usize;
                     let end = start + v.byte_size();
-                    let mem = self.mem.as_mut();
-                    if mem.len() < end {
+                    if self.mem.len() < end {
                         return Err(ExecutionError::Trapped);
                     }
-                    v.copy_to(&mut mem[start..end]);
+                    v.copy_to(&mut self.mem[start..end]);
                 }
                 Instr::Block(block) => {
                     let prev_block = self.enter_block(block.block_type);
-                    let return_level =
-                        self.execute_instrs(block.instrs.as_ref(), level + 1, module)?;
+                    let return_level = self.execute_instrs(&block.instrs, level + 1, module)?;
                     self.exit_block(block.block_type, return_level <= level, prev_block);
                     if return_level <= level {
                         return Ok(return_level);

@@ -131,19 +131,19 @@ impl<V: VectorFactory> Module<V> {
     }
 
     pub fn function_types(&self) -> &[FuncType<V>] {
-        self.function_types.as_ref()
+        &self.function_types
     }
 
     pub fn imports(&self) -> &[Import<V>] {
-        self.imports.as_ref()
+        &self.imports
     }
 
     pub fn functions(&self) -> &[TypeIdx] {
-        self.functions.as_ref()
+        &self.functions
     }
 
     pub fn table_types(&self) -> &[TableType] {
-        self.table_types.as_ref()
+        &self.table_types
     }
 
     pub fn memory_type(&self) -> Option<MemType> {
@@ -151,11 +151,11 @@ impl<V: VectorFactory> Module<V> {
     }
 
     pub fn globals(&self) -> &[Global<V>] {
-        self.globals.as_ref()
+        &self.globals
     }
 
     pub fn exports(&self) -> &[Export<V>] {
-        self.exports.as_ref()
+        &self.exports
     }
 
     pub fn start_function(&self) -> Option<Function> {
@@ -163,15 +163,15 @@ impl<V: VectorFactory> Module<V> {
     }
 
     pub fn elements(&self) -> &[Elem<V>] {
-        self.elements.as_ref()
+        &self.elements
     }
 
     pub fn function_codes(&self) -> &[Code<V>] {
-        self.function_codes.as_ref()
+        &self.function_codes
     }
 
     pub fn data_segments(&self) -> &[Data<V>] {
-        self.data_segments.as_ref()
+        &self.data_segments
     }
 }
 
