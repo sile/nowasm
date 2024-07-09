@@ -24,50 +24,6 @@ pub struct Module<A: Allocator> {
 }
 
 impl<A: Allocator> Module<A> {
-    pub fn function_types(&self) -> &[FuncType<A>] {
-        self.function_types.as_ref()
-    }
-
-    pub fn imports(&self) -> &[Import<A>] {
-        self.imports.as_ref()
-    }
-
-    pub fn functions(&self) -> &[FuncIdx] {
-        self.functions.as_ref()
-    }
-
-    pub fn table_types(&self) -> &[TableType] {
-        self.table_types.as_ref()
-    }
-
-    pub fn memory_type(&self) -> Option<MemType> {
-        self.memory_type
-    }
-
-    pub fn globals(&self) -> &[Global<A>] {
-        self.globals.as_ref()
-    }
-
-    pub fn exports(&self) -> &[Export<A>] {
-        self.exports.as_ref()
-    }
-
-    pub fn start_function(&self) -> Option<FuncIdx> {
-        self.start_function
-    }
-
-    pub fn elements(&self) -> &[Elem<A>] {
-        self.elements.as_ref()
-    }
-
-    pub fn function_codes(&self) -> &[Code<A>] {
-        self.function_codes.as_ref()
-    }
-
-    pub fn data_segments(&self) -> &[Data<A>] {
-        self.data_segments.as_ref()
-    }
-
     pub fn decode(wasm_bytes: &[u8]) -> Result<Self, DecodeError> {
         let mut this = Self {
             function_types: A::allocate_vector(),
@@ -169,8 +125,52 @@ impl<A: Allocator> Module<A> {
     }
 
     pub fn instantiate(&self) -> Result<(), ValidateError> {
-        // TODO
+        // TODO: validate
         Ok(())
+    }
+
+    pub fn function_types(&self) -> &[FuncType<A>] {
+        self.function_types.as_ref()
+    }
+
+    pub fn imports(&self) -> &[Import<A>] {
+        self.imports.as_ref()
+    }
+
+    pub fn functions(&self) -> &[FuncIdx] {
+        self.functions.as_ref()
+    }
+
+    pub fn table_types(&self) -> &[TableType] {
+        self.table_types.as_ref()
+    }
+
+    pub fn memory_type(&self) -> Option<MemType> {
+        self.memory_type
+    }
+
+    pub fn globals(&self) -> &[Global<A>] {
+        self.globals.as_ref()
+    }
+
+    pub fn exports(&self) -> &[Export<A>] {
+        self.exports.as_ref()
+    }
+
+    pub fn start_function(&self) -> Option<FuncIdx> {
+        self.start_function
+    }
+
+    pub fn elements(&self) -> &[Elem<A>] {
+        self.elements.as_ref()
+    }
+
+    pub fn function_codes(&self) -> &[Code<A>] {
+        self.function_codes.as_ref()
+    }
+
+    pub fn data_segments(&self) -> &[Data<A>] {
+        self.data_segments.as_ref()
     }
 }
 
