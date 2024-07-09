@@ -16,7 +16,7 @@ pub mod instructions;
 pub use decode::DecodeError;
 pub use execute::{ExecuteError, Val};
 pub use module::Module;
-pub use module_instance::{Invoke, ModuleInstance, Resolve, ResolveSpec, Resolved};
+pub use module_instance::{HostFunc, ModuleInstance, Resolve, ResolveSpec, Resolved};
 #[cfg(feature = "std")]
 pub use vector::{StdVector, StdVectorFactory};
 pub use vector::{Vector, VectorFactory};

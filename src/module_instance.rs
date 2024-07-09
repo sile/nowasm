@@ -5,18 +5,18 @@ use crate::{
 };
 use core::fmt::{Debug, Formatter};
 
-pub trait Invoke {
+pub trait HostFunc {
     fn invoke(&mut self, args: &[Val]) -> Option<Val>;
 }
 
-impl Invoke for () {
+impl HostFunc for () {
     fn invoke(&mut self, _args: &[Val]) -> Option<Val> {
         panic!();
     }
 }
 
 pub trait Resolve {
-    type HostFunc: Invoke;
+    type HostFunc: HostFunc;
 
     fn resolve<V: VectorFactory>(
         &mut self,
