@@ -2,14 +2,13 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub(crate) mod decode;
+pub mod execute; // TODO: priv
 #[cfg(feature = "sign_extension")]
 pub(crate) mod instructions_sign_extension;
-pub(crate) mod reader;
-pub(crate) mod vector;
-
-pub mod execution; // TODO: priv
 pub(crate) mod module;
+pub(crate) mod reader;
 pub(crate) mod validate;
+pub(crate) mod vector;
 
 pub mod components;
 pub mod instructions;

@@ -1,6 +1,6 @@
 use clap::Parser;
 use nowasm::{
-    execution::{ModuleInstance, Value},
+    execute::{ModuleInstance, Value},
     Module, StdVector, StdVectorFactory,
 };
 use orfail::{Failure, OrFail};
