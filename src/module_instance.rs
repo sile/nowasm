@@ -3,6 +3,7 @@ use crate::{
 };
 use core::fmt::{Debug, Formatter};
 
+// TODO: Rename to Env
 pub struct ModuleInstanceOptions<V: VectorFactory> {
     pub mem: Option<V::Vector<u8>>,
 }

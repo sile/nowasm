@@ -31,8 +31,8 @@ pub struct Module<V: VectorFactory> {
     imports: V::Vector<Import<V>>,
     mem: Option<Memtype>,
     globals: V::Vector<Global<V>>,
-    elem: V::Vector<Elem<V>>,
-    data: V::Vector<Data<V>>,
+    elems: V::Vector<Elem<V>>,
+    datas: V::Vector<Data<V>>,
     start: Option<Funcidx>,
     exports: V::Vector<Export<V>>,
 }
@@ -45,8 +45,8 @@ impl<V: VectorFactory> Module<V> {
             table: None,
             mem: None,
             globals: V::create_vector(None),
-            elem: V::create_vector(None),
-            data: V::create_vector(None),
+            elems: V::create_vector(None),
+            datas: V::create_vector(None),
             start: None,
             imports: V::create_vector(None),
             exports: V::create_vector(None),
@@ -122,7 +122,7 @@ impl<V: VectorFactory> Module<V> {
                     self.start = Some(Decode::decode(&mut section_reader)?);
                 }
                 SECTION_ID_ELEMENT => {
-                    self.elem = Decode::decode_vector::<V>(&mut section_reader)?;
+                    self.elems = Decode::decode_vector::<V>(&mut section_reader)?;
                 }
                 SECTION_ID_CODE => {
                     let code_section: V::Vector<Code<V>> =
@@ -143,7 +143,7 @@ impl<V: VectorFactory> Module<V> {
                     }
                 }
                 SECTION_ID_DATA => {
-                    self.data = Decode::decode_vector::<V>(&mut section_reader)?;
+                    self.datas = Decode::decode_vector::<V>(&mut section_reader)?;
                 }
                 _ => {
                     return Err(DecodeError::InvalidSectionId { value: section_id });
@@ -191,12 +191,12 @@ impl<V: VectorFactory> Module<V> {
         &self.globals
     }
 
-    pub fn elem(&self) -> &[Elem<V>] {
-        &self.elem
+    pub fn elems(&self) -> &[Elem<V>] {
+        &self.elems
     }
 
-    pub fn data(&self) -> &[Data<V>] {
-        &self.data
+    pub fn datas(&self) -> &[Data<V>] {
+        &self.datas
     }
 
     pub fn start(&self) -> Option<Funcidx> {
@@ -220,8 +220,8 @@ impl<V: VectorFactory> Debug for Module<V> {
             .field("table", &self.table)
             .field("mem", &self.mem)
             .field("globals", &self.globals.as_ref())
-            .field("elem", &self.elem.as_ref())
-            .field("data", &self.data.as_ref())
+            .field("elems", &self.elems.as_ref())
+            .field("datas", &self.datas.as_ref())
             .field("start", &self.start)
             .field("imports", &self.imports.as_ref())
             .field("exports", &self.exports.as_ref())
@@ -237,8 +237,8 @@ impl<V: VectorFactory> Clone for Module<V> {
             table: self.table,
             mem: self.mem,
             globals: V::clone_vector(&self.globals),
-            elem: V::clone_vector(&self.elem),
-            data: V::clone_vector(&self.data),
+            elems: V::clone_vector(&self.elems),
+            datas: V::clone_vector(&self.datas),
             start: self.start,
             imports: V::clone_vector(&self.imports),
             exports: V::clone_vector(&self.exports),
