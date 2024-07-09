@@ -1,5 +1,5 @@
 use crate::{
-    components::{Exportdesc, Limits, Resulttype, Typeidx, Valtype},
+    components::{Exportdesc, Importdesc, Limits, Resulttype, Typeidx, Valtype},
     execute::State,
     ExecuteError, Module, Val, Vector, VectorFactory, PAGE_SIZE,
 };
@@ -18,60 +18,35 @@ impl HostFunc for () {
 pub trait Resolve {
     type HostFunc: HostFunc;
 
-    fn resolve<V: VectorFactory>(
-        &mut self,
+    #[allow(unused_variables)]
+    fn resolve_mem(&self, module: &str, name: &str, limits: Limits) -> Option<&[u8]> {
+        None
+    }
+
+    #[allow(unused_variables)]
+    fn resolve_table(&self, module: &str, name: &str, limits: Limits) -> Option<&[Typeidx]> {
+        None
+    }
+
+    #[allow(unused_variables)]
+    fn resolve_global(&self, module: &str, name: &str, ty: Valtype) -> Option<Val> {
+        None
+    }
+
+    #[allow(unused_variables)]
+    fn resolve_func(
+        &self,
         module: &str,
         name: &str,
-        spec: &ResolveSpec,
-    ) -> Option<Resolved<V, Self::HostFunc>>;
-}
-
-impl Resolve for () {
-    type HostFunc = ();
-
-    fn resolve<V: VectorFactory>(
-        &mut self,
-        _module: &str,
-        _name: &str,
-        _spec: &ResolveSpec,
-    ) -> Option<Resolved<V, Self::HostFunc>> {
+        params: &[Valtype],
+        result: Resulttype,
+    ) -> Option<Self::HostFunc> {
         None
     }
 }
 
-#[derive(Debug)]
-pub enum ResolveSpec<'a> {
-    Mem {
-        limits: Limits,
-    },
-    Table {
-        limits: Limits,
-    },
-    Global {
-        ty: Valtype,
-    },
-    Func {
-        params: &'a [Valtype],
-        result: Resulttype,
-    },
-}
-
-pub enum Resolved<V: VectorFactory, F> {
-    Func(F),
-    Mem(V::Vector<u8>),
-    Table(V::Vector<Typeidx>),
-    Global(Val),
-}
-
-impl<V: VectorFactory, F: Debug> Debug for Resolved<V, F> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        match self {
-            Self::Func(v) => f.debug_tuple("Func").field(v).finish(),
-            Self::Mem(v) => f.debug_tuple("Mem").field(&v.as_ref()).finish(),
-            Self::Table(v) => f.debug_tuple("Table").field(&v.as_ref()).finish(),
-            Self::Global(v) => f.debug_tuple("Global").field(v).finish(),
-        }
-    }
+impl Resolve for () {
+    type HostFunc = ();
 }
 
 pub struct ModuleInstance<V: VectorFactory, H> {
@@ -80,10 +55,30 @@ pub struct ModuleInstance<V: VectorFactory, H> {
 }
 
 impl<V: VectorFactory, H> ModuleInstance<V, H> {
-    pub(crate) fn new<R>(module: Module<V>, _resolver: R) -> Result<Self, ExecuteError>
+    pub(crate) fn new<R>(module: Module<V>, resolver: R) -> Result<Self, ExecuteError>
     where
         R: Resolve<HostFunc = H>,
     {
+        //let mut mem = None;
+
+        for (index, import) in module.imports().iter().enumerate() {
+            match &import.desc {
+                Importdesc::Func(_) => todo!(),
+                Importdesc::Table(_) => todo!(),
+                Importdesc::Mem(ty) => {
+                    // let resolved = resolver
+                    //     .resolve(import.module.as_str(), import.name.as_str(), &spec)
+                    //     .ok_or_else(|| ExecuteError::UnresolvedImport { index: i })?;
+                    // if let Resolved::Mem(v) = resolved {
+                    //     mem = Some(v);
+                    // } else {
+                    //     return Err(ExecuteError::InvalidImport { index: i });
+                    // }
+                }
+                Importdesc::Global(_) => todo!(),
+            }
+        }
+
         // TODO: let mem = env.mem.unwrap_or_else(|| V::create_vector(None));
         let mut mem = V::create_vector(None);
         if let Some(m) = module.mem() {
@@ -119,6 +114,7 @@ impl<V: VectorFactory, H> ModuleInstance<V, H> {
     }
 
     // TODO: table
+    // TODO: global
 
     pub fn invoke(
         &mut self,

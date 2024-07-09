@@ -7,6 +7,7 @@ use crate::{
 #[derive(Debug, Clone, Copy)]
 pub enum ExecuteError {
     NotExportedFunction,
+    UnresolvedImport { index: usize },
     InvalidFuncidx,
     InvalidTypeidx,
     InvalidFuncArgs,
