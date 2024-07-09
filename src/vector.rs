@@ -14,9 +14,7 @@ pub trait VectorFactory {
     }
 }
 
-pub trait Vector<T>:
-    AsRef<[T]> + AsMut<[T]> + Deref<Target = [T]> + DerefMut<Target = [T]>
-{
+pub trait Vector<T>: Deref<Target = [T]> + DerefMut<Target = [T]> {
     fn push(&mut self, item: T);
     fn pop(&mut self) -> Option<T>;
     fn truncate(&mut self, len: usize);
@@ -24,7 +22,7 @@ pub trait Vector<T>:
 }
 
 #[cfg(feature = "std")]
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct StdVectorFactory;
 
 #[cfg(feature = "std")]
@@ -75,20 +73,6 @@ impl<T> Vector<T> for StdVector<T> {
 
     fn remove_range<R: RangeBounds<usize>>(&mut self, range: R) {
         self.0.drain(range);
-    }
-}
-
-#[cfg(feature = "std")]
-impl<T> AsRef<[T]> for StdVector<T> {
-    fn as_ref(&self) -> &[T] {
-        self.0.as_ref()
-    }
-}
-
-#[cfg(feature = "std")]
-impl<T> AsMut<[T]> for StdVector<T> {
-    fn as_mut(&mut self) -> &mut [T] {
-        self.0.as_mut()
     }
 }
 
