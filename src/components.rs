@@ -1,5 +1,5 @@
 use crate::decode::Decode;
-use crate::execute::{ExecuteError, Value};
+use crate::execute::{ExecuteError, Val};
 use crate::instructions::Instr;
 use crate::reader::Reader;
 use crate::vector::Vector;
@@ -392,7 +392,7 @@ pub struct Functype<V: VectorFactory> {
 impl<V: VectorFactory> Functype<V> {
     pub fn validate_args(
         &self,
-        args: &[Value],
+        args: &[Val],
         _module: &Module<impl VectorFactory>,
     ) -> Result<(), ExecuteError> {
         if args.len() != self.params.len() {
@@ -469,7 +469,7 @@ pub struct Global<V: VectorFactory> {
 }
 
 impl<V: VectorFactory> Global<V> {
-    pub fn init(&self) -> Result<Value, ExecuteError> {
+    pub fn init(&self) -> Result<Val, ExecuteError> {
         if self.init.instrs().len() != 1 {
             return Err(ExecuteError::InvalidGlobalInitializer);
         }
@@ -477,10 +477,10 @@ impl<V: VectorFactory> Global<V> {
             return Err(ExecuteError::InvalidGlobalInitializer);
         };
         match (self.ty.val_type(), instr) {
-            (Valtype::I32, Instr::I32Const(x)) => Ok(Value::I32(*x)),
-            (Valtype::I64, Instr::I64Const(x)) => Ok(Value::I64(*x)),
-            (Valtype::F32, Instr::F32Const(x)) => Ok(Value::F32(*x)),
-            (Valtype::F64, Instr::F64Const(x)) => Ok(Value::F64(*x)),
+            (Valtype::I32, Instr::I32Const(x)) => Ok(Val::I32(*x)),
+            (Valtype::I64, Instr::I64Const(x)) => Ok(Val::I64(*x)),
+            (Valtype::F32, Instr::F32Const(x)) => Ok(Val::F32(*x)),
+            (Valtype::F64, Instr::F64Const(x)) => Ok(Val::F64(*x)),
             _ => Err(ExecuteError::InvalidGlobalInitializer),
         }
     }

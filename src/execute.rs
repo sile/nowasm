@@ -20,9 +20,9 @@ pub enum ExecuteError {
 #[derive(Debug)]
 pub struct State<V: VectorFactory> {
     pub mem: V::Vector<u8>,
-    pub globals: V::Vector<Value>,
-    pub locals: V::Vector<Value>,
-    pub values: V::Vector<Value>,
+    pub globals: V::Vector<Val>,
+    pub locals: V::Vector<Val>,
+    pub values: V::Vector<Val>,
     pub current_frame: Frame,
     pub current_block: Block,
 }
@@ -96,26 +96,26 @@ impl<V: VectorFactory> State<V> {
         self.current_block = prev;
     }
 
-    pub fn set_local(&mut self, i: Localidx, v: Value) {
+    pub fn set_local(&mut self, i: Localidx, v: Val) {
         let i = self.current_frame.locals_start + i.get() as usize;
         self.locals[i] = v;
     }
 
-    pub fn get_local(&self, i: Localidx) -> Value {
+    pub fn get_local(&self, i: Localidx) -> Val {
         let i = self.current_frame.locals_start + i.get() as usize;
         self.locals[i]
     }
 
-    pub fn push_value(&mut self, v: Value) {
+    pub fn push_value(&mut self, v: Val) {
         self.values.push(v);
     }
 
-    pub fn pop_value(&mut self) -> Value {
+    pub fn pop_value(&mut self) -> Val {
         self.values.pop().expect("unreachable")
     }
 
     pub fn pop_value_i32(&mut self) -> i32 {
-        let Some(Value::I32(v)) = self.values.pop() else {
+        let Some(Val::I32(v)) = self.values.pop() else {
             unreachable!();
         };
         v
@@ -139,7 +139,7 @@ impl<V: VectorFactory> State<V> {
             .ok_or(ExecuteError::InvalidFuncidx)?; // TODO: change reason
 
         let prev_frame = self.enter_frame(func_type, 0);
-        for v in func.locals.iter().copied().map(Value::zero) {
+        for v in func.locals.iter().copied().map(Val::zero) {
             self.locals.push(v);
         }
         let value = self.execute_instrs(func.body.instrs(), 0, module)?; // TODO: set trapped flag if needed
@@ -173,10 +173,10 @@ impl<V: VectorFactory> State<V> {
                     let v = self.get_local(*idx);
                     self.push_value(v);
                 }
-                Instr::I32Const(v) => self.push_value(Value::I32(*v)),
-                Instr::I64Const(v) => self.push_value(Value::I64(*v)),
-                Instr::F32Const(v) => self.push_value(Value::F32(*v)),
-                Instr::F64Const(v) => self.push_value(Value::F64(*v)),
+                Instr::I32Const(v) => self.push_value(Val::I32(*v)),
+                Instr::I64Const(v) => self.push_value(Val::I64(*v)),
+                Instr::F32Const(v) => self.push_value(Val::F32(*v)),
+                Instr::F64Const(v) => self.push_value(Val::F64(*v)),
                 Instr::I32Sub => self.apply_binop_i32(|v0, v1| v0 - v1),
                 Instr::I32Add => self.apply_binop_i32(|v0, v1| v0 + v1),
                 Instr::I32Xor => self.apply_binop_i32(|v0, v1| v0 ^ v1),
@@ -222,7 +222,7 @@ impl<V: VectorFactory> State<V> {
     {
         let v0 = self.pop_value_i32();
         let v1 = self.pop_value_i32();
-        self.push_value(Value::I32(f(v1, v0)));
+        self.push_value(Val::I32(f(v1, v0)));
     }
 }
 
@@ -304,8 +304,8 @@ impl<V: VectorFactory> ModuleInstance<V> {
     pub fn invoke(
         &mut self,
         function_name: &str,
-        args: &[Value],
-    ) -> Result<Option<Value>, ExecuteError> {
+        args: &[Val],
+    ) -> Result<Option<Val>, ExecuteError> {
         let Some(export) = self.module.exports().iter().find(|export| {
             matches!(export.desc, Exportdesc::Func(_)) && function_name == export.name.as_str()
         }) else {
@@ -343,24 +343,24 @@ impl<V: VectorFactory> ModuleInstance<V> {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub enum Value {
+pub enum Val {
     I32(i32),
     I64(i64),
     F32(f32),
     F64(f64),
 }
 
-impl Value {
+impl Val {
     pub fn ty(self) -> Valtype {
         match self {
-            Value::I32(_) => Valtype::I32,
-            Value::I64(_) => Valtype::I64,
-            Value::F32(_) => Valtype::F32,
-            Value::F64(_) => Valtype::F64,
+            Self::I32(_) => Valtype::I32,
+            Self::I64(_) => Valtype::I64,
+            Self::F32(_) => Valtype::F32,
+            Self::F64(_) => Valtype::F64,
         }
     }
 
-    pub fn zero(ty: Valtype) -> Self {
+    pub(crate) fn zero(ty: Valtype) -> Self {
         match ty {
             Valtype::I32 => Self::I32(0),
             Valtype::I64 => Self::I64(0),
@@ -369,21 +369,21 @@ impl Value {
         }
     }
 
-    pub fn byte_size(self) -> usize {
+    pub(crate) fn byte_size(self) -> usize {
         match self {
-            Value::I32(_) => 4,
-            Value::I64(_) => 8,
-            Value::F32(_) => 4,
-            Value::F64(_) => 8,
+            Self::I32(_) => 4,
+            Self::I64(_) => 8,
+            Self::F32(_) => 4,
+            Self::F64(_) => 8,
         }
     }
 
-    pub fn copy_to(self, mem: &mut [u8]) {
+    pub(crate) fn copy_to(self, mem: &mut [u8]) {
         match self {
-            Value::I32(v) => mem.copy_from_slice(&v.to_le_bytes()),
-            Value::I64(v) => mem.copy_from_slice(&v.to_le_bytes()),
-            Value::F32(v) => mem.copy_from_slice(&v.to_le_bytes()),
-            Value::F64(v) => mem.copy_from_slice(&v.to_le_bytes()),
+            Self::I32(v) => mem.copy_from_slice(&v.to_le_bytes()),
+            Self::I64(v) => mem.copy_from_slice(&v.to_le_bytes()),
+            Self::F32(v) => mem.copy_from_slice(&v.to_le_bytes()),
+            Self::F64(v) => mem.copy_from_slice(&v.to_le_bytes()),
         }
     }
 }

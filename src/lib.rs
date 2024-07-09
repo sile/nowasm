@@ -13,7 +13,7 @@ pub mod components;
 pub mod instructions;
 
 pub use decode::DecodeError;
-pub use execute::{ExecuteError, ModuleInstance, ModuleInstanceOptions, Value};
+pub use execute::{ExecuteError, ModuleInstance, ModuleInstanceOptions, Val};
 pub use module::Module;
 #[cfg(feature = "std")]
 pub use vector::{StdVector, StdVectorFactory};
