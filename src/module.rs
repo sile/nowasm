@@ -4,10 +4,10 @@ use crate::{
         Typeidx,
     },
     decode::Decode,
-    execute::{ExecuteError, ModuleInstance, ModuleInstanceOptions},
+    execute::ExecuteError,
     reader::Reader,
     vector::Vector,
-    DecodeError, VectorFactory,
+    DecodeError, ModuleInstance, ModuleInstanceOptions, VectorFactory,
 };
 use core::fmt::{Debug, Formatter};
 
