@@ -15,33 +15,32 @@ impl Invoke for () {
     }
 }
 
-// TODO: rename
-pub trait Import {
+pub trait Resolve {
     type HostFunc: Invoke;
 
-    fn import(
+    fn resolve(
         &mut self,
         module: &str,
         name: &str,
-        spec: &ImportSpec,
-    ) -> Option<Imported<Self::HostFunc>>;
+        spec: &ResolveSpec,
+    ) -> Option<Resolved<Self::HostFunc>>;
 }
 
-impl Import for () {
+impl Resolve for () {
     type HostFunc = ();
 
-    fn import(
+    fn resolve(
         &mut self,
         _module: &str,
         _name: &str,
-        _spec: &ImportSpec,
-    ) -> Option<Imported<Self::HostFunc>> {
+        _spec: &ResolveSpec,
+    ) -> Option<Resolved<Self::HostFunc>> {
         None
     }
 }
 
 #[derive(Debug)]
-pub enum ImportSpec<'a> {
+pub enum ResolveSpec<'a> {
     Mem {
         limits: Limits,
     },
@@ -58,7 +57,7 @@ pub enum ImportSpec<'a> {
 }
 
 #[derive(Debug)]
-pub enum Imported<F> {
+pub enum Resolved<F> {
     Func(F),
     Mem(Mem),
     Table(Table),
@@ -77,9 +76,9 @@ pub struct ModuleInstance<V: VectorFactory, H> {
 }
 
 impl<V: VectorFactory, H> ModuleInstance<V, H> {
-    pub(crate) fn new<I>(module: Module<V>, _importer: I) -> Result<Self, ExecuteError>
+    pub(crate) fn new<R>(module: Module<V>, _resolver: R) -> Result<Self, ExecuteError>
     where
-        I: Import<HostFunc = H>,
+        R: Resolve<HostFunc = H>,
     {
         // TODO: let mem = env.mem.unwrap_or_else(|| V::create_vector(None));
         let mut mem = V::create_vector(None);
