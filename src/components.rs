@@ -9,18 +9,20 @@ use core::fmt::{Debug, Formatter};
 pub struct Name<V: VectorFactory>(V::Vector<u8>);
 
 impl<V: VectorFactory> Name<V> {
-    pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
-        let bytes = u8::decode_vector::<V>(reader)?;
-        let _ = core::str::from_utf8(&bytes).map_err(DecodeError::InvalidUtf8)?;
-        Ok(Self(bytes))
-    }
-
     pub fn as_str(&self) -> &str {
         core::str::from_utf8(&self.0).expect("unreachable")
     }
 
     pub fn len(&self) -> usize {
         self.0.len()
+    }
+}
+
+impl<V: VectorFactory> Decode for Name<V> {
+    fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
+        let bytes = u8::decode_vector::<V>(reader)?;
+        let _ = core::str::from_utf8(&bytes).map_err(DecodeError::InvalidUtf8)?;
+        Ok(Self(bytes))
     }
 }
 
@@ -79,8 +81,8 @@ pub enum Importdesc {
     Global(Globaltype),
 }
 
-impl Importdesc {
-    pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
+impl Decode for Importdesc {
+    fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         match reader.read_u8()? {
             0x00 => Ok(Self::Func(Typeidx::decode(reader)?)),
             0x01 => Ok(Self::Table(Tabletype::decode(reader)?)),
@@ -130,8 +132,8 @@ pub enum Exportdesc {
     Global(Globalidx),
 }
 
-impl Exportdesc {
-    pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
+impl Decode for Exportdesc {
+    fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         match reader.read_u8()? {
             0x00 => Ok(Self::Func(Funcidx::decode(reader)?)),
             0x01 => Ok(Self::Table(Tableidx::decode(reader)?)),
@@ -142,7 +144,7 @@ impl Exportdesc {
     }
 }
 
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub struct Typeidx(u32);
 
 impl Typeidx {
@@ -172,11 +174,11 @@ impl Decode for Funcidx {
     }
 }
 
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub struct Tableidx;
 
-impl Tableidx {
-    pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
+impl Decode for Tableidx {
+    fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         let i = reader.read_u32()?;
         if i != 0 {
             return Err(DecodeError::InvalidTableIdx { value: i });
@@ -188,8 +190,8 @@ impl Tableidx {
 #[derive(Debug, Clone, Copy)]
 pub struct Memidx;
 
-impl Memidx {
-    pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
+impl Decode for Memidx {
+    fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         let i = reader.read_u32()?;
         if i != 0 {
             return Err(DecodeError::InvalidMemIdx { value: i });
@@ -405,14 +407,6 @@ impl<V: VectorFactory> Functype<V> {
 
         Ok(())
     }
-
-    pub fn args_len(&self) -> usize {
-        self.params.len()
-    }
-
-    pub fn return_arity(&self) -> usize {
-        self.result.len()
-    }
 }
 
 impl<V: VectorFactory> Decode for Functype<V> {
@@ -470,7 +464,7 @@ impl Decode for Resulttype {
 }
 
 pub struct Global<V: VectorFactory> {
-    pub ty: Globaltype, // TODO: global_type
+    pub ty: Globaltype,
     pub init: Expr<V>,
 }
 
@@ -556,13 +550,13 @@ impl<V: VectorFactory> Clone for Expr<V> {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct MemArg {
+pub struct Memarg {
     pub align: u32,
     pub offset: u32,
 }
 
-impl MemArg {
-    pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
+impl Decode for Memarg {
+    fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         let align = reader.read_u32()?;
         let offset = reader.read_u32()?;
         Ok(Self { align, offset })
@@ -632,43 +626,29 @@ impl<V: VectorFactory> Decode for Code<V> {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub enum BlockType {
+pub enum Blocktype {
     Empty,
     Val(Valtype),
-    TypeIndex(S33),
 }
 
-impl BlockType {
+impl Blocktype {
     pub fn arity(self) -> usize {
         match self {
-            BlockType::Empty => 0,
-            BlockType::Val(_) => 1,
-            BlockType::TypeIndex(_) => todo!(),
+            Blocktype::Empty => 0,
+            Blocktype::Val(_) => 1,
         }
     }
+}
 
-    pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
+impl Decode for Blocktype {
+    fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         if reader.read_u8()? == 0x40 {
             return Ok(Self::Empty);
         }
-
         reader.unread_u8();
-        if let Ok(t) = Valtype::decode(reader) {
-            return Ok(Self::Val(t));
-        }
 
-        reader.unread_u8();
-        Ok(Self::TypeIndex(S33::decode(reader)?)) // TODO: n>0 check
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct S33(i64);
-
-impl S33 {
-    pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
-        // TODO: check sign
-        reader.read_integer_s(33).map(Self)
+        let t = Valtype::decode(reader)?;
+        Ok(Self::Val(t))
     }
 }
 

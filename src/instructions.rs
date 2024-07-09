@@ -2,7 +2,7 @@
 use crate::instructions_sign_extension::SignExtensionInstr;
 use crate::vector::Vector;
 use crate::{
-    components::{BlockType, Funcidx, Globalidx, Labelidx, Localidx, MemArg, Typeidx},
+    components::{Blocktype, Funcidx, Globalidx, Labelidx, Localidx, Memarg, Typeidx},
     decode::Decode,
     reader::Reader,
     DecodeError, VectorFactory,
@@ -35,29 +35,29 @@ pub enum Instr<V: VectorFactory> {
     GlobalSet(Globalidx),
 
     // Memory Instructions
-    I32Load(MemArg),
-    I64Load(MemArg),
-    F32Load(MemArg),
-    F64Load(MemArg),
-    I32Load8S(MemArg),
-    I32Load8U(MemArg),
-    I32Load16S(MemArg),
-    I32Load16U(MemArg),
-    I64Load8S(MemArg),
-    I64Load8U(MemArg),
-    I64Load16S(MemArg),
-    I64Load16U(MemArg),
-    I64Load32S(MemArg),
-    I64Load32U(MemArg),
-    I32Store(MemArg),
-    I64Store(MemArg),
-    F32Store(MemArg),
-    F64Store(MemArg),
-    I32Store8(MemArg),
-    I32Store16(MemArg),
-    I64Store8(MemArg),
-    I64Store16(MemArg),
-    I64Store32(MemArg),
+    I32Load(Memarg),
+    I64Load(Memarg),
+    F32Load(Memarg),
+    F64Load(Memarg),
+    I32Load8S(Memarg),
+    I32Load8U(Memarg),
+    I32Load16S(Memarg),
+    I32Load16U(Memarg),
+    I64Load8S(Memarg),
+    I64Load8U(Memarg),
+    I64Load16S(Memarg),
+    I64Load16U(Memarg),
+    I64Load32S(Memarg),
+    I64Load32U(Memarg),
+    I32Store(Memarg),
+    I64Store(Memarg),
+    F32Store(Memarg),
+    F64Store(Memarg),
+    I32Store8(Memarg),
+    I32Store16(Memarg),
+    I64Store8(Memarg),
+    I64Store16(Memarg),
+    I64Store32(Memarg),
     MemorySize,
     MemoryGrow,
 
@@ -233,29 +233,29 @@ impl<V: VectorFactory> Instr<V> {
             0x24 => Ok(Self::GlobalSet(Globalidx::decode(reader)?)),
 
             // Memory Instructions
-            0x28 => Ok(Self::I32Load(MemArg::decode(reader)?)),
-            0x29 => Ok(Self::I64Load(MemArg::decode(reader)?)),
-            0x2a => Ok(Self::F32Load(MemArg::decode(reader)?)),
-            0x2b => Ok(Self::F64Load(MemArg::decode(reader)?)),
-            0x2c => Ok(Self::I32Load8S(MemArg::decode(reader)?)),
-            0x2d => Ok(Self::I32Load8U(MemArg::decode(reader)?)),
-            0x2e => Ok(Self::I32Load16S(MemArg::decode(reader)?)),
-            0x2f => Ok(Self::I32Load16U(MemArg::decode(reader)?)),
-            0x30 => Ok(Self::I64Load8S(MemArg::decode(reader)?)),
-            0x31 => Ok(Self::I64Load8U(MemArg::decode(reader)?)),
-            0x32 => Ok(Self::I64Load16S(MemArg::decode(reader)?)),
-            0x33 => Ok(Self::I64Load16U(MemArg::decode(reader)?)),
-            0x34 => Ok(Self::I64Load32S(MemArg::decode(reader)?)),
-            0x35 => Ok(Self::I64Load32U(MemArg::decode(reader)?)),
-            0x36 => Ok(Self::I32Store(MemArg::decode(reader)?)),
-            0x37 => Ok(Self::I64Store(MemArg::decode(reader)?)),
-            0x38 => Ok(Self::F32Store(MemArg::decode(reader)?)),
-            0x39 => Ok(Self::F64Store(MemArg::decode(reader)?)),
-            0x3a => Ok(Self::I32Store8(MemArg::decode(reader)?)),
-            0x3b => Ok(Self::I32Store16(MemArg::decode(reader)?)),
-            0x3c => Ok(Self::I64Store8(MemArg::decode(reader)?)),
-            0x3d => Ok(Self::I64Store16(MemArg::decode(reader)?)),
-            0x3e => Ok(Self::I64Store32(MemArg::decode(reader)?)),
+            0x28 => Ok(Self::I32Load(Memarg::decode(reader)?)),
+            0x29 => Ok(Self::I64Load(Memarg::decode(reader)?)),
+            0x2a => Ok(Self::F32Load(Memarg::decode(reader)?)),
+            0x2b => Ok(Self::F64Load(Memarg::decode(reader)?)),
+            0x2c => Ok(Self::I32Load8S(Memarg::decode(reader)?)),
+            0x2d => Ok(Self::I32Load8U(Memarg::decode(reader)?)),
+            0x2e => Ok(Self::I32Load16S(Memarg::decode(reader)?)),
+            0x2f => Ok(Self::I32Load16U(Memarg::decode(reader)?)),
+            0x30 => Ok(Self::I64Load8S(Memarg::decode(reader)?)),
+            0x31 => Ok(Self::I64Load8U(Memarg::decode(reader)?)),
+            0x32 => Ok(Self::I64Load16S(Memarg::decode(reader)?)),
+            0x33 => Ok(Self::I64Load16U(Memarg::decode(reader)?)),
+            0x34 => Ok(Self::I64Load32S(Memarg::decode(reader)?)),
+            0x35 => Ok(Self::I64Load32U(Memarg::decode(reader)?)),
+            0x36 => Ok(Self::I32Store(Memarg::decode(reader)?)),
+            0x37 => Ok(Self::I64Store(Memarg::decode(reader)?)),
+            0x38 => Ok(Self::F32Store(Memarg::decode(reader)?)),
+            0x39 => Ok(Self::F64Store(Memarg::decode(reader)?)),
+            0x3a => Ok(Self::I32Store8(Memarg::decode(reader)?)),
+            0x3b => Ok(Self::I32Store16(Memarg::decode(reader)?)),
+            0x3c => Ok(Self::I64Store8(Memarg::decode(reader)?)),
+            0x3d => Ok(Self::I64Store16(Memarg::decode(reader)?)),
+            0x3e => Ok(Self::I64Store32(Memarg::decode(reader)?)),
             0x3f => {
                 let value = reader.read_u8()? as u32;
                 if value != 0 {
@@ -769,13 +769,13 @@ impl<V: VectorFactory> Clone for Instr<V> {
 }
 
 pub struct BlockInstr<V: VectorFactory> {
-    pub block_type: BlockType,
+    pub block_type: Blocktype,
     pub instrs: V::Vector<Instr<V>>,
 }
 
 impl<V: VectorFactory> BlockInstr<V> {
     pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
-        let block_type = BlockType::decode(reader)?;
+        let block_type = Blocktype::decode(reader)?;
         let mut instrs = V::create_vector(None);
         while reader.peek_u8()? != 0x0b {
             instrs.push(Instr::decode(reader)?);
@@ -808,13 +808,13 @@ impl<V: VectorFactory> Clone for BlockInstr<V> {
 }
 
 pub struct LoopInstr<V: VectorFactory> {
-    pub block_type: BlockType,
+    pub block_type: Blocktype,
     pub instrs: V::Vector<Instr<V>>,
 }
 
 impl<V: VectorFactory> LoopInstr<V> {
     pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
-        let block_type = BlockType::decode(reader)?;
+        let block_type = Blocktype::decode(reader)?;
         let mut instrs = V::create_vector(None);
         while reader.peek_u8()? != 0x0b {
             instrs.push(Instr::decode(reader)?);
@@ -843,14 +843,14 @@ impl<V: VectorFactory> Clone for LoopInstr<V> {
 }
 
 pub struct IfInstr<V: VectorFactory> {
-    pub block_type: BlockType,
+    pub block_type: Blocktype,
     pub then_instrs: V::Vector<Instr<V>>,
     pub else_instrs: V::Vector<Instr<V>>,
 }
 
 impl<V: VectorFactory> IfInstr<V> {
     pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
-        let block_type = BlockType::decode(reader)?;
+        let block_type = Blocktype::decode(reader)?;
         let mut then_instrs = V::create_vector(None);
         let mut else_instrs = V::create_vector(None);
 

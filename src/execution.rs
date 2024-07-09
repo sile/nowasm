@@ -1,5 +1,5 @@
 use crate::{
-    components::{BlockType, Exportdesc, Funcidx, Functype, Localidx, Valtype},
+    components::{Blocktype, Exportdesc, Funcidx, Functype, Localidx, Valtype},
     Instr, Module, Vector, VectorFactory,
 };
 
@@ -38,7 +38,7 @@ impl<V: VectorFactory> State<V> {
 
     pub fn enter_frame(&mut self, ty: &Functype<V>, level: usize) -> Frame {
         let locals_start = self.locals.len();
-        for _ in 0..ty.args_len() {
+        for _ in 0..ty.params.len() {
             let v = self.pop_value();
             self.locals.push(v);
         }
@@ -48,7 +48,7 @@ impl<V: VectorFactory> State<V> {
         let prev = self.current_frame;
         self.current_frame = Frame {
             level,
-            arity: ty.return_arity(),
+            arity: ty.result.len(),
             locals_start,
             values_start,
         };
@@ -68,8 +68,8 @@ impl<V: VectorFactory> State<V> {
         self.current_frame = prev;
     }
 
-    pub fn enter_block(&mut self, ty: BlockType) -> Block {
-        assert!(matches!(ty, BlockType::Empty)); // TODO
+    pub fn enter_block(&mut self, ty: Blocktype) -> Block {
+        assert!(matches!(ty, Blocktype::Empty)); // TODO
 
         let prev = self.current_block;
         self.current_block = Block {
@@ -80,8 +80,8 @@ impl<V: VectorFactory> State<V> {
     }
 
     // TODO: rename skipped
-    pub fn exit_block(&mut self, ty: BlockType, skipped: bool, prev: Block) {
-        assert!(matches!(ty, BlockType::Empty)); // TODO
+    pub fn exit_block(&mut self, ty: Blocktype, skipped: bool, prev: Block) {
+        assert!(matches!(ty, Blocktype::Empty)); // TODO
 
         let block = self.current_block;
 
@@ -304,7 +304,7 @@ impl<V: VectorFactory> ModuleInstance<V> {
         self.state.call_function(func_idx, &self.module)?;
 
         // TODO: validate return value type
-        match func_type.return_arity() {
+        match func_type.result.len() {
             0 => Ok(None),
             1 => Ok(Some(self.state.pop_value())),
             _ => unreachable!(),
