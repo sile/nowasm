@@ -1,12 +1,12 @@
 use crate::{
     components::{
-        Code, Data, Elem, Export, Function, Global, Import, Magic, MemType, TableType, TypeIdx,
-        Version,
+        Code, Data, Elem, Export, FuncType, Function, Global, Import, Magic, MemType, TableType,
+        TypeIdx, Version,
     },
     decode::Decode,
     reader::Reader,
     validate::ValidateError,
-    DecodeError, FuncType, VectorFactory,
+    DecodeError, VectorFactory,
 };
 use core::fmt::{Debug, Formatter};
 

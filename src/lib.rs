@@ -13,7 +13,6 @@ pub mod execution; // TODO
 pub(crate) mod module;
 pub(crate) mod validate;
 
-pub use components::FuncType;
 pub use decode::DecodeError;
 pub use instructions::Instr;
 pub use module::Module;

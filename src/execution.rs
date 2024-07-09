@@ -1,6 +1,6 @@
 use crate::{
-    components::{BlockType, ExportDesc, Function, LocalIdx, ValType},
-    FuncType, Instr, Module, Vector, VectorFactory,
+    components::{BlockType, ExportDesc, FuncType, Function, LocalIdx, ValType},
+    Instr, Module, Vector, VectorFactory,
 };
 
 #[derive(Debug, Clone, Copy)]

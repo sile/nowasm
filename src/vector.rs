@@ -5,9 +5,9 @@ pub trait VectorFactory {
 
     fn create_vector<T>(capacity: Option<usize>) -> Self::Vector<T>;
 
-    fn clone_vector<T: Clone>(vs: &Self::Vector<T>) -> Self::Vector<T> {
-        let mut cloned = Self::create_vector(Some(vs.len()));
-        for v in vs.as_ref() {
+    fn clone_vector<T: Clone>(vector: &Self::Vector<T>) -> Self::Vector<T> {
+        let mut cloned = Self::create_vector(Some(vector.len()));
+        for v in vector.as_ref() {
             cloned.push(v.clone());
         }
         cloned
@@ -39,8 +39,8 @@ impl VectorFactory for StdVectorFactory {
         }
     }
 
-    fn clone_vector<T: Clone>(vs: &Self::Vector<T>) -> Self::Vector<T> {
-        vs.clone()
+    fn clone_vector<T: Clone>(vector: &Self::Vector<T>) -> Self::Vector<T> {
+        vector.clone()
     }
 }
 
