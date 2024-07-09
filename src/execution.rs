@@ -1,6 +1,7 @@
 use crate::{
     components::{Blocktype, Exportdesc, Funcidx, Functype, Localidx, Valtype},
-    Instr, Module, Vector, VectorFactory,
+    instructions::Instr,
+    Module, Vector, VectorFactory,
 };
 
 #[derive(Debug, Clone, Copy)]
