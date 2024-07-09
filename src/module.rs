@@ -27,7 +27,7 @@ const SECTION_ID_DATA: u8 = 11;
 pub struct Module<V: VectorFactory> {
     types: V::Vector<Functype<V>>,
     funcs: V::Vector<Func<V>>,
-    tables: V::Vector<Tabletype>,
+    table: Option<Tabletype>,
     imports: V::Vector<Import<V>>,
     mem: Option<Memtype>,
     globals: V::Vector<Global<V>>,
@@ -42,7 +42,7 @@ impl<V: VectorFactory> Module<V> {
         let mut this = Self {
             types: V::create_vector(None),
             funcs: V::create_vector(None),
-            tables: V::create_vector(None),
+            table: None,
             mem: None,
             globals: V::create_vector(None),
             elem: V::create_vector(None),
@@ -93,7 +93,14 @@ impl<V: VectorFactory> Module<V> {
                     function_section = Decode::decode_vector::<V>(&mut section_reader)?;
                 }
                 SECTION_ID_TABLE => {
-                    self.tables = Decode::decode_vector::<V>(&mut section_reader)?;
+                    let value = section_reader.read_u32()? as usize;
+                    if value > 1 {
+                        return Err(DecodeError::InvalidTableCount { value });
+                    }
+                    if value == 1 {
+                        let table = Decode::decode(&mut section_reader)?;
+                        self.table = Some(table);
+                    }
                 }
                 SECTION_ID_MEMORY => {
                     let value = section_reader.read_u32()? as usize;
@@ -101,7 +108,7 @@ impl<V: VectorFactory> Module<V> {
                         return Err(DecodeError::InvalidMemoryCount { value });
                     }
                     if value == 1 {
-                        let mem = Memtype::decode(&mut section_reader)?;
+                        let mem = Decode::decode(&mut section_reader)?;
                         self.mem = Some(mem);
                     }
                 }
@@ -172,8 +179,8 @@ impl<V: VectorFactory> Module<V> {
         &self.funcs
     }
 
-    pub fn tables(&self) -> &[Tabletype] {
-        &self.tables
+    pub fn table(&self) -> Option<Tabletype> {
+        self.table
     }
 
     pub fn mem(&self) -> Option<Memtype> {
@@ -210,7 +217,7 @@ impl<V: VectorFactory> Debug for Module<V> {
         f.debug_struct("Module")
             .field("types", &self.types.as_ref())
             .field("funcs", &self.funcs.as_ref())
-            .field("tables", &self.tables.as_ref())
+            .field("table", &self.table)
             .field("mem", &self.mem)
             .field("globals", &self.globals.as_ref())
             .field("elem", &self.elem.as_ref())
@@ -227,7 +234,7 @@ impl<V: VectorFactory> Clone for Module<V> {
         Self {
             types: V::clone_vector(&self.types),
             funcs: V::clone_vector(&self.funcs),
-            tables: V::clone_vector(&self.tables),
+            table: self.table,
             mem: self.mem,
             globals: V::clone_vector(&self.globals),
             elem: V::clone_vector(&self.elem),

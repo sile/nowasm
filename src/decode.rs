@@ -60,6 +60,9 @@ pub enum DecodeError {
     InvalidMemoryCount {
         value: usize,
     },
+    InvalidTableCount {
+        value: usize,
+    },
     InvalidResultArity {
         value: usize,
     },
@@ -108,6 +111,7 @@ impl Display for DecodeError {
             Self::InvalidElemType { value } => write!(f, "Invalid element type {value:?}"),
             Self::InvalidFuncTypeTag { value } => write!(f, "Invalid function type {value:?}"),
             Self::InvalidMemoryCount { value } => write!(f, "Invalid memory count {value:?}"),
+            Self::InvalidTableCount { value } => write!(f, "Invalid table count {value:?}"),
             Self::InvalidResultArity { value } => write!(f, "Invalid result arity {value:?}"),
             Self::InvalidMemIdx { value } => write!(f, "Invalid memory index {value:?}"),
             Self::InvalidTableIdx { value } => write!(f, "Invalid table index {value:?}"),
