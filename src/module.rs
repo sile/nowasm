@@ -1,6 +1,7 @@
 use crate::{
     components::{
-        Code, Data, Elem, Export, FuncIdx, Global, Import, Magic, MemType, TableType, Version,
+        Code, Data, Elem, Export, Function, Global, Import, Magic, MemType, TableType, TypeIdx,
+        Version,
     },
     decode::Decode,
     reader::Reader,
@@ -12,12 +13,12 @@ use core::fmt::{Debug, Formatter};
 pub struct Module<A: Allocator> {
     function_types: A::Vector<FuncType<A>>,
     imports: A::Vector<Import<A>>,
-    functions: A::Vector<FuncIdx>,
+    functions: A::Vector<TypeIdx>, //TODO: Rename
     table_types: A::Vector<TableType>,
     memory_type: Option<MemType>,
     globals: A::Vector<Global<A>>,
     exports: A::Vector<Export<A>>,
-    start_function: Option<FuncIdx>,
+    start_function: Option<Function>,
     elements: A::Vector<Elem<A>>,
     function_codes: A::Vector<Code<A>>,
     data_segments: A::Vector<Data<A>>,
@@ -137,7 +138,7 @@ impl<A: Allocator> Module<A> {
         self.imports.as_ref()
     }
 
-    pub fn functions(&self) -> &[FuncIdx] {
+    pub fn functions(&self) -> &[TypeIdx] {
         self.functions.as_ref()
     }
 
@@ -157,7 +158,7 @@ impl<A: Allocator> Module<A> {
         self.exports.as_ref()
     }
 
-    pub fn start_function(&self) -> Option<FuncIdx> {
+    pub fn start_function(&self) -> Option<Function> {
         self.start_function
     }
 

@@ -1,5 +1,5 @@
 use crate::{
-    components::{BlockType, ExportDesc, FuncIdx, LocalIdx, ValType},
+    components::{BlockType, ExportDesc, Function, LocalIdx, ValType},
     Allocator, FuncType, Instr, Module, Vector,
 };
 use std::marker::PhantomData;
@@ -122,7 +122,7 @@ impl<A: Allocator> State<A> {
 
     pub fn call_function(
         &mut self,
-        func_idx: FuncIdx,
+        func_idx: Function,
         module: &Module<A>,
     ) -> Result<usize, ExecutionError> {
         // TODO: check trapped flag

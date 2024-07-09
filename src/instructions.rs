@@ -4,7 +4,7 @@ use core::fmt::{Debug, Formatter};
 use crate::instructions_sign_extension::SignExtensionInstr;
 use crate::vectors::Vector;
 use crate::{
-    components::{BlockType, FuncIdx, GlobalIdx, LabelIdx, LocalIdx, MemArg, TypeIdx},
+    components::{BlockType, Function, GlobalIdx, LabelIdx, LocalIdx, MemArg, TypeIdx},
     decode::Decode,
     reader::Reader,
     Allocator, DecodeError,
@@ -21,7 +21,7 @@ pub enum Instr<A: Allocator> {
     BrIf(LabelIdx),
     BrTable(BrTableInstr<A>),
     Return,
-    Call(FuncIdx),
+    Call(Function),
     CallIndirect(TypeIdx),
 
     // Parametric Instructions
@@ -210,7 +210,7 @@ impl<A: Allocator> Instr<A> {
             0x0d => Ok(Self::BrIf(LabelIdx::decode(reader)?)),
             0x0e => Ok(Self::BrTable(BrTableInstr::decode(reader)?)),
             0x0f => Ok(Self::Return),
-            0x10 => Ok(Self::Call(FuncIdx::decode(reader)?)),
+            0x10 => Ok(Self::Call(Function::decode(reader)?)),
             0x11 => {
                 let idx = TypeIdx::decode(reader)?;
                 let table = reader.read_u8()?;

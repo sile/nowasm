@@ -152,7 +152,7 @@ impl<A: Allocator> Clone for Export<A> {
 
 #[derive(Debug, Clone, Copy)]
 pub enum ExportDesc {
-    Func(FuncIdx),
+    Func(Function),
     Table(TableIdx),
     Mem(MemIdx),
     Global(GlobalIdx),
@@ -161,7 +161,7 @@ pub enum ExportDesc {
 impl ExportDesc {
     pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         match reader.read_u8()? {
-            0x00 => Ok(Self::Func(FuncIdx::decode(reader)?)),
+            0x00 => Ok(Self::Func(Function::decode(reader)?)),
             0x01 => Ok(Self::Table(TableIdx::decode(reader)?)),
             0x02 => Ok(Self::Mem(MemIdx::decode(reader)?)),
             0x03 => Ok(Self::Global(GlobalIdx::decode(reader)?)),
@@ -185,27 +185,25 @@ impl Decode for TypeIdx {
     }
 }
 
-#[derive(Debug, Default, Clone, Copy)]
-pub struct FuncIdx(u32);
+#[derive(Debug, Clone, Copy)]
+pub struct Function(u32);
 
-impl FuncIdx {
-    pub fn get(self) -> u32 {
-        self.0
+impl Function {
+    pub const fn index(self) -> usize {
+        self.0 as usize
     }
-}
 
-impl FuncIdx {
     pub fn get_type<A: Allocator>(self, module: &Module<A>) -> Option<&FuncType<A>> {
-        let type_idx = module.functions().get(self.0 as usize)?;
+        let type_idx = module.functions().get(self.index())?;
         module.function_types().get(type_idx.0 as usize)
     }
 
     pub fn get_code<A: Allocator>(self, module: &Module<A>) -> Option<&Code<A>> {
-        module.function_codes().get(self.0 as usize)
+        module.function_codes().get(self.index())
     }
 }
 
-impl Decode for FuncIdx {
+impl Decode for Function {
     fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         reader.read_u32().map(Self)
     }
@@ -591,14 +589,14 @@ impl MemArg {
 pub struct Elem<A: Allocator> {
     pub table: TableIdx,
     pub offset: Expr<A>,
-    pub init: A::Vector<FuncIdx>,
+    pub init: A::Vector<Function>,
 }
 
 impl<A: Allocator> Decode for Elem<A> {
     fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         let table = TableIdx::decode(reader)?;
         let offset = Expr::decode(reader)?;
-        let init = FuncIdx::decode_vector::<A>(reader)?;
+        let init = Function::decode_vector::<A>(reader)?;
         Ok(Self {
             table,
             offset,
