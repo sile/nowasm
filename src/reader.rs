@@ -27,7 +27,7 @@ impl<'a> Reader<'a> {
         self.data
             .get(self.position)
             .copied()
-            .ok_or(DecodeError::EndOfBytes)
+            .ok_or(DecodeError::UnexpectedEndOfBytes)
     }
 
     pub fn read_u8(&mut self) -> Result<u8, DecodeError> {
@@ -35,7 +35,7 @@ impl<'a> Reader<'a> {
             .data
             .get(self.position)
             .copied()
-            .ok_or(DecodeError::EndOfBytes)?;
+            .ok_or(DecodeError::UnexpectedEndOfBytes)?;
         self.position += 1;
         Ok(v)
     }
@@ -48,7 +48,7 @@ impl<'a> Reader<'a> {
         let v = self
             .data
             .get(self.position..self.position + n)
-            .ok_or(DecodeError::EndOfBytes)?;
+            .ok_or(DecodeError::UnexpectedEndOfBytes)?;
         self.position += n;
         Ok(v)
     }

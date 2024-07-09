@@ -215,7 +215,9 @@ impl<A: Allocator> Instr<A> {
                 let idx = TypeIdx::decode(reader)?;
                 let table = reader.read_u8()?;
                 if table != 0 {
-                    return Err(DecodeError::InvalidCallIndirectTableIndex { value: table });
+                    return Err(DecodeError::InvalidTableIdx {
+                        value: table as u32,
+                    });
                 }
                 Ok(Self::CallIndirect(idx))
             }
@@ -256,16 +258,16 @@ impl<A: Allocator> Instr<A> {
             0x3d => Ok(Self::I64Store16(MemArg::decode(reader)?)),
             0x3e => Ok(Self::I64Store32(MemArg::decode(reader)?)),
             0x3f => {
-                let value = reader.read_u8()?;
+                let value = reader.read_u8()? as u32;
                 if value != 0 {
-                    return Err(DecodeError::InvalidMemorySizeMemoryIndex { value });
+                    return Err(DecodeError::InvalidMemIdx { value });
                 }
                 Ok(Self::MemorySize)
             }
             0x40 => {
-                let value = reader.read_u8()?;
+                let value = reader.read_u8()? as u32;
                 if value != 0 {
-                    return Err(DecodeError::InvalidMemoryGrowMemoryIndex { value });
+                    return Err(DecodeError::InvalidMemIdx { value });
                 }
                 Ok(Self::MemoryGrow)
             }

@@ -64,8 +64,8 @@ impl<A: Allocator> Module<A> {
 
             if section_id < last_section_id {
                 return Err(DecodeError::InvalidSectionOrder {
-                    current_section_id: section_id,
-                    last_section_id,
+                    current_section_id: section_id as u8,
+                    last_section_id: last_section_id as u8,
                 });
             }
 
@@ -116,7 +116,7 @@ impl<A: Allocator> Module<A> {
 
             if !section_reader.is_empty() {
                 return Err(DecodeError::InvalidSectionSize {
-                    section_id,
+                    section_id: section_id as u8,
                     expected_size: section_size,
                     actual_size: section_reader.position(),
                 });
@@ -213,7 +213,7 @@ impl<A: Allocator> Clone for Module<A> {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum SectionId {
-    Custom,
+    Custom = 0,
     Type,
     Import,
     Function,
