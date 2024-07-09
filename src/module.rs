@@ -11,6 +11,19 @@ use crate::{
 };
 use core::fmt::{Debug, Formatter};
 
+const SECTION_ID_CUSTOM: u8 = 0;
+const SECTION_ID_TYPE: u8 = 1;
+const SECTION_ID_IMPORT: u8 = 2;
+const SECTION_ID_FUNCTION: u8 = 3;
+const SECTION_ID_TABLE: u8 = 4;
+const SECTION_ID_MEMORY: u8 = 5;
+const SECTION_ID_GLOBAL: u8 = 6;
+const SECTION_ID_EXPORT: u8 = 7;
+const SECTION_ID_START: u8 = 8;
+const SECTION_ID_ELEMENT: u8 = 9;
+const SECTION_ID_CODE: u8 = 10;
+const SECTION_ID_DATA: u8 = 11;
+
 pub struct Module<V: VectorFactory> {
     types: V::Vector<Functype<V>>,
     funcs: V::Vector<Func<V>>,
@@ -51,14 +64,14 @@ impl<V: VectorFactory> Module<V> {
     }
 
     fn decode_sections(&mut self, reader: &mut Reader) -> Result<(), DecodeError> {
-        let mut last_section_id = SectionId::Custom;
+        let mut last_section_id = SECTION_ID_CUSTOM;
         let mut function_section: V::Vector<Typeidx> = V::create_vector(None);
         while !reader.is_empty() {
-            let section_id = SectionId::decode(reader)?;
+            let section_id = reader.read_u8()?;
             let section_size = reader.read_u32()? as usize;
             let mut section_reader = Reader::new(reader.read(section_size)?);
 
-            if section_id == SectionId::Custom {
+            if section_id == SECTION_ID_CUSTOM {
                 continue;
             }
 
@@ -70,20 +83,19 @@ impl<V: VectorFactory> Module<V> {
             }
 
             match section_id {
-                SectionId::Custom => unreachable!(),
-                SectionId::Type => {
+                SECTION_ID_TYPE => {
                     self.types = Decode::decode_vector::<V>(&mut section_reader)?;
                 }
-                SectionId::Import => {
+                SECTION_ID_IMPORT => {
                     self.imports = Decode::decode_vector::<V>(&mut section_reader)?;
                 }
-                SectionId::Function => {
+                SECTION_ID_FUNCTION => {
                     function_section = Decode::decode_vector::<V>(&mut section_reader)?;
                 }
-                SectionId::Table => {
+                SECTION_ID_TABLE => {
                     self.tables = Decode::decode_vector::<V>(&mut section_reader)?;
                 }
-                SectionId::Memory => {
+                SECTION_ID_MEMORY => {
                     let value = section_reader.read_u32()? as usize;
                     if value > 1 {
                         return Err(DecodeError::InvalidMemoryCount { value });
@@ -93,19 +105,19 @@ impl<V: VectorFactory> Module<V> {
                         self.mem = Some(mem);
                     }
                 }
-                SectionId::Global => {
+                SECTION_ID_GLOBAL => {
                     self.globals = Decode::decode_vector::<V>(&mut section_reader)?;
                 }
-                SectionId::Export => {
+                SECTION_ID_EXPORT => {
                     self.exports = Decode::decode_vector::<V>(&mut section_reader)?;
                 }
-                SectionId::Start => {
+                SECTION_ID_START => {
                     self.start = Some(Decode::decode(&mut section_reader)?);
                 }
-                SectionId::Element => {
+                SECTION_ID_ELEMENT => {
                     self.elem = Decode::decode_vector::<V>(&mut section_reader)?;
                 }
-                SectionId::Code => {
+                SECTION_ID_CODE => {
                     let code_section: V::Vector<Code<V>> =
                         Decode::decode_vector::<V>(&mut section_reader)?;
                     if function_section.len() != code_section.len() {
@@ -123,8 +135,11 @@ impl<V: VectorFactory> Module<V> {
                         });
                     }
                 }
-                SectionId::Data => {
+                SECTION_ID_DATA => {
                     self.data = Decode::decode_vector::<V>(&mut section_reader)?;
+                }
+                _ => {
+                    return Err(DecodeError::InvalidSectionId { value: section_id });
                 }
             }
             last_section_id = section_id;
@@ -216,43 +231,6 @@ impl<V: VectorFactory> Clone for Module<V> {
             start: self.start,
             imports: V::clone_vector(&self.imports),
             exports: V::clone_vector(&self.exports),
-        }
-    }
-}
-
-// TODO: delete
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub enum SectionId {
-    Custom = 0,
-    Type,
-    Import,
-    Function,
-    Table,
-    Memory,
-    Global,
-    Export,
-    Start,
-    Element,
-    Code,
-    Data,
-}
-
-impl SectionId {
-    pub(crate) fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
-        match reader.read_u8()? {
-            0 => Ok(Self::Custom),
-            1 => Ok(Self::Type),
-            2 => Ok(Self::Import),
-            3 => Ok(Self::Function),
-            4 => Ok(Self::Table),
-            5 => Ok(Self::Memory),
-            6 => Ok(Self::Global),
-            7 => Ok(Self::Export),
-            8 => Ok(Self::Start),
-            9 => Ok(Self::Element),
-            10 => Ok(Self::Code),
-            11 => Ok(Self::Data),
-            value => Err(DecodeError::InvalidSectionId { value }),
         }
     }
 }
