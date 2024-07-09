@@ -29,20 +29,17 @@ impl<V: VectorFactory> Debug for ModuleInstanceOptions<V> {
     }
 }
 
-// TODO: #[derive(Debug)]
 pub struct ModuleInstance<V: VectorFactory> {
     pub module: Module<V>,
     pub state: State<V>,
 }
 
 impl<V: VectorFactory> ModuleInstance<V> {
-    // TODO:
     pub(crate) fn new(
         module: Module<V>,
-
-        // TODO: Use builder
-        mem: V::Vector<u8>,
+        options: ModuleInstanceOptions<V>,
     ) -> Result<Self, ExecuteError> {
+        let mem = options.mem.unwrap_or_else(|| V::create_vector(None));
         if module.start().is_some() {
             todo!()
         }
@@ -99,5 +96,14 @@ impl<V: VectorFactory> ModuleInstance<V> {
             1 => Ok(Some(self.state.pop_value())),
             _ => unreachable!(),
         }
+    }
+}
+
+impl<V: VectorFactory> Debug for ModuleInstance<V> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("ModuleInstance")
+            .field("module", &self.module)
+            // TODO: .field("state", &self.state)
+            .finish()
     }
 }

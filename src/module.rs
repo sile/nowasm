@@ -160,8 +160,7 @@ impl<V: VectorFactory> Module<V> {
         options: ModuleInstanceOptions<V>,
     ) -> Result<ModuleInstance<V>, ExecuteError> {
         // TODO: validate
-        let mem = options.mem.unwrap_or_else(|| V::create_vector(None));
-        let instance = ModuleInstance::new(self, mem)?;
+        let instance = ModuleInstance::new(self, options)?;
         Ok(instance)
     }
 
