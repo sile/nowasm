@@ -1,5 +1,5 @@
 use crate::{
-    components::{Exportdesc, Limits, Resulttype, Valtype},
+    components::{Exportdesc, Limits, Resulttype, Typeidx, Valtype},
     execute::State,
     ExecuteError, Module, Val, Vector, VectorFactory, PAGE_SIZE,
 };
@@ -18,23 +18,23 @@ impl Invoke for () {
 pub trait Resolve {
     type HostFunc: Invoke;
 
-    fn resolve(
+    fn resolve<V: VectorFactory>(
         &mut self,
         module: &str,
         name: &str,
         spec: &ResolveSpec,
-    ) -> Option<Resolved<Self::HostFunc>>;
+    ) -> Option<Resolved<V, Self::HostFunc>>;
 }
 
 impl Resolve for () {
     type HostFunc = ();
 
-    fn resolve(
+    fn resolve<V: VectorFactory>(
         &mut self,
         _module: &str,
         _name: &str,
         _spec: &ResolveSpec,
-    ) -> Option<Resolved<Self::HostFunc>> {
+    ) -> Option<Resolved<V, Self::HostFunc>> {
         None
     }
 }
@@ -56,19 +56,23 @@ pub enum ResolveSpec<'a> {
     },
 }
 
-#[derive(Debug)]
-pub enum Resolved<F> {
+pub enum Resolved<V: VectorFactory, F> {
     Func(F),
-    Mem(Mem),
-    Table(Table),
+    Mem(V::Vector<u8>),
+    Table(V::Vector<Typeidx>),
     Global(Val),
 }
 
-#[derive(Debug)]
-pub struct Mem;
-
-#[derive(Debug)]
-pub struct Table;
+impl<V: VectorFactory, F: Debug> Debug for Resolved<V, F> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        match self {
+            Self::Func(v) => f.debug_tuple("Func").field(v).finish(),
+            Self::Mem(v) => f.debug_tuple("Mem").field(&v.as_ref()).finish(),
+            Self::Table(v) => f.debug_tuple("Table").field(&v.as_ref()).finish(),
+            Self::Global(v) => f.debug_tuple("Global").field(v).finish(),
+        }
+    }
+}
 
 pub struct ModuleInstance<V: VectorFactory, H> {
     pub module: Module<V>,
