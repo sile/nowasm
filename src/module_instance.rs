@@ -1,7 +1,7 @@
 use crate::{
     components::{Exportdesc, Importdesc, Limits, Resulttype, Typeidx, Valtype},
     execute::State,
-    ExecuteError, Module, Val, Vector, VectorFactory, PAGE_SIZE,
+    ExecuteError, Module, Val, Vector, VectorFactory,
 };
 use core::fmt::{Debug, Formatter};
 
@@ -24,7 +24,12 @@ pub trait Resolve {
     }
 
     #[allow(unused_variables)]
-    fn resolve_table(&self, module: &str, name: &str, limits: Limits) -> Option<&[Typeidx]> {
+    fn resolve_table(
+        &self,
+        module: &str,
+        name: &str,
+        limits: Limits,
+    ) -> Option<&[Option<Typeidx>]> {
         None
     }
 
@@ -59,33 +64,39 @@ impl<V: VectorFactory, H> ModuleInstance<V, H> {
     where
         R: Resolve<HostFunc = H>,
     {
-        //let mut mem = None;
+        let mut mem = None;
 
         for (index, import) in module.imports().iter().enumerate() {
             match &import.desc {
                 Importdesc::Func(_) => todo!(),
                 Importdesc::Table(_) => todo!(),
                 Importdesc::Mem(ty) => {
-                    // let resolved = resolver
-                    //     .resolve(import.module.as_str(), import.name.as_str(), &spec)
-                    //     .ok_or_else(|| ExecuteError::UnresolvedImport { index: i })?;
-                    // if let Resolved::Mem(v) = resolved {
-                    //     mem = Some(v);
-                    // } else {
-                    //     return Err(ExecuteError::InvalidImport { index: i });
-                    // }
+                    let resolved = resolver
+                        .resolve_mem(import.module.as_str(), import.name.as_str(), ty.limits)
+                        .ok_or_else(|| ExecuteError::UnresolvedImport { index })?;
+                    let resolved = V::clone_vector(resolved);
+                    mem = Some(resolved);
                 }
                 Importdesc::Global(_) => todo!(),
             }
         }
 
-        // TODO: let mem = env.mem.unwrap_or_else(|| V::create_vector(None));
-        let mut mem = V::create_vector(None);
-        if let Some(m) = module.mem() {
-            for _ in 0..m.limits.min as usize * PAGE_SIZE {
-                mem.push(0);
+        if let Some(ty) = module.mem() {
+            if let Some(v) = &mem {
+                if !ty.contains(v.len()) {
+                    return Err(ExecuteError::InvalidMem);
+                }
+            } else {
+                let mut m = V::create_vector(Some(ty.min_bytes()));
+                for _ in 0..ty.min_bytes() {
+                    m.push(0);
+                }
+                mem = Some(m);
             }
+        } else if mem.is_some() {
+            return Err(ExecuteError::InvalidMem);
         }
+        let mem = mem.unwrap_or_else(|| V::create_vector(None));
 
         if module.start().is_some() {
             todo!()

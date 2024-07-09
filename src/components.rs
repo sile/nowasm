@@ -3,7 +3,7 @@ use crate::execute::{ExecuteError, Val};
 use crate::instructions::Instr;
 use crate::reader::Reader;
 use crate::vector::Vector;
-use crate::{DecodeError, Module, VectorFactory};
+use crate::{DecodeError, Module, VectorFactory, PAGE_SIZE};
 use core::fmt::{Debug, Formatter};
 
 pub struct Name<V: VectorFactory>(V::Vector<u8>);
@@ -302,6 +302,24 @@ impl Decode for Limits {
 #[derive(Debug, Clone, Copy)]
 pub struct Memtype {
     pub limits: Limits,
+}
+
+impl Memtype {
+    pub fn min_bytes(self) -> usize {
+        self.limits.min as usize * PAGE_SIZE
+    }
+
+    pub fn max_bytes(self) -> Option<usize> {
+        self.limits.max.map(|max| max as usize * PAGE_SIZE)
+    }
+
+    pub fn contains(self, bytes: usize) -> bool {
+        if let Some(max) = self.max_bytes() {
+            self.min_bytes() <= bytes && bytes <= max
+        } else {
+            self.min_bytes() <= bytes
+        }
+    }
 }
 
 impl Decode for Memtype {
