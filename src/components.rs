@@ -383,8 +383,8 @@ impl<V: VectorFactory> Clone for Func<V> {
 }
 
 pub struct Functype<V: VectorFactory> {
-    pub rt1: ResultType<V>,
-    pub rt2: ResultType<V>,
+    pub params: V::Vector<Valtype>,
+    pub result: Resulttype,
 }
 
 impl<V: VectorFactory> Functype<V> {
@@ -393,12 +393,12 @@ impl<V: VectorFactory> Functype<V> {
         args: &[Value],
         _module: &Module<impl VectorFactory>,
     ) -> Result<(), ExecutionError> {
-        if args.len() != self.rt1.len() {
+        if args.len() != self.params.len() {
             return Err(ExecutionError::InvalidFuncArgs);
         }
 
-        for (ty, val) in self.rt1.iter().zip(args.iter()) {
-            if ty != val.ty() {
+        for (&expected_type, actual_value) in self.params.iter().zip(args.iter()) {
+            if expected_type != actual_value.ty() {
                 return Err(ExecutionError::InvalidFuncArgs);
             }
         }
@@ -407,11 +407,11 @@ impl<V: VectorFactory> Functype<V> {
     }
 
     pub fn args_len(&self) -> usize {
-        self.rt1.len()
+        self.params.len()
     }
 
     pub fn return_arity(&self) -> usize {
-        self.rt2.len()
+        self.result.len()
     }
 }
 
@@ -421,17 +421,17 @@ impl<V: VectorFactory> Decode for Functype<V> {
         if tag != 0x60 {
             return Err(DecodeError::InvalidFuncTypeTag { value: tag });
         }
-        let rt1 = ResultType::decode_item(reader)?;
-        let rt2 = ResultType::decode_item(reader)?;
-        Ok(Self { rt1, rt2 })
+        let params = Decode::decode_vector::<V>(reader)?;
+        let result = Decode::decode(reader)?;
+        Ok(Self { params, result })
     }
 }
 
 impl<V: VectorFactory> Debug for Functype<V> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        f.debug_struct("FuncType")
-            .field("rt1", &self.rt1)
-            .field("rt2", &self.rt2)
+        f.debug_struct("Functype")
+            .field("params", &self.params.as_ref())
+            .field("result", &self.result)
             .finish()
     }
 }
@@ -439,43 +439,32 @@ impl<V: VectorFactory> Debug for Functype<V> {
 impl<V: VectorFactory> Clone for Functype<V> {
     fn clone(&self) -> Self {
         Self {
-            rt1: self.rt1.clone(),
-            rt2: self.rt2.clone(),
+            params: V::clone_vector(&self.params),
+            result: self.result.clone(),
         }
     }
 }
 
-pub struct ResultType<V: VectorFactory> {
-    pub types: V::Vector<Valtype>,
-}
+#[derive(Debug, Clone, Copy)]
+pub struct Resulttype(Option<Valtype>);
 
-impl<V: VectorFactory> ResultType<V> {
-    fn decode_item(reader: &mut Reader) -> Result<Self, DecodeError> {
-        let types = Decode::decode_vector::<V>(reader)?;
-        Ok(Self { types })
+impl Resulttype {
+    pub fn len(self) -> usize {
+        self.0.is_some() as usize
     }
 
-    pub fn len(&self) -> usize {
-        self.types.len()
-    }
-
-    pub fn iter(&self) -> impl '_ + Iterator<Item = Valtype> {
-        self.types.iter().copied()
+    pub fn get(self) -> Option<Valtype> {
+        self.0
     }
 }
 
-impl<V: VectorFactory> Debug for ResultType<V> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        f.debug_struct("ResultType")
-            .field("types", &self.types.as_ref())
-            .finish()
-    }
-}
-
-impl<V: VectorFactory> Clone for ResultType<V> {
-    fn clone(&self) -> Self {
-        Self {
-            types: V::clone_vector(&self.types),
+impl Decode for Resulttype {
+    fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
+        let size = reader.read_usize()?;
+        match size {
+            0 => Ok(Self(None)),
+            1 => Ok(Self(Some(Valtype::decode(reader)?))),
+            _ => Err(DecodeError::InvalidResultArity { value: size }),
         }
     }
 }
