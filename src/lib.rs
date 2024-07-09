@@ -2,7 +2,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub(crate) mod decode;
-pub mod execute; // TODO: priv
+pub(crate) mod execute;
 #[cfg(feature = "sign_extension")]
 pub(crate) mod instructions_sign_extension;
 pub(crate) mod module;
@@ -13,10 +13,10 @@ pub mod components;
 pub mod instructions;
 
 pub use decode::DecodeError;
+pub use execute::{ModuleInstance, ModuleInstanceOptions, Value};
 pub use module::Module;
-pub use vector::{Vector, VectorFactory};
-
 #[cfg(feature = "std")]
 pub use vector::{StdVector, StdVectorFactory};
+pub use vector::{Vector, VectorFactory};
 
-pub const PAGE_SIZE: u32 = 65536;
+pub const PAGE_SIZE: usize = 65536;

@@ -1,8 +1,5 @@
 use clap::Parser;
-use nowasm::{
-    execute::{ModuleInstanceOptions, Value},
-    Module, StdVector, StdVectorFactory,
-};
+use nowasm::{Module, ModuleInstanceOptions, StdVector, StdVectorFactory, Value, PAGE_SIZE};
 use orfail::{Failure, OrFail};
 use std::{fmt::Debug, path::PathBuf};
 
@@ -22,7 +19,7 @@ pub fn main() -> orfail::Result<()> {
         .or_fail()?;
 
     let options = ModuleInstanceOptions {
-        mem: Some(StdVector::new(vec![0; 1024 * 1024])),
+        mem: Some(StdVector::new(vec![0; 1024 * PAGE_SIZE])),
         ..Default::default()
     };
     let mut instance = module
