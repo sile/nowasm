@@ -1,4 +1,4 @@
-use crate::{reader::Reader, DecodeError};
+use crate::{decode::Decode, reader::Reader, DecodeError};
 
 #[derive(Debug, Clone, Copy)]
 pub enum SignExtensionInstr {
@@ -9,8 +9,8 @@ pub enum SignExtensionInstr {
     I64Extend32S,
 }
 
-impl SignExtensionInstr {
-    pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
+impl Decode for SignExtensionInstr {
+    fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         let opcode = reader.read_u8()?;
         match opcode {
             0xc0 => Ok(SignExtensionInstr::I32Extend8S),

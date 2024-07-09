@@ -58,10 +58,6 @@ impl<'a> Reader<'a> {
         Ok(())
     }
 
-    pub fn read_u64(&mut self) -> Result<u64, DecodeError> {
-        self.read_integer_u(64)
-    }
-
     pub fn read_i64(&mut self) -> Result<i64, DecodeError> {
         self.read_integer_s(64)
     }

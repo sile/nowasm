@@ -191,9 +191,9 @@ impl<V: VectorFactory> State<V> {
                     v.copy_to(&mut self.mem[start..end]);
                 }
                 Instr::Block(block) => {
-                    let prev_block = self.enter_block(block.block_type);
+                    let prev_block = self.enter_block(block.blocktype);
                     let return_level = self.execute_instrs(&block.instrs, level + 1, module)?;
-                    self.exit_block(block.block_type, return_level <= level, prev_block);
+                    self.exit_block(block.blocktype, return_level <= level, prev_block);
                     if return_level <= level {
                         return Ok(return_level);
                     }

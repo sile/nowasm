@@ -1,5 +1,3 @@
-#[cfg(feature = "sign_extension")]
-use crate::instructions_sign_extension::SignExtensionInstr;
 use crate::vector::Vector;
 use crate::{
     components::{Blocktype, Funcidx, Globalidx, Labelidx, Localidx, Memarg, Typeidx},
@@ -8,6 +6,9 @@ use crate::{
     DecodeError, VectorFactory,
 };
 use core::fmt::{Debug, Formatter};
+
+#[cfg(feature = "sign_extension")]
+pub use crate::instructions_sign_extension::SignExtensionInstr;
 
 pub enum Instr<V: VectorFactory> {
     // Control Instructions
@@ -195,8 +196,8 @@ pub enum Instr<V: VectorFactory> {
     SignExtension(SignExtensionInstr),
 }
 
-impl<V: VectorFactory> Instr<V> {
-    pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
+impl<V: VectorFactory> Decode for Instr<V> {
+    fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         let opcode = reader.read_u8()?;
         match opcode {
             // Control Instructions
@@ -769,30 +770,29 @@ impl<V: VectorFactory> Clone for Instr<V> {
 }
 
 pub struct BlockInstr<V: VectorFactory> {
-    pub block_type: Blocktype,
+    pub blocktype: Blocktype,
     pub instrs: V::Vector<Instr<V>>,
 }
 
-impl<V: VectorFactory> BlockInstr<V> {
-    pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
+impl<V: VectorFactory> Decode for BlockInstr<V> {
+    fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         let block_type = Blocktype::decode(reader)?;
         let mut instrs = V::create_vector(None);
         while reader.peek_u8()? != 0x0b {
             instrs.push(Instr::decode(reader)?);
         }
         reader.read_u8()?;
-        Ok(Self { block_type, instrs })
-    }
-
-    pub fn len(self) -> usize {
-        self.instrs.len()
+        Ok(Self {
+            blocktype: block_type,
+            instrs,
+        })
     }
 }
 
 impl<V: VectorFactory> Debug for BlockInstr<V> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("BlockInstr")
-            .field("block_type", &self.block_type)
+            .field("blocktype", &self.blocktype)
             .field("instrs", &self.instrs.as_ref())
             .finish()
     }
@@ -801,33 +801,36 @@ impl<V: VectorFactory> Debug for BlockInstr<V> {
 impl<V: VectorFactory> Clone for BlockInstr<V> {
     fn clone(&self) -> Self {
         Self {
-            block_type: self.block_type.clone(),
+            blocktype: self.blocktype.clone(),
             instrs: V::clone_vector(&self.instrs),
         }
     }
 }
 
 pub struct LoopInstr<V: VectorFactory> {
-    pub block_type: Blocktype,
+    pub blocktype: Blocktype,
     pub instrs: V::Vector<Instr<V>>,
 }
 
-impl<V: VectorFactory> LoopInstr<V> {
-    pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
+impl<V: VectorFactory> Decode for LoopInstr<V> {
+    fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         let block_type = Blocktype::decode(reader)?;
         let mut instrs = V::create_vector(None);
         while reader.peek_u8()? != 0x0b {
             instrs.push(Instr::decode(reader)?);
         }
         reader.read_u8()?;
-        Ok(Self { block_type, instrs })
+        Ok(Self {
+            blocktype: block_type,
+            instrs,
+        })
     }
 }
 
 impl<V: VectorFactory> Debug for LoopInstr<V> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("LoopInstr")
-            .field("block_type", &self.block_type)
+            .field("blocktype", &self.blocktype)
             .field("instrs", &self.instrs.as_ref())
             .finish()
     }
@@ -836,20 +839,20 @@ impl<V: VectorFactory> Debug for LoopInstr<V> {
 impl<V: VectorFactory> Clone for LoopInstr<V> {
     fn clone(&self) -> Self {
         Self {
-            block_type: self.block_type.clone(),
+            blocktype: self.blocktype.clone(),
             instrs: V::clone_vector(&self.instrs),
         }
     }
 }
 
 pub struct IfInstr<V: VectorFactory> {
-    pub block_type: Blocktype,
+    pub blocktype: Blocktype,
     pub then_instrs: V::Vector<Instr<V>>,
     pub else_instrs: V::Vector<Instr<V>>,
 }
 
-impl<V: VectorFactory> IfInstr<V> {
-    pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
+impl<V: VectorFactory> Decode for IfInstr<V> {
+    fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         let block_type = Blocktype::decode(reader)?;
         let mut then_instrs = V::create_vector(None);
         let mut else_instrs = V::create_vector(None);
@@ -859,7 +862,7 @@ impl<V: VectorFactory> IfInstr<V> {
             if b == 0x0B {
                 reader.read_u8()?;
                 return Ok(Self {
-                    block_type,
+                    blocktype: block_type,
                     then_instrs,
                     else_instrs,
                 });
@@ -877,7 +880,7 @@ impl<V: VectorFactory> IfInstr<V> {
         reader.read_u8()?;
 
         Ok(Self {
-            block_type,
+            blocktype: block_type,
             then_instrs,
             else_instrs,
         })
@@ -887,7 +890,7 @@ impl<V: VectorFactory> IfInstr<V> {
 impl<V: VectorFactory> Debug for IfInstr<V> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("IfInstr")
-            .field("block_type", &self.block_type)
+            .field("blocktype", &self.blocktype)
             .field("then_instrs", &self.then_instrs.as_ref())
             .field("else_instrs", &self.else_instrs.as_ref())
             .finish()
@@ -897,7 +900,7 @@ impl<V: VectorFactory> Debug for IfInstr<V> {
 impl<V: VectorFactory> Clone for IfInstr<V> {
     fn clone(&self) -> Self {
         Self {
-            block_type: self.block_type.clone(),
+            blocktype: self.blocktype.clone(),
             then_instrs: V::clone_vector(&self.then_instrs),
             else_instrs: V::clone_vector(&self.else_instrs),
         }
@@ -908,18 +911,14 @@ pub struct BrTableInstr<V: VectorFactory> {
     pub labels: V::Vector<Labelidx>,
 }
 
-impl<V: VectorFactory> BrTableInstr<V> {
-    pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
+impl<V: VectorFactory> Decode for BrTableInstr<V> {
+    fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         let n = reader.read_u32()? as usize + 1;
         let mut labels = V::create_vector(Some(n));
         for _ in 0..n {
             labels.push(Labelidx::decode(reader)?);
         }
         Ok(Self { labels })
-    }
-
-    pub fn idx_len(self) -> usize {
-        self.labels.len()
     }
 }
 
