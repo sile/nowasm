@@ -24,6 +24,7 @@ impl Decode for u8 {
 }
 
 // TODO: impl Display
+// TODO: impl Error if std is enabled
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DecodeError {
     EndOfBytes,

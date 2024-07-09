@@ -4,7 +4,7 @@ use crate::{
     },
     decode::Decode,
     reader::Reader,
-    validation::ValidateError,
+    validate::ValidateError,
     Allocator, DecodeError, FuncType,
 };
 use core::fmt::{Debug, Formatter};

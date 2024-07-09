@@ -11,12 +11,13 @@ pub(crate) mod vectors; // TODO: rename
 
 pub mod execution; // TODO
 pub(crate) mod module;
-pub mod validation; // TODO: pub (crate)
+pub mod validate;
 
 pub use components::FuncType;
 pub use decode::DecodeError;
 pub use instructions::Instr;
 pub use module::Module;
+pub use validate::ValidateError;
 pub use vectors::{Allocator, Vector};
 
 #[cfg(feature = "std")]
