@@ -16,16 +16,17 @@ pub enum ExecuteError {
 
 // TODO: Rename
 #[derive(Debug)]
-pub struct State<V: VectorFactory> {
+pub struct State<V: VectorFactory, H> {
     pub mem: V::Vector<u8>,
     pub globals: V::Vector<Val>,
     pub locals: V::Vector<Val>,
     pub values: V::Vector<Val>,
     pub current_frame: Frame,
     pub current_block: Block,
+    pub host_funcs: V::Vector<H>,
 }
 
-impl<V: VectorFactory> State<V> {
+impl<V: VectorFactory, H> State<V, H> {
     pub fn new(mem: V::Vector<u8>) -> Self {
         Self {
             mem,
@@ -34,6 +35,7 @@ impl<V: VectorFactory> State<V> {
             values: V::create_vector(None),
             current_frame: Frame::root(),
             current_block: Block::default(),
+            host_funcs: V::create_vector(None),
         }
     }
 

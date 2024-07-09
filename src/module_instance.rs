@@ -1,7 +1,7 @@
 use crate::{
-    components::{Exportdesc, Funcidx, Limits, Resulttype, Valtype},
+    components::{Exportdesc, Limits, Resulttype, Valtype},
     execute::State,
-    ExecuteError, Module, Val, Vector, VectorFactory,
+    ExecuteError, Module, Val, Vector, VectorFactory, PAGE_SIZE,
 };
 use core::fmt::{Debug, Formatter};
 
@@ -9,6 +9,13 @@ pub trait Invoke {
     fn invoke(&mut self, args: &[Val]) -> Option<Val>;
 }
 
+impl Invoke for () {
+    fn invoke(&mut self, _args: &[Val]) -> Option<Val> {
+        panic!();
+    }
+}
+
+// TODO: rename
 pub trait Import {
     type HostFunc: Invoke;
 
@@ -18,6 +25,19 @@ pub trait Import {
         name: &str,
         spec: &ImportSpec,
     ) -> Option<Imported<Self::HostFunc>>;
+}
+
+impl Import for () {
+    type HostFunc = ();
+
+    fn import(
+        &mut self,
+        _module: &str,
+        _name: &str,
+        _spec: &ImportSpec,
+    ) -> Option<Imported<Self::HostFunc>> {
+        None
+    }
 }
 
 #[derive(Debug)]
@@ -40,59 +60,41 @@ pub enum ImportSpec<'a> {
 #[derive(Debug)]
 pub enum Imported<F> {
     Func(F),
-    Mem,   // TODO
-    Table, // TODO
+    Mem(Mem),
+    Table(Table),
     Global(Val),
 }
 
-// Mem, Table, Globals
-// TODO: delete
-pub struct Env<V: VectorFactory> {
-    pub mem: Option<V::Vector<u8>>,
-    pub table: Option<V::Vector<Option<Funcidx>>>,
-}
+#[derive(Debug)]
+pub struct Mem;
 
-impl<V: VectorFactory> Default for Env<V> {
-    fn default() -> Self {
-        Self {
-            mem: None,
-            table: None,
-        }
-    }
-}
+#[derive(Debug)]
+pub struct Table;
 
-impl<V: VectorFactory> Clone for Env<V> {
-    fn clone(&self) -> Self {
-        Self {
-            mem: self.mem.as_ref().map(V::clone_vector),
-            table: self.table.as_ref().map(V::clone_vector),
-        }
-    }
-}
-
-impl<V: VectorFactory> Debug for Env<V> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        f.debug_struct("Env")
-            .field("mem", &self.mem.as_ref().map(|v| v.as_ref()))
-            .field("table", &self.table.as_ref().map(|v| v.as_ref()))
-            .finish()
-    }
-}
-
-pub struct ModuleInstance<V: VectorFactory> {
+pub struct ModuleInstance<V: VectorFactory, H> {
     pub module: Module<V>,
-    pub state: State<V>,
+    pub state: State<V, H>,
 }
 
-impl<V: VectorFactory> ModuleInstance<V> {
-    pub(crate) fn new(module: Module<V>, env: Env<V>) -> Result<Self, ExecuteError> {
-        let mem = env.mem.unwrap_or_else(|| V::create_vector(None));
+impl<V: VectorFactory, H> ModuleInstance<V, H> {
+    pub(crate) fn new<I>(module: Module<V>, _importer: I) -> Result<Self, ExecuteError>
+    where
+        I: Import<HostFunc = H>,
+    {
+        // TODO: let mem = env.mem.unwrap_or_else(|| V::create_vector(None));
+        let mut mem = V::create_vector(None);
+        if let Some(m) = module.mem() {
+            for _ in 0..m.limits.min as usize * PAGE_SIZE {
+                mem.push(0);
+            }
+        }
+
         if module.start().is_some() {
             todo!()
         }
 
         // TODO: check mem (min, max, pagesize)
-        let mut state = State::<V>::new(mem);
+        let mut state = State::<V, H>::new(mem);
 
         for global in module.globals().iter() {
             state.globals.push(global.init()?);
@@ -156,7 +158,7 @@ impl<V: VectorFactory> ModuleInstance<V> {
     }
 }
 
-impl<V: VectorFactory> Debug for ModuleInstance<V> {
+impl<V: VectorFactory, H> Debug for ModuleInstance<V, H> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("ModuleInstance")
             .field("module", &self.module)

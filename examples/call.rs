@@ -1,5 +1,5 @@
 use clap::Parser;
-use nowasm::{Env, Module, StdVector, StdVectorFactory, Val, PAGE_SIZE};
+use nowasm::{Module, StdVectorFactory, Val};
 use orfail::{Failure, OrFail};
 use std::{fmt::Debug, path::PathBuf};
 
@@ -18,12 +18,8 @@ pub fn main() -> orfail::Result<()> {
         .map_err(|e| Failure::new(format!("{e:?}")))
         .or_fail()?;
 
-    let options = Env {
-        mem: Some(StdVector::new(vec![0; 1024 * PAGE_SIZE])),
-        ..Default::default()
-    };
     let mut instance = module
-        .instantiate(options)
+        .instantiate(())
         .map_err(|e| Failure::new(format!("{e:?}")))
         .or_fail()?;
 
