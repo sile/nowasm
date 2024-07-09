@@ -1,25 +1,52 @@
 use crate::{
-    components::{Exportdesc, Funcidx, Resulttype, Valtype},
+    components::{Exportdesc, Funcidx, Limits, Resulttype, Valtype},
     execute::State,
     ExecuteError, Module, Val, Vector, VectorFactory,
 };
 use core::fmt::{Debug, Formatter};
 
-pub trait HostFuncs {
-    type HostFunc;
+pub trait Invoke {
+    fn invoke(&mut self, args: &[Val]) -> Option<Val>;
+}
 
-    fn invoke(&mut self, func: &mut Self::HostFunc, args: &[Val]) -> Option<Val>;
+pub trait Import {
+    type HostFunc: Invoke;
 
-    fn resolve(
+    fn import(
         &mut self,
-        module_name: &str,
-        func_name: &str,
-        params: &[Valtype],
+        module: &str,
+        name: &str,
+        spec: &ImportSpec,
+    ) -> Option<Imported<Self::HostFunc>>;
+}
+
+#[derive(Debug)]
+pub enum ImportSpec<'a> {
+    Mem {
+        limits: Limits,
+    },
+    Table {
+        limits: Limits,
+    },
+    Global {
+        ty: Valtype,
+    },
+    Func {
+        params: &'a [Valtype],
         result: Resulttype,
-    ) -> Option<Self::HostFunc>;
+    },
+}
+
+#[derive(Debug)]
+pub enum Imported<F> {
+    Func(F),
+    Mem,   // TODO
+    Table, // TODO
+    Global(Val),
 }
 
 // Mem, Table, Globals
+// TODO: delete
 pub struct Env<V: VectorFactory> {
     pub mem: Option<V::Vector<u8>>,
     pub table: Option<V::Vector<Option<Funcidx>>>,
