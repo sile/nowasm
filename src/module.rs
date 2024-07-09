@@ -1,7 +1,7 @@
 use crate::{
     components::{
         Code, Data, Elem, Export, Func, Funcidx, Functype, Global, Import, Magic, Memtype,
-        TableType, Typeidx, Version,
+        Tabletype, Typeidx, Version,
     },
     decode::Decode,
     reader::Reader,
@@ -27,7 +27,7 @@ const SECTION_ID_DATA: u8 = 11;
 pub struct Module<V: VectorFactory> {
     types: V::Vector<Functype<V>>,
     funcs: V::Vector<Func<V>>,
-    tables: V::Vector<TableType>,
+    tables: V::Vector<Tabletype>,
     imports: V::Vector<Import<V>>,
     mem: Option<Memtype>,
     globals: V::Vector<Global<V>>,
@@ -168,7 +168,7 @@ impl<V: VectorFactory> Module<V> {
         &self.funcs
     }
 
-    pub fn tables(&self) -> &[TableType] {
+    pub fn tables(&self) -> &[Tabletype] {
         &self.tables
     }
 
