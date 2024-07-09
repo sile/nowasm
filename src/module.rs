@@ -7,7 +7,7 @@ use crate::{
     execute::ExecuteError,
     reader::Reader,
     vector::Vector,
-    DecodeError, ModuleInstance, ModuleInstanceOptions, VectorFactory,
+    DecodeError, Env, ModuleInstance, VectorFactory,
 };
 use core::fmt::{Debug, Formatter};
 
@@ -162,12 +162,9 @@ impl<V: VectorFactory> Module<V> {
         Ok(())
     }
 
-    pub fn instantiate(
-        self,
-        options: ModuleInstanceOptions<V>,
-    ) -> Result<ModuleInstance<V>, ExecuteError> {
+    pub fn instantiate(self, env: Env<V>) -> Result<ModuleInstance<V>, ExecuteError> {
         // TODO: validate
-        let instance = ModuleInstance::new(self, options)?;
+        let instance = ModuleInstance::new(self, env)?;
         Ok(instance)
     }
 

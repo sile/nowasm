@@ -3,18 +3,17 @@ use crate::{
 };
 use core::fmt::{Debug, Formatter};
 
-// TODO: Rename to Env
-pub struct ModuleInstanceOptions<V: VectorFactory> {
+pub struct Env<V: VectorFactory> {
     pub mem: Option<V::Vector<u8>>,
 }
 
-impl<V: VectorFactory> Default for ModuleInstanceOptions<V> {
+impl<V: VectorFactory> Default for Env<V> {
     fn default() -> Self {
         Self { mem: None }
     }
 }
 
-impl<V: VectorFactory> Clone for ModuleInstanceOptions<V> {
+impl<V: VectorFactory> Clone for Env<V> {
     fn clone(&self) -> Self {
         Self {
             mem: self.mem.as_ref().map(V::clone_vector),
@@ -22,9 +21,9 @@ impl<V: VectorFactory> Clone for ModuleInstanceOptions<V> {
     }
 }
 
-impl<V: VectorFactory> Debug for ModuleInstanceOptions<V> {
+impl<V: VectorFactory> Debug for Env<V> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        f.debug_struct("ModuleInstanceOptions")
+        f.debug_struct("Env")
             .field("mem", &self.mem.as_ref().map(|v| v.as_ref()))
             .finish()
     }
@@ -36,11 +35,8 @@ pub struct ModuleInstance<V: VectorFactory> {
 }
 
 impl<V: VectorFactory> ModuleInstance<V> {
-    pub(crate) fn new(
-        module: Module<V>,
-        options: ModuleInstanceOptions<V>,
-    ) -> Result<Self, ExecuteError> {
-        let mem = options.mem.unwrap_or_else(|| V::create_vector(None));
+    pub(crate) fn new(module: Module<V>, env: Env<V>) -> Result<Self, ExecuteError> {
+        let mem = env.mem.unwrap_or_else(|| V::create_vector(None));
         if module.start().is_some() {
             todo!()
         }
@@ -57,6 +53,14 @@ impl<V: VectorFactory> ModuleInstance<V> {
 
     pub fn module(&self) -> &Module<V> {
         &self.module
+    }
+
+    pub fn mem(&self) -> &[u8] {
+        &self.state.mem
+    }
+
+    pub fn mem_mut(&mut self) -> &mut [u8] {
+        &mut self.state.mem
     }
 
     pub fn invoke(
