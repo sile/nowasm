@@ -1,5 +1,5 @@
 use crate::{
-    symbols::{BlockType, ExportDesc, FuncIdx, LocalIdx, ValType},
+    components::{BlockType, ExportDesc, FuncIdx, LocalIdx, ValType},
     Allocator, FuncType, Instr, Module, Vector,
 };
 use std::marker::PhantomData;

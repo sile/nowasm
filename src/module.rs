@@ -1,9 +1,9 @@
 use crate::{
-    decode::Decode,
-    reader::Reader,
-    symbols::{
+    components::{
         Code, Data, Elem, Export, FuncIdx, Global, Import, Magic, MemType, TableType, Version,
     },
+    decode::Decode,
+    reader::Reader,
     validation::ValidateError,
     Allocator, DecodeError, FuncType,
 };
