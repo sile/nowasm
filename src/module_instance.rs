@@ -1,15 +1,36 @@
 use crate::{
-    components::Exportdesc, execute::State, ExecuteError, Module, Val, Vector, VectorFactory,
+    components::{Exportdesc, Funcidx, Resulttype, Valtype},
+    execute::State,
+    ExecuteError, Module, Val, Vector, VectorFactory,
 };
 use core::fmt::{Debug, Formatter};
 
+pub trait HostFuncs {
+    type HostFunc;
+
+    fn invoke(&mut self, func: &mut Self::HostFunc, args: &[Val]) -> Option<Val>;
+
+    fn resolve(
+        &mut self,
+        module_name: &str,
+        func_name: &str,
+        params: &[Valtype],
+        result: Resulttype,
+    ) -> Option<Self::HostFunc>;
+}
+
+// Mem, Table, Globals
 pub struct Env<V: VectorFactory> {
     pub mem: Option<V::Vector<u8>>,
+    pub table: Option<V::Vector<Option<Funcidx>>>,
 }
 
 impl<V: VectorFactory> Default for Env<V> {
     fn default() -> Self {
-        Self { mem: None }
+        Self {
+            mem: None,
+            table: None,
+        }
     }
 }
 
@@ -17,6 +38,7 @@ impl<V: VectorFactory> Clone for Env<V> {
     fn clone(&self) -> Self {
         Self {
             mem: self.mem.as_ref().map(V::clone_vector),
+            table: self.table.as_ref().map(V::clone_vector),
         }
     }
 }
@@ -25,6 +47,7 @@ impl<V: VectorFactory> Debug for Env<V> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("Env")
             .field("mem", &self.mem.as_ref().map(|v| v.as_ref()))
+            .field("table", &self.table.as_ref().map(|v| v.as_ref()))
             .finish()
     }
 }
@@ -62,6 +85,8 @@ impl<V: VectorFactory> ModuleInstance<V> {
     pub fn mem_mut(&mut self) -> &mut [u8] {
         &mut self.state.mem
     }
+
+    // TODO: table
 
     pub fn invoke(
         &mut self,
