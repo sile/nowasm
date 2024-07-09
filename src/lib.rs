@@ -18,9 +18,9 @@ pub use decode::DecodeError;
 pub use instructions::Instr;
 pub use module::Module;
 pub use validate::ValidateError;
-pub use vector::{Allocator, Vector};
+pub use vector::{Vector, VectorFactory};
 
 #[cfg(feature = "std")]
-pub use vector::{StdAllocator, StdVector};
+pub use vector::{StdVector, StdVectorFactory};
 
 pub const PAGE_SIZE: u32 = 65536;

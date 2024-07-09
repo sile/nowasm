@@ -1,14 +1,16 @@
 use crate::vector::Vector;
-use crate::{reader::Reader, Allocator};
+use crate::{reader::Reader, VectorFactory};
 use core::fmt::{Display, Formatter};
 use core::str::Utf8Error;
 
 pub trait Decode: Sized {
     fn decode(reader: &mut Reader) -> Result<Self, DecodeError>;
 
-    fn decode_vector<A: Allocator>(reader: &mut Reader) -> Result<A::Vector<Self>, DecodeError> {
+    fn decode_vector<V: VectorFactory>(
+        reader: &mut Reader,
+    ) -> Result<V::Vector<Self>, DecodeError> {
         let len = reader.read_usize()?;
-        let mut items = A::allocate_vector();
+        let mut items = V::allocate_vector();
         for _ in 0..len {
             items.push(Self::decode(reader)?);
         }

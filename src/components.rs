@@ -3,7 +3,7 @@ use crate::execution::{ExecutionError, Value};
 use crate::instructions::Instr;
 use crate::reader::Reader;
 use crate::vector::Vector;
-use crate::{Allocator, DecodeError, Module};
+use crate::{DecodeError, Module, VectorFactory};
 use core::fmt::{Debug, Formatter};
 
 #[derive(Debug)]
@@ -34,11 +34,11 @@ impl Version {
     }
 }
 
-pub struct Name<A: Allocator>(A::Vector<u8>);
+pub struct Name<V: VectorFactory>(V::Vector<u8>);
 
-impl<A: Allocator> Name<A> {
+impl<V: VectorFactory> Name<V> {
     pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
-        let bytes = u8::decode_vector::<A>(reader)?;
+        let bytes = u8::decode_vector::<V>(reader)?;
         let _ = core::str::from_utf8(bytes.as_ref()).map_err(DecodeError::InvalidUtf8)?;
         Ok(Self(bytes))
     }
@@ -52,25 +52,25 @@ impl<A: Allocator> Name<A> {
     }
 }
 
-impl<A: Allocator> Debug for Name<A> {
+impl<V: VectorFactory> Debug for Name<V> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.debug_tuple("Name").field(&self.as_str()).finish()
     }
 }
 
-impl<A: Allocator> Clone for Name<A> {
+impl<V: VectorFactory> Clone for Name<V> {
     fn clone(&self) -> Self {
-        Self(A::clone_vector(&self.0))
+        Self(V::clone_vector(&self.0))
     }
 }
 
-pub struct Import<A: Allocator> {
-    pub module: Name<A>,
-    pub name: Name<A>,
+pub struct Import<V: VectorFactory> {
+    pub module: Name<V>,
+    pub name: Name<V>,
     pub desc: ImportDesc,
 }
 
-impl<A: Allocator> Decode for Import<A> {
+impl<V: VectorFactory> Decode for Import<V> {
     fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         let module = Name::decode(reader)?;
         let name = Name::decode(reader)?;
@@ -79,7 +79,7 @@ impl<A: Allocator> Decode for Import<A> {
     }
 }
 
-impl<A: Allocator> Debug for Import<A> {
+impl<V: VectorFactory> Debug for Import<V> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("Import")
             .field("module", &self.module)
@@ -89,7 +89,7 @@ impl<A: Allocator> Debug for Import<A> {
     }
 }
 
-impl<A: Allocator> Clone for Import<A> {
+impl<V: VectorFactory> Clone for Import<V> {
     fn clone(&self) -> Self {
         Self {
             module: self.module.clone(),
@@ -119,12 +119,12 @@ impl ImportDesc {
     }
 }
 
-pub struct Export<A: Allocator> {
-    pub name: Name<A>,
+pub struct Export<V: VectorFactory> {
+    pub name: Name<V>,
     pub desc: ExportDesc,
 }
 
-impl<A: Allocator> Decode for Export<A> {
+impl<V: VectorFactory> Decode for Export<V> {
     fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         let name = Name::decode(reader)?;
         let desc = ExportDesc::decode(reader)?;
@@ -132,7 +132,7 @@ impl<A: Allocator> Decode for Export<A> {
     }
 }
 
-impl<A: Allocator> Debug for Export<A> {
+impl<V: VectorFactory> Debug for Export<V> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("Export")
             .field("name", &self.name)
@@ -141,7 +141,7 @@ impl<A: Allocator> Debug for Export<A> {
     }
 }
 
-impl<A: Allocator> Clone for Export<A> {
+impl<V: VectorFactory> Clone for Export<V> {
     fn clone(&self) -> Self {
         Self {
             name: self.name.clone(),
@@ -193,12 +193,12 @@ impl Function {
         self.0 as usize
     }
 
-    pub fn get_type<A: Allocator>(self, module: &Module<A>) -> Option<&FuncType<A>> {
+    pub fn get_type<V: VectorFactory>(self, module: &Module<V>) -> Option<&FuncType<V>> {
         let type_idx = module.functions().get(self.index())?;
         module.function_types().get(type_idx.0 as usize)
     }
 
-    pub fn get_code<A: Allocator>(self, module: &Module<A>) -> Option<&Code<A>> {
+    pub fn get_code<V: VectorFactory>(self, module: &Module<V>) -> Option<&Code<V>> {
         module.function_codes().get(self.index())
     }
 }
@@ -386,16 +386,16 @@ impl Decode for ValType {
     }
 }
 
-pub struct FuncType<A: Allocator> {
-    pub rt1: ResultType<A>,
-    pub rt2: ResultType<A>,
+pub struct FuncType<V: VectorFactory> {
+    pub rt1: ResultType<V>,
+    pub rt2: ResultType<V>,
 }
 
-impl<A: Allocator> FuncType<A> {
+impl<V: VectorFactory> FuncType<V> {
     pub fn validate_args(
         &self,
         args: &[Value],
-        _module: &Module<impl Allocator>,
+        _module: &Module<impl VectorFactory>,
     ) -> Result<(), ExecutionError> {
         if args.len() != self.rt1.len() {
             return Err(ExecutionError::InvalidFuncArgs);
@@ -419,7 +419,7 @@ impl<A: Allocator> FuncType<A> {
     }
 }
 
-impl<A: Allocator> Decode for FuncType<A> {
+impl<V: VectorFactory> Decode for FuncType<V> {
     fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         let tag = reader.read_u8()?;
         if tag != 0x60 {
@@ -431,7 +431,7 @@ impl<A: Allocator> Decode for FuncType<A> {
     }
 }
 
-impl<A: Allocator> Debug for FuncType<A> {
+impl<V: VectorFactory> Debug for FuncType<V> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("FuncType")
             .field("rt1", &self.rt1)
@@ -440,7 +440,7 @@ impl<A: Allocator> Debug for FuncType<A> {
     }
 }
 
-impl<A: Allocator> Clone for FuncType<A> {
+impl<V: VectorFactory> Clone for FuncType<V> {
     fn clone(&self) -> Self {
         Self {
             rt1: self.rt1.clone(),
@@ -449,13 +449,13 @@ impl<A: Allocator> Clone for FuncType<A> {
     }
 }
 
-pub struct ResultType<A: Allocator> {
-    pub types: A::Vector<ValType>,
+pub struct ResultType<V: VectorFactory> {
+    pub types: V::Vector<ValType>,
 }
 
-impl<A: Allocator> ResultType<A> {
+impl<V: VectorFactory> ResultType<V> {
     fn decode_item(reader: &mut Reader) -> Result<Self, DecodeError> {
-        let types = Decode::decode_vector::<A>(reader)?;
+        let types = Decode::decode_vector::<V>(reader)?;
         Ok(Self { types })
     }
 
@@ -468,7 +468,7 @@ impl<A: Allocator> ResultType<A> {
     }
 }
 
-impl<A: Allocator> Debug for ResultType<A> {
+impl<V: VectorFactory> Debug for ResultType<V> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("ResultType")
             .field("types", &self.types.as_ref())
@@ -476,20 +476,20 @@ impl<A: Allocator> Debug for ResultType<A> {
     }
 }
 
-impl<A: Allocator> Clone for ResultType<A> {
+impl<V: VectorFactory> Clone for ResultType<V> {
     fn clone(&self) -> Self {
         Self {
-            types: A::clone_vector(&self.types),
+            types: V::clone_vector(&self.types),
         }
     }
 }
 
-pub struct Global<A: Allocator> {
+pub struct Global<V: VectorFactory> {
     pub ty: GlobalType, // TODO: global_type
-    pub init: Expr<A>,
+    pub init: Expr<V>,
 }
 
-impl<A: Allocator> Global<A> {
+impl<V: VectorFactory> Global<V> {
     pub fn init(&self) -> Result<Value, ExecutionError> {
         if self.init.len() != 1 {
             return Err(ExecutionError::InvalidGlobalInitializer);
@@ -507,7 +507,7 @@ impl<A: Allocator> Global<A> {
     }
 }
 
-impl<A: Allocator> Decode for Global<A> {
+impl<V: VectorFactory> Decode for Global<V> {
     fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         let ty = GlobalType::decode(reader)?;
         let init = Expr::decode(reader)?;
@@ -515,7 +515,7 @@ impl<A: Allocator> Decode for Global<A> {
     }
 }
 
-impl<A: Allocator> Debug for Global<A> {
+impl<V: VectorFactory> Debug for Global<V> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("Global")
             .field("ty", &self.ty)
@@ -524,7 +524,7 @@ impl<A: Allocator> Debug for Global<A> {
     }
 }
 
-impl<A: Allocator> Clone for Global<A> {
+impl<V: VectorFactory> Clone for Global<V> {
     fn clone(&self) -> Self {
         Self {
             ty: self.ty.clone(),
@@ -533,13 +533,13 @@ impl<A: Allocator> Clone for Global<A> {
     }
 }
 
-pub struct Expr<A: Allocator> {
-    instrs: A::Vector<Instr<A>>,
+pub struct Expr<V: VectorFactory> {
+    instrs: V::Vector<Instr<V>>,
 }
 
-impl<A: Allocator> Expr<A> {
+impl<V: VectorFactory> Expr<V> {
     pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
-        let mut instrs = A::allocate_vector();
+        let mut instrs = V::allocate_vector();
         while reader.peek_u8()? != 0x0b {
             instrs.push(Instr::decode(reader)?);
         }
@@ -551,12 +551,12 @@ impl<A: Allocator> Expr<A> {
         self.instrs.as_ref().len()
     }
 
-    pub fn iter(&self) -> impl '_ + Iterator<Item = &Instr<A>> {
+    pub fn iter(&self) -> impl '_ + Iterator<Item = &Instr<V>> {
         self.instrs.as_ref().iter()
     }
 }
 
-impl<A: Allocator> Debug for Expr<A> {
+impl<V: VectorFactory> Debug for Expr<V> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("Expr")
             .field("instrs", &self.instrs.as_ref())
@@ -564,10 +564,10 @@ impl<A: Allocator> Debug for Expr<A> {
     }
 }
 
-impl<A: Allocator> Clone for Expr<A> {
+impl<V: VectorFactory> Clone for Expr<V> {
     fn clone(&self) -> Self {
         Self {
-            instrs: A::clone_vector(&self.instrs),
+            instrs: V::clone_vector(&self.instrs),
         }
     }
 }
@@ -586,17 +586,17 @@ impl MemArg {
     }
 }
 
-pub struct Elem<A: Allocator> {
+pub struct Elem<V: VectorFactory> {
     pub table: TableIdx,
-    pub offset: Expr<A>,
-    pub init: A::Vector<Function>,
+    pub offset: Expr<V>,
+    pub init: V::Vector<Function>,
 }
 
-impl<A: Allocator> Decode for Elem<A> {
+impl<V: VectorFactory> Decode for Elem<V> {
     fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         let table = TableIdx::decode(reader)?;
         let offset = Expr::decode(reader)?;
-        let init = Function::decode_vector::<A>(reader)?;
+        let init = Function::decode_vector::<V>(reader)?;
         Ok(Self {
             table,
             offset,
@@ -605,7 +605,7 @@ impl<A: Allocator> Decode for Elem<A> {
     }
 }
 
-impl<A: Allocator> Debug for Elem<A> {
+impl<V: VectorFactory> Debug for Elem<V> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("Elem")
             .field("table", &self.table)
@@ -615,40 +615,40 @@ impl<A: Allocator> Debug for Elem<A> {
     }
 }
 
-impl<A: Allocator> Clone for Elem<A> {
+impl<V: VectorFactory> Clone for Elem<V> {
     fn clone(&self) -> Self {
         Self {
             table: self.table,
             offset: self.offset.clone(),
-            init: A::clone_vector(&self.init),
+            init: V::clone_vector(&self.init),
         }
     }
 }
 
-pub struct Code<A: Allocator> {
-    pub locals: A::Vector<ValType>,
-    pub body: Expr<A>,
+pub struct Code<V: VectorFactory> {
+    pub locals: V::Vector<ValType>,
+    pub body: Expr<V>,
 }
 
-impl<A: Allocator> Code<A> {
+impl<V: VectorFactory> Code<V> {
     pub fn locals(&self) -> impl '_ + Iterator<Item = ValType> {
         self.locals.as_ref().iter().copied()
     }
 
-    pub fn body_iter(&self) -> impl '_ + Iterator<Item = &Instr<A>> {
+    pub fn body_iter(&self) -> impl '_ + Iterator<Item = &Instr<V>> {
         self.body.iter()
     }
 
-    pub fn instrs(&self) -> &[Instr<A>] {
+    pub fn instrs(&self) -> &[Instr<V>] {
         self.body.instrs.as_ref()
     }
 }
 
-impl<A: Allocator> Decode for Code<A> {
+impl<V: VectorFactory> Decode for Code<V> {
     fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         let code_size = reader.read_usize()?;
         let mut reader = Reader::new(reader.read(code_size)?);
-        let mut locals = A::allocate_vector();
+        let mut locals = V::allocate_vector();
         let locals_len = reader.read_usize()?;
         for _ in 0..locals_len {
             let val_types_len = reader.read_usize()?;
@@ -662,7 +662,7 @@ impl<A: Allocator> Decode for Code<A> {
     }
 }
 
-impl<A: Allocator> Debug for Code<A> {
+impl<V: VectorFactory> Debug for Code<V> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("Code")
             .field("locals", &self.locals.as_ref())
@@ -671,10 +671,10 @@ impl<A: Allocator> Debug for Code<A> {
     }
 }
 
-impl<A: Allocator> Clone for Code<A> {
+impl<V: VectorFactory> Clone for Code<V> {
     fn clone(&self) -> Self {
         Self {
-            locals: A::clone_vector(&self.locals),
+            locals: V::clone_vector(&self.locals),
             body: self.body.clone(),
         }
     }
@@ -721,22 +721,22 @@ impl S33 {
     }
 }
 
-pub struct Data<A: Allocator> {
+pub struct Data<V: VectorFactory> {
     pub data: MemIdx,
-    pub offset: Expr<A>,
-    pub init: A::Vector<u8>,
+    pub offset: Expr<V>,
+    pub init: V::Vector<u8>,
 }
 
-impl<A: Allocator> Decode for Data<A> {
+impl<V: VectorFactory> Decode for Data<V> {
     fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         let data = MemIdx::decode(reader)?;
         let offset = Expr::decode(reader)?;
-        let init = u8::decode_vector::<A>(reader)?;
+        let init = u8::decode_vector::<V>(reader)?;
         Ok(Self { data, offset, init })
     }
 }
 
-impl<A: Allocator> Debug for Data<A> {
+impl<V: VectorFactory> Debug for Data<V> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("Data")
             .field("data", &self.data)
@@ -746,12 +746,12 @@ impl<A: Allocator> Debug for Data<A> {
     }
 }
 
-impl<A: Allocator> Clone for Data<A> {
+impl<V: VectorFactory> Clone for Data<V> {
     fn clone(&self) -> Self {
         Self {
             data: self.data,
             offset: self.offset.clone(),
-            init: A::clone_vector(&self.init),
+            init: V::clone_vector(&self.init),
         }
     }
 }

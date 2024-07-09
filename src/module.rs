@@ -6,38 +6,38 @@ use crate::{
     decode::Decode,
     reader::Reader,
     validate::ValidateError,
-    Allocator, DecodeError, FuncType,
+    DecodeError, FuncType, VectorFactory,
 };
 use core::fmt::{Debug, Formatter};
 
-pub struct Module<A: Allocator> {
-    function_types: A::Vector<FuncType<A>>,
-    imports: A::Vector<Import<A>>,
-    functions: A::Vector<TypeIdx>, //TODO: Rename
-    table_types: A::Vector<TableType>,
+pub struct Module<V: VectorFactory> {
+    function_types: V::Vector<FuncType<V>>,
+    imports: V::Vector<Import<V>>,
+    functions: V::Vector<TypeIdx>, //TODO: Rename
+    table_types: V::Vector<TableType>,
     memory_type: Option<MemType>,
-    globals: A::Vector<Global<A>>,
-    exports: A::Vector<Export<A>>,
+    globals: V::Vector<Global<V>>,
+    exports: V::Vector<Export<V>>,
     start_function: Option<Function>,
-    elements: A::Vector<Elem<A>>,
-    function_codes: A::Vector<Code<A>>,
-    data_segments: A::Vector<Data<A>>,
+    elements: V::Vector<Elem<V>>,
+    function_codes: V::Vector<Code<V>>,
+    data_segments: V::Vector<Data<V>>,
 }
 
-impl<A: Allocator> Module<A> {
+impl<V: VectorFactory> Module<V> {
     pub fn decode(wasm_bytes: &[u8]) -> Result<Self, DecodeError> {
         let mut this = Self {
-            function_types: A::allocate_vector(),
-            imports: A::allocate_vector(),
-            functions: A::allocate_vector(),
-            table_types: A::allocate_vector(),
+            function_types: V::allocate_vector(),
+            imports: V::allocate_vector(),
+            functions: V::allocate_vector(),
+            table_types: V::allocate_vector(),
             memory_type: None,
-            globals: A::allocate_vector(),
-            exports: A::allocate_vector(),
+            globals: V::allocate_vector(),
+            exports: V::allocate_vector(),
             start_function: None,
-            elements: A::allocate_vector(),
-            function_codes: A::allocate_vector(),
-            data_segments: A::allocate_vector(),
+            elements: V::allocate_vector(),
+            function_codes: V::allocate_vector(),
+            data_segments: V::allocate_vector(),
         };
         let mut reader = Reader::new(wasm_bytes);
 
@@ -72,16 +72,16 @@ impl<A: Allocator> Module<A> {
             match section_id {
                 SectionId::Custom => unreachable!(),
                 SectionId::Type => {
-                    self.function_types = Decode::decode_vector::<A>(&mut section_reader)?;
+                    self.function_types = Decode::decode_vector::<V>(&mut section_reader)?;
                 }
                 SectionId::Import => {
-                    self.imports = Decode::decode_vector::<A>(&mut section_reader)?;
+                    self.imports = Decode::decode_vector::<V>(&mut section_reader)?;
                 }
                 SectionId::Function => {
-                    self.functions = Decode::decode_vector::<A>(&mut section_reader)?;
+                    self.functions = Decode::decode_vector::<V>(&mut section_reader)?;
                 }
                 SectionId::Table => {
-                    self.table_types = Decode::decode_vector::<A>(&mut section_reader)?;
+                    self.table_types = Decode::decode_vector::<V>(&mut section_reader)?;
                 }
                 SectionId::Memory => {
                     let value = section_reader.read_u32()? as usize;
@@ -94,22 +94,22 @@ impl<A: Allocator> Module<A> {
                     }
                 }
                 SectionId::Global => {
-                    self.globals = Decode::decode_vector::<A>(&mut section_reader)?;
+                    self.globals = Decode::decode_vector::<V>(&mut section_reader)?;
                 }
                 SectionId::Export => {
-                    self.exports = Decode::decode_vector::<A>(&mut section_reader)?;
+                    self.exports = Decode::decode_vector::<V>(&mut section_reader)?;
                 }
                 SectionId::Start => {
                     self.start_function = Some(Decode::decode(&mut section_reader)?);
                 }
                 SectionId::Element => {
-                    self.elements = Decode::decode_vector::<A>(&mut section_reader)?;
+                    self.elements = Decode::decode_vector::<V>(&mut section_reader)?;
                 }
                 SectionId::Code => {
-                    self.function_codes = Decode::decode_vector::<A>(&mut section_reader)?;
+                    self.function_codes = Decode::decode_vector::<V>(&mut section_reader)?;
                 }
                 SectionId::Data => {
-                    self.data_segments = Decode::decode_vector::<A>(&mut section_reader)?;
+                    self.data_segments = Decode::decode_vector::<V>(&mut section_reader)?;
                 }
             }
             last_section_id = section_id;
@@ -130,11 +130,11 @@ impl<A: Allocator> Module<A> {
         Ok(())
     }
 
-    pub fn function_types(&self) -> &[FuncType<A>] {
+    pub fn function_types(&self) -> &[FuncType<V>] {
         self.function_types.as_ref()
     }
 
-    pub fn imports(&self) -> &[Import<A>] {
+    pub fn imports(&self) -> &[Import<V>] {
         self.imports.as_ref()
     }
 
@@ -150,11 +150,11 @@ impl<A: Allocator> Module<A> {
         self.memory_type
     }
 
-    pub fn globals(&self) -> &[Global<A>] {
+    pub fn globals(&self) -> &[Global<V>] {
         self.globals.as_ref()
     }
 
-    pub fn exports(&self) -> &[Export<A>] {
+    pub fn exports(&self) -> &[Export<V>] {
         self.exports.as_ref()
     }
 
@@ -162,20 +162,20 @@ impl<A: Allocator> Module<A> {
         self.start_function
     }
 
-    pub fn elements(&self) -> &[Elem<A>] {
+    pub fn elements(&self) -> &[Elem<V>] {
         self.elements.as_ref()
     }
 
-    pub fn function_codes(&self) -> &[Code<A>] {
+    pub fn function_codes(&self) -> &[Code<V>] {
         self.function_codes.as_ref()
     }
 
-    pub fn data_segments(&self) -> &[Data<A>] {
+    pub fn data_segments(&self) -> &[Data<V>] {
         self.data_segments.as_ref()
     }
 }
 
-impl<A: Allocator> Debug for Module<A> {
+impl<V: VectorFactory> Debug for Module<V> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("Module")
             .field("function_types", &self.function_types.as_ref())
@@ -193,20 +193,20 @@ impl<A: Allocator> Debug for Module<A> {
     }
 }
 
-impl<A: Allocator> Clone for Module<A> {
+impl<V: VectorFactory> Clone for Module<V> {
     fn clone(&self) -> Self {
         Self {
-            function_types: A::clone_vector(&self.function_types),
-            imports: A::clone_vector(&self.imports),
-            functions: A::clone_vector(&self.functions),
-            table_types: A::clone_vector(&self.table_types),
+            function_types: V::clone_vector(&self.function_types),
+            imports: V::clone_vector(&self.imports),
+            functions: V::clone_vector(&self.functions),
+            table_types: V::clone_vector(&self.table_types),
             memory_type: self.memory_type,
-            globals: A::clone_vector(&self.globals),
-            exports: A::clone_vector(&self.exports),
+            globals: V::clone_vector(&self.globals),
+            exports: V::clone_vector(&self.exports),
             start_function: self.start_function,
-            elements: A::clone_vector(&self.elements),
-            function_codes: A::clone_vector(&self.function_codes),
-            data_segments: A::clone_vector(&self.data_segments),
+            elements: V::clone_vector(&self.elements),
+            function_codes: V::clone_vector(&self.function_codes),
+            data_segments: V::clone_vector(&self.data_segments),
         }
     }
 }
@@ -250,9 +250,9 @@ impl SectionId {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::StdAllocator;
+    use crate::StdVectorFactory;
 
-    fn decode(wasm: &[u8]) -> Module<StdAllocator> {
+    fn decode(wasm: &[u8]) -> Module<StdVectorFactory> {
         Module::decode(wasm).expect("decode module")
     }
 

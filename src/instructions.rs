@@ -1,5 +1,3 @@
-use core::fmt::{Debug, Formatter};
-
 #[cfg(feature = "sign_extension")]
 use crate::instructions_sign_extension::SignExtensionInstr;
 use crate::vector::Vector;
@@ -7,19 +5,20 @@ use crate::{
     components::{BlockType, Function, GlobalIdx, LabelIdx, LocalIdx, MemArg, TypeIdx},
     decode::Decode,
     reader::Reader,
-    Allocator, DecodeError,
+    DecodeError, VectorFactory,
 };
+use core::fmt::{Debug, Formatter};
 
-pub enum Instr<A: Allocator> {
+pub enum Instr<V: VectorFactory> {
     // Control Instructions
     Unreachable,
     Nop,
-    Block(BlockInstr<A>),
-    Loop(LoopInstr<A>),
-    If(IfInstr<A>),
+    Block(BlockInstr<V>),
+    Loop(LoopInstr<V>),
+    If(IfInstr<V>),
     Br(LabelIdx),
     BrIf(LabelIdx),
-    BrTable(BrTableInstr<A>),
+    BrTable(BrTableInstr<V>),
     Return,
     Call(Function),
     CallIndirect(TypeIdx),
@@ -196,7 +195,7 @@ pub enum Instr<A: Allocator> {
     SignExtension(SignExtensionInstr),
 }
 
-impl<A: Allocator> Instr<A> {
+impl<V: VectorFactory> Instr<V> {
     pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         let opcode = reader.read_u8()?;
         match opcode {
@@ -413,7 +412,7 @@ impl<A: Allocator> Instr<A> {
     }
 }
 
-impl<A: Allocator> Debug for Instr<A> {
+impl<V: VectorFactory> Debug for Instr<V> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::Unreachable => write!(f, "Unreachable"),
@@ -591,7 +590,7 @@ impl<A: Allocator> Debug for Instr<A> {
     }
 }
 
-impl<A: Allocator> Clone for Instr<A> {
+impl<V: VectorFactory> Clone for Instr<V> {
     fn clone(&self) -> Self {
         match self {
             Self::Unreachable => Self::Unreachable,
@@ -769,15 +768,15 @@ impl<A: Allocator> Clone for Instr<A> {
     }
 }
 
-pub struct BlockInstr<A: Allocator> {
+pub struct BlockInstr<V: VectorFactory> {
     pub block_type: BlockType,
-    pub instrs: A::Vector<Instr<A>>,
+    pub instrs: V::Vector<Instr<V>>,
 }
 
-impl<A: Allocator> BlockInstr<A> {
+impl<V: VectorFactory> BlockInstr<V> {
     pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         let block_type = BlockType::decode(reader)?;
-        let mut instrs = A::allocate_vector();
+        let mut instrs = V::allocate_vector();
         while reader.peek_u8()? != 0x0b {
             instrs.push(Instr::decode(reader)?);
         }
@@ -790,7 +789,7 @@ impl<A: Allocator> BlockInstr<A> {
     }
 }
 
-impl<A: Allocator> Debug for BlockInstr<A> {
+impl<V: VectorFactory> Debug for BlockInstr<V> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("BlockInstr")
             .field("block_type", &self.block_type)
@@ -799,24 +798,24 @@ impl<A: Allocator> Debug for BlockInstr<A> {
     }
 }
 
-impl<A: Allocator> Clone for BlockInstr<A> {
+impl<V: VectorFactory> Clone for BlockInstr<V> {
     fn clone(&self) -> Self {
         Self {
             block_type: self.block_type.clone(),
-            instrs: A::clone_vector(&self.instrs),
+            instrs: V::clone_vector(&self.instrs),
         }
     }
 }
 
-pub struct LoopInstr<A: Allocator> {
+pub struct LoopInstr<V: VectorFactory> {
     pub block_type: BlockType,
-    pub instrs: A::Vector<Instr<A>>,
+    pub instrs: V::Vector<Instr<V>>,
 }
 
-impl<A: Allocator> LoopInstr<A> {
+impl<V: VectorFactory> LoopInstr<V> {
     pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         let block_type = BlockType::decode(reader)?;
-        let mut instrs = A::allocate_vector();
+        let mut instrs = V::allocate_vector();
         while reader.peek_u8()? != 0x0b {
             instrs.push(Instr::decode(reader)?);
         }
@@ -825,7 +824,7 @@ impl<A: Allocator> LoopInstr<A> {
     }
 }
 
-impl<A: Allocator> Debug for LoopInstr<A> {
+impl<V: VectorFactory> Debug for LoopInstr<V> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("LoopInstr")
             .field("block_type", &self.block_type)
@@ -834,26 +833,26 @@ impl<A: Allocator> Debug for LoopInstr<A> {
     }
 }
 
-impl<A: Allocator> Clone for LoopInstr<A> {
+impl<V: VectorFactory> Clone for LoopInstr<V> {
     fn clone(&self) -> Self {
         Self {
             block_type: self.block_type.clone(),
-            instrs: A::clone_vector(&self.instrs),
+            instrs: V::clone_vector(&self.instrs),
         }
     }
 }
 
-pub struct IfInstr<A: Allocator> {
+pub struct IfInstr<V: VectorFactory> {
     pub block_type: BlockType,
-    pub then_instrs: A::Vector<Instr<A>>,
-    pub else_instrs: A::Vector<Instr<A>>,
+    pub then_instrs: V::Vector<Instr<V>>,
+    pub else_instrs: V::Vector<Instr<V>>,
 }
 
-impl<A: Allocator> IfInstr<A> {
+impl<V: VectorFactory> IfInstr<V> {
     pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         let block_type = BlockType::decode(reader)?;
-        let mut then_instrs = A::allocate_vector();
-        let mut else_instrs = A::allocate_vector();
+        let mut then_instrs = V::allocate_vector();
+        let mut else_instrs = V::allocate_vector();
 
         loop {
             let b = reader.peek_u8()?;
@@ -885,7 +884,7 @@ impl<A: Allocator> IfInstr<A> {
     }
 }
 
-impl<A: Allocator> Debug for IfInstr<A> {
+impl<V: VectorFactory> Debug for IfInstr<V> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("IfInstr")
             .field("block_type", &self.block_type)
@@ -895,24 +894,24 @@ impl<A: Allocator> Debug for IfInstr<A> {
     }
 }
 
-impl<A: Allocator> Clone for IfInstr<A> {
+impl<V: VectorFactory> Clone for IfInstr<V> {
     fn clone(&self) -> Self {
         Self {
             block_type: self.block_type.clone(),
-            then_instrs: A::clone_vector(&self.then_instrs),
-            else_instrs: A::clone_vector(&self.else_instrs),
+            then_instrs: V::clone_vector(&self.then_instrs),
+            else_instrs: V::clone_vector(&self.else_instrs),
         }
     }
 }
 
-pub struct BrTableInstr<A: Allocator> {
-    pub labels: A::Vector<LabelIdx>,
+pub struct BrTableInstr<V: VectorFactory> {
+    pub labels: V::Vector<LabelIdx>,
 }
 
-impl<A: Allocator> BrTableInstr<A> {
+impl<V: VectorFactory> BrTableInstr<V> {
     pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         let n = reader.read_u32()? as usize + 1;
-        let mut labels = A::allocate_vector();
+        let mut labels = V::allocate_vector();
         for _ in 0..n {
             labels.push(LabelIdx::decode(reader)?);
         }
@@ -924,7 +923,7 @@ impl<A: Allocator> BrTableInstr<A> {
     }
 }
 
-impl<A: Allocator> Debug for BrTableInstr<A> {
+impl<V: VectorFactory> Debug for BrTableInstr<V> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("BrTableInstr")
             .field("labels", &self.labels.as_ref())
@@ -932,10 +931,10 @@ impl<A: Allocator> Debug for BrTableInstr<A> {
     }
 }
 
-impl<A: Allocator> Clone for BrTableInstr<A> {
+impl<V: VectorFactory> Clone for BrTableInstr<V> {
     fn clone(&self) -> Self {
         Self {
-            labels: A::clone_vector(&self.labels),
+            labels: V::clone_vector(&self.labels),
         }
     }
 }

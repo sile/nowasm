@@ -1,7 +1,7 @@
 use clap::Parser;
 use nowasm::{
     execution::{ModuleInstance, Value},
-    Module, StdAllocator, StdVector,
+    Module, StdVector, StdVectorFactory,
 };
 use orfail::{Failure, OrFail};
 use std::{fmt::Debug, path::PathBuf};
@@ -17,7 +17,7 @@ pub fn main() -> orfail::Result<()> {
     let args = Args::parse();
     let wasm_bytes = std::fs::read(&args.wasm_path).or_fail()?;
 
-    let module = Module::<StdAllocator>::decode(&wasm_bytes)
+    let module = Module::<StdVectorFactory>::decode(&wasm_bytes)
         .map_err(|e| Failure::new(format!("{e:?}")))
         .or_fail()?;
 

@@ -1,4 +1,4 @@
-pub trait Allocator {
+pub trait VectorFactory {
     type Vector<T>: Vector<T>;
 
     // TODO: Add capacity: Option<usize>
@@ -32,10 +32,10 @@ pub trait Vector<T>: AsRef<[T]> + AsMut<[T]> {
 
 #[cfg(feature = "std")]
 #[derive(Debug)]
-pub struct StdAllocator;
+pub struct StdVectorFactory;
 
 #[cfg(feature = "std")]
-impl Allocator for StdAllocator {
+impl VectorFactory for StdVectorFactory {
     type Vector<T> = StdVector<T>;
 
     fn allocate_vector<T>() -> Self::Vector<T> {

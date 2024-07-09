@@ -1,8 +1,7 @@
 use crate::{
     components::{BlockType, ExportDesc, Function, LocalIdx, ValType},
-    Allocator, FuncType, Instr, Module, Vector,
+    FuncType, Instr, Module, Vector, VectorFactory,
 };
-use std::marker::PhantomData;
 
 #[derive(Debug, Clone, Copy)]
 pub enum ExecutionError {
@@ -15,30 +14,28 @@ pub enum ExecutionError {
 
 // TODO: Rename
 #[derive(Debug)]
-pub struct State<A: Allocator> {
-    _allocator: PhantomData<A>,
-    pub mem: A::Vector<u8>,
-    pub globals: A::Vector<Value>,
-    pub locals: A::Vector<Value>,
-    pub values: A::Vector<Value>,
+pub struct State<V: VectorFactory> {
+    pub mem: V::Vector<u8>,
+    pub globals: V::Vector<Value>,
+    pub locals: V::Vector<Value>,
+    pub values: V::Vector<Value>,
     pub current_frame: Frame,
     pub current_block: Block,
 }
 
-impl<A: Allocator> State<A> {
-    pub fn new(mem: A::Vector<u8>) -> Self {
+impl<V: VectorFactory> State<V> {
+    pub fn new(mem: V::Vector<u8>) -> Self {
         Self {
-            _allocator: PhantomData,
             mem,
-            globals: A::allocate_vector(),
-            locals: A::allocate_vector(),
-            values: A::allocate_vector(),
+            globals: V::allocate_vector(),
+            locals: V::allocate_vector(),
+            values: V::allocate_vector(),
             current_frame: Frame::root(),
             current_block: Block::default(),
         }
     }
 
-    pub fn enter_frame(&mut self, ty: &FuncType<A>, level: usize) -> Frame {
+    pub fn enter_frame(&mut self, ty: &FuncType<V>, level: usize) -> Frame {
         let locals_start = self.locals.len();
         for _ in 0..ty.args_len() {
             let v = self.pop_value();
@@ -58,7 +55,7 @@ impl<A: Allocator> State<A> {
     }
 
     // TODO: delete unused parameter
-    pub fn exit_frame(&mut self, _ty: &FuncType<A>, prev: Frame) {
+    pub fn exit_frame(&mut self, _ty: &FuncType<V>, prev: Frame) {
         let frame = self.current_frame;
 
         assert!(frame.locals_start <= self.locals.len());
@@ -123,7 +120,7 @@ impl<A: Allocator> State<A> {
     pub fn call_function(
         &mut self,
         func_idx: Function,
-        module: &Module<A>,
+        module: &Module<V>,
     ) -> Result<usize, ExecutionError> {
         // TODO: check trapped flag
 
@@ -146,9 +143,9 @@ impl<A: Allocator> State<A> {
 
     pub fn execute_instrs(
         &mut self,
-        instrs: &[Instr<A>],
+        instrs: &[Instr<V>],
         level: usize,
-        module: &Module<A>,
+        module: &Module<V>,
     ) -> Result<usize, ExecutionError> {
         for instr in instrs {
             match instr {
@@ -247,24 +244,24 @@ pub struct Block {
 }
 
 // TODO: #[derive(Debug)]
-pub struct ModuleInstance<A: Allocator> {
-    pub module: Module<A>,
-    pub state: State<A>,
+pub struct ModuleInstance<V: VectorFactory> {
+    pub module: Module<V>,
+    pub state: State<V>,
 }
 
-impl<A: Allocator> ModuleInstance<A> {
+impl<V: VectorFactory> ModuleInstance<V> {
     pub fn new(
-        module: Module<A>,
+        module: Module<V>,
 
         // TODO: Use builder
-        mem: A::Vector<u8>,
+        mem: V::Vector<u8>,
     ) -> Result<Self, ExecutionError> {
         if module.start_function().is_some() {
             todo!()
         }
 
         // TODO: check mem (min, max, pagesize)
-        let mut state = State::<A>::new(mem);
+        let mut state = State::<V>::new(mem);
 
         for global in module.globals().iter() {
             state.globals.push(global.init()?);
