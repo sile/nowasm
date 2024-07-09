@@ -263,6 +263,38 @@ impl Val {
         }
     }
 
+    pub fn as_i32(self) -> Option<i32> {
+        if let Self::I32(v) = self {
+            Some(v)
+        } else {
+            None
+        }
+    }
+
+    pub fn as_i64(self) -> Option<i64> {
+        if let Self::I64(v) = self {
+            Some(v)
+        } else {
+            None
+        }
+    }
+
+    pub fn as_f32(self) -> Option<f32> {
+        if let Self::F32(v) = self {
+            Some(v)
+        } else {
+            None
+        }
+    }
+
+    pub fn as_f64(self) -> Option<f64> {
+        if let Self::F64(v) = self {
+            Some(v)
+        } else {
+            None
+        }
+    }
+
     pub(crate) fn zero(ty: Valtype) -> Self {
         match ty {
             Valtype::I32 => Self::I32(0),
