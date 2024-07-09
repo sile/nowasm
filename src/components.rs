@@ -2,7 +2,7 @@ use crate::decode::Decode;
 use crate::execution::{ExecutionError, Value};
 use crate::instructions::Instr;
 use crate::reader::Reader;
-use crate::vectors::Vector;
+use crate::vector::Vector;
 use crate::{Allocator, DecodeError, Module};
 use core::fmt::{Debug, Formatter};
 

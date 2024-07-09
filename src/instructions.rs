@@ -2,7 +2,7 @@ use core::fmt::{Debug, Formatter};
 
 #[cfg(feature = "sign_extension")]
 use crate::instructions_sign_extension::SignExtensionInstr;
-use crate::vectors::Vector;
+use crate::vector::Vector;
 use crate::{
     components::{BlockType, Function, GlobalIdx, LabelIdx, LocalIdx, MemArg, TypeIdx},
     decode::Decode,

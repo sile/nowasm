@@ -1,4 +1,4 @@
-use crate::vectors::Vector;
+use crate::vector::Vector;
 use crate::{reader::Reader, Allocator};
 use core::fmt::{Display, Formatter};
 use core::str::Utf8Error;

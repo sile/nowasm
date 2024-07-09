@@ -7,7 +7,7 @@ pub(crate) mod instructions;
 #[cfg(feature = "sign_extension")]
 pub(crate) mod instructions_sign_extension;
 pub(crate) mod reader;
-pub(crate) mod vectors; // TODO: rename
+pub(crate) mod vector;
 
 pub mod execution; // TODO
 pub(crate) mod module;
@@ -18,9 +18,9 @@ pub use decode::DecodeError;
 pub use instructions::Instr;
 pub use module::Module;
 pub use validate::ValidateError;
-pub use vectors::{Allocator, Vector};
+pub use vector::{Allocator, Vector};
 
 #[cfg(feature = "std")]
-pub use vectors::{StdAllocator, StdVector};
+pub use vector::{StdAllocator, StdVector};
 
 pub const PAGE_SIZE: u32 = 65536;
