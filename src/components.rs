@@ -1,5 +1,5 @@
 use crate::decode::Decode;
-use crate::execute::{ExecutionError, Value};
+use crate::execute::{ExecuteError, Value};
 use crate::instructions::Instr;
 use crate::reader::Reader;
 use crate::vector::Vector;
@@ -394,14 +394,14 @@ impl<V: VectorFactory> Functype<V> {
         &self,
         args: &[Value],
         _module: &Module<impl VectorFactory>,
-    ) -> Result<(), ExecutionError> {
+    ) -> Result<(), ExecuteError> {
         if args.len() != self.params.len() {
-            return Err(ExecutionError::InvalidFuncArgs);
+            return Err(ExecuteError::InvalidFuncArgs);
         }
 
         for (&expected_type, actual_value) in self.params.iter().zip(args.iter()) {
             if expected_type != actual_value.ty() {
-                return Err(ExecutionError::InvalidFuncArgs);
+                return Err(ExecuteError::InvalidFuncArgs);
             }
         }
 
@@ -469,19 +469,19 @@ pub struct Global<V: VectorFactory> {
 }
 
 impl<V: VectorFactory> Global<V> {
-    pub fn init(&self) -> Result<Value, ExecutionError> {
+    pub fn init(&self) -> Result<Value, ExecuteError> {
         if self.init.instrs().len() != 1 {
-            return Err(ExecutionError::InvalidGlobalInitializer);
+            return Err(ExecuteError::InvalidGlobalInitializer);
         }
         let Some(instr) = self.init.instrs().iter().next() else {
-            return Err(ExecutionError::InvalidGlobalInitializer);
+            return Err(ExecuteError::InvalidGlobalInitializer);
         };
         match (self.ty.val_type(), instr) {
             (Valtype::I32, Instr::I32Const(x)) => Ok(Value::I32(*x)),
             (Valtype::I64, Instr::I64Const(x)) => Ok(Value::I64(*x)),
             (Valtype::F32, Instr::F32Const(x)) => Ok(Value::F32(*x)),
             (Valtype::F64, Instr::F64Const(x)) => Ok(Value::F64(*x)),
-            _ => Err(ExecutionError::InvalidGlobalInitializer),
+            _ => Err(ExecuteError::InvalidGlobalInitializer),
         }
     }
 }

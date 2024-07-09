@@ -7,7 +7,7 @@ use crate::{
 };
 
 #[derive(Debug, Clone, Copy)]
-pub enum ExecutionError {
+pub enum ExecuteError {
     NotExportedFunction,
     InvalidFuncidx,
     InvalidTypeidx,
@@ -125,18 +125,18 @@ impl<V: VectorFactory> State<V> {
         &mut self,
         func_idx: Funcidx,
         module: &Module<V>,
-    ) -> Result<usize, ExecutionError> {
+    ) -> Result<usize, ExecuteError> {
         // TODO: check trapped flag
 
         // TODO: Add validation phase
         let func = module
             .funcs()
             .get(func_idx.get())
-            .ok_or(ExecutionError::InvalidFuncidx)?;
+            .ok_or(ExecuteError::InvalidFuncidx)?;
         let func_type = module
             .types()
             .get(func.ty.get())
-            .ok_or(ExecutionError::InvalidFuncidx)?; // TODO: change reason
+            .ok_or(ExecuteError::InvalidFuncidx)?; // TODO: change reason
 
         let prev_frame = self.enter_frame(func_type, 0);
         for v in func.locals.iter().copied().map(Value::zero) {
@@ -152,11 +152,11 @@ impl<V: VectorFactory> State<V> {
         instrs: &[Instr<V>],
         level: usize,
         module: &Module<V>,
-    ) -> Result<usize, ExecutionError> {
+    ) -> Result<usize, ExecuteError> {
         for instr in instrs {
             match instr {
                 Instr::Nop => {}
-                Instr::Unreachable => return Err(ExecutionError::Trapped),
+                Instr::Unreachable => return Err(ExecuteError::Trapped),
                 Instr::GlobalSet(idx) => {
                     let v = self.pop_value();
                     self.globals[idx.get()] = v;
@@ -188,7 +188,7 @@ impl<V: VectorFactory> State<V> {
                     let start = (i + arg.offset as i32) as usize;
                     let end = start + v.byte_size();
                     if self.mem.len() < end {
-                        return Err(ExecutionError::Trapped);
+                        return Err(ExecuteError::Trapped);
                     }
                     v.copy_to(&mut self.mem[start..end]);
                 }
@@ -286,7 +286,7 @@ impl<V: VectorFactory> ModuleInstance<V> {
 
         // TODO: Use builder
         mem: V::Vector<u8>,
-    ) -> Result<Self, ExecutionError> {
+    ) -> Result<Self, ExecuteError> {
         if module.start().is_some() {
             todo!()
         }
@@ -305,11 +305,11 @@ impl<V: VectorFactory> ModuleInstance<V> {
         &mut self,
         function_name: &str,
         args: &[Value],
-    ) -> Result<Option<Value>, ExecutionError> {
+    ) -> Result<Option<Value>, ExecuteError> {
         let Some(export) = self.module.exports().iter().find(|export| {
             matches!(export.desc, Exportdesc::Func(_)) && function_name == export.name.as_str()
         }) else {
-            return Err(ExecutionError::NotExportedFunction);
+            return Err(ExecuteError::NotExportedFunction);
         };
         let Exportdesc::Func(func_idx) = export.desc else {
             unreachable!();
@@ -319,12 +319,12 @@ impl<V: VectorFactory> ModuleInstance<V> {
             .module
             .funcs()
             .get(func_idx.get())
-            .ok_or(ExecutionError::InvalidFuncidx)?;
+            .ok_or(ExecuteError::InvalidFuncidx)?;
         let func_type = self
             .module
             .types()
             .get(func.ty.get())
-            .ok_or(ExecutionError::InvalidTypeidx)?;
+            .ok_or(ExecuteError::InvalidTypeidx)?;
         func_type.validate_args(args, &self.module)?;
 
         for v in args.iter().copied() {

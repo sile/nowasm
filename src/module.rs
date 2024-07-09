@@ -4,7 +4,7 @@ use crate::{
         Typeidx,
     },
     decode::Decode,
-    execute::{ExecutionError, ModuleInstance, ModuleInstanceOptions},
+    execute::{ExecuteError, ModuleInstance, ModuleInstanceOptions},
     reader::Reader,
     vector::Vector,
     DecodeError, VectorFactory,
@@ -158,7 +158,7 @@ impl<V: VectorFactory> Module<V> {
     pub fn instantiate(
         self,
         options: ModuleInstanceOptions<V>,
-    ) -> Result<ModuleInstance<V>, ExecutionError> {
+    ) -> Result<ModuleInstance<V>, ExecuteError> {
         // TODO: validate
         let mem = options.mem.unwrap_or_else(|| V::create_vector(None));
         let instance = ModuleInstance::new(self, mem)?;
