@@ -6,34 +6,6 @@ use crate::vector::Vector;
 use crate::{DecodeError, Module, VectorFactory};
 use core::fmt::{Debug, Formatter};
 
-#[derive(Debug)]
-pub struct Magic;
-
-impl Magic {
-    pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
-        let mut value = [0; 4];
-        reader.read_exact(&mut value)?;
-        if value != *b"\0asm" {
-            return Err(DecodeError::InvalidMagic { value });
-        }
-        Ok(Self)
-    }
-}
-
-#[derive(Debug)]
-pub struct Version;
-
-impl Version {
-    pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
-        let mut value = [0; 4];
-        reader.read_exact(&mut value)?;
-        if value != [1, 0, 0, 0] {
-            return Err(DecodeError::InvalidVersion { value });
-        }
-        Ok(Self)
-    }
-}
-
 pub struct Name<V: VectorFactory>(V::Vector<u8>);
 
 impl<V: VectorFactory> Name<V> {
@@ -67,14 +39,14 @@ impl<V: VectorFactory> Clone for Name<V> {
 pub struct Import<V: VectorFactory> {
     pub module: Name<V>,
     pub name: Name<V>,
-    pub desc: ImportDesc,
+    pub desc: Importdesc,
 }
 
 impl<V: VectorFactory> Decode for Import<V> {
     fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         let module = Name::decode(reader)?;
         let name = Name::decode(reader)?;
-        let desc = ImportDesc::decode(reader)?;
+        let desc = Importdesc::decode(reader)?;
         Ok(Self { module, name, desc })
     }
 }
@@ -100,20 +72,20 @@ impl<V: VectorFactory> Clone for Import<V> {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub enum ImportDesc {
+pub enum Importdesc {
     Func(Typeidx),
     Table(Tabletype),
     Mem(Memtype),
-    Global(GlobalType),
+    Global(Globaltype),
 }
 
-impl ImportDesc {
+impl Importdesc {
     pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         match reader.read_u8()? {
             0x00 => Ok(Self::Func(Typeidx::decode(reader)?)),
             0x01 => Ok(Self::Table(Tabletype::decode(reader)?)),
             0x02 => Ok(Self::Mem(Memtype::decode(reader)?)),
-            0x03 => Ok(Self::Global(GlobalType::decode(reader)?)),
+            0x03 => Ok(Self::Global(Globaltype::decode(reader)?)),
             value => Err(DecodeError::InvalidImportDescTag { value }),
         }
     }
@@ -121,13 +93,13 @@ impl ImportDesc {
 
 pub struct Export<V: VectorFactory> {
     pub name: Name<V>,
-    pub desc: ExportDesc,
+    pub desc: Exportdesc,
 }
 
 impl<V: VectorFactory> Decode for Export<V> {
     fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         let name = Name::decode(reader)?;
-        let desc = ExportDesc::decode(reader)?;
+        let desc = Exportdesc::decode(reader)?;
         Ok(Self { name, desc })
     }
 }
@@ -151,20 +123,20 @@ impl<V: VectorFactory> Clone for Export<V> {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub enum ExportDesc {
+pub enum Exportdesc {
     Func(Funcidx),
-    Table(TableIdx),
-    Mem(MemIdx),
-    Global(GlobalIdx),
+    Table(Tableidx),
+    Mem(Memidx),
+    Global(Globalidx),
 }
 
-impl ExportDesc {
+impl Exportdesc {
     pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         match reader.read_u8()? {
             0x00 => Ok(Self::Func(Funcidx::decode(reader)?)),
-            0x01 => Ok(Self::Table(TableIdx::decode(reader)?)),
-            0x02 => Ok(Self::Mem(MemIdx::decode(reader)?)),
-            0x03 => Ok(Self::Global(GlobalIdx::decode(reader)?)),
+            0x01 => Ok(Self::Table(Tableidx::decode(reader)?)),
+            0x02 => Ok(Self::Mem(Memidx::decode(reader)?)),
+            0x03 => Ok(Self::Global(Globalidx::decode(reader)?)),
             value => Err(DecodeError::InvalidExportDescTag { value }),
         }
     }
@@ -176,13 +148,6 @@ pub struct Typeidx(u32);
 impl Typeidx {
     pub const fn get(self) -> usize {
         self.0 as usize
-    }
-}
-
-// TODO: delete
-impl From<Typeidx> for u32 {
-    fn from(idx: Typeidx) -> u32 {
-        idx.0
     }
 }
 
@@ -208,9 +173,9 @@ impl Decode for Funcidx {
 }
 
 #[derive(Debug, Default, Clone, Copy)]
-pub struct TableIdx;
+pub struct Tableidx;
 
-impl TableIdx {
+impl Tableidx {
     pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         let i = reader.read_u32()?;
         if i != 0 {
@@ -220,10 +185,10 @@ impl TableIdx {
     }
 }
 
-#[derive(Debug, Default, Clone, Copy)]
-pub struct MemIdx;
+#[derive(Debug, Clone, Copy)]
+pub struct Memidx;
 
-impl MemIdx {
+impl Memidx {
     pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         let i = reader.read_u32()?;
         if i != 0 {
@@ -234,73 +199,78 @@ impl MemIdx {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct GlobalIdx(u32);
+pub struct Globalidx(u32);
 
-impl GlobalIdx {
-    pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
-        reader.read_u32().map(Self)
-    }
-
-    pub fn get(self) -> u32 {
-        self.0
-    }
-
-    pub fn as_usize(self) -> usize {
+impl Globalidx {
+    pub const fn get(self) -> usize {
         self.0 as usize
+    }
+}
+
+impl Decode for Globalidx {
+    fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
+        reader.read_u32().map(Self)
     }
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct LocalIdx(u32);
+pub struct Localidx(u32);
 
-impl LocalIdx {
-    pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
-        reader.read_u32().map(Self)
-    }
-
-    pub fn get(self) -> u32 {
-        self.0
-    }
-
-    pub fn as_usize(self) -> usize {
+impl Localidx {
+    pub const fn get(self) -> usize {
         self.0 as usize
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub struct LabelIdx(u32);
+impl Decode for Localidx {
+    fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
+        reader.read_u32().map(Self)
+    }
+}
 
-impl LabelIdx {
-    pub fn new(v: u32) -> Self {
+#[derive(Debug, Clone, Copy)]
+pub struct Labelidx(u32);
+
+impl Labelidx {
+    pub const fn new(v: u32) -> Self {
         Self(v)
     }
 
-    pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
+    pub const fn get(self) -> usize {
+        self.0 as usize
+    }
+}
+
+impl Decode for Labelidx {
+    fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         reader.read_u32().map(Self)
-    }
-
-    pub fn get(self) -> u32 {
-        self.0
-    }
-
-    pub fn increment(self) -> Self {
-        Self(self.0 + 1)
     }
 }
 
 #[derive(Debug, Clone, Copy)]
 pub struct Tabletype {
+    pub elemtype: Elemtype,
     pub limits: Limits,
 }
 
 impl Decode for Tabletype {
     fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
+        let elemtype = Elemtype::decode(reader)?;
+        let limits = Limits::decode(reader)?;
+        Ok(Self { elemtype, limits })
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct Elemtype;
+
+impl Decode for Elemtype {
+    fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         let elem_type = reader.read_u8()?;
         if elem_type != 0x70 {
             return Err(DecodeError::InvalidElemType { value: elem_type });
         }
-        let limits = Limits::decode(reader)?;
-        Ok(Self { limits })
+        Ok(Self)
     }
 }
 
@@ -310,8 +280,8 @@ pub struct Limits {
     pub max: Option<u32>,
 }
 
-impl Limits {
-    pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
+impl Decode for Limits {
+    fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         match reader.read_u8()? {
             0x00 => {
                 let min = reader.read_u32()?;
@@ -332,8 +302,8 @@ pub struct Memtype {
     pub limits: Limits,
 }
 
-impl Memtype {
-    pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
+impl Decode for Memtype {
+    fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         Ok(Self {
             limits: Limits::decode(reader)?,
         })
@@ -341,25 +311,27 @@ impl Memtype {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub enum GlobalType {
+pub enum Globaltype {
     Const(Valtype),
     Var(Valtype),
 }
 
-impl GlobalType {
-    pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
+impl Globaltype {
+    pub fn val_type(self) -> Valtype {
+        match self {
+            Self::Const(t) => t,
+            Self::Var(t) => t,
+        }
+    }
+}
+
+impl Decode for Globaltype {
+    fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         let t = Valtype::decode(reader)?;
         match reader.read_u8()? {
             0x00 => Ok(Self::Const(t)),
             0x01 => Ok(Self::Var(t)),
             value => Err(DecodeError::InvalidMutabilityFlag { value }),
-        }
-    }
-
-    pub fn val_type(self) -> Valtype {
-        match self {
-            Self::Const(t) => t,
-            Self::Var(t) => t,
         }
     }
 }
@@ -509,16 +481,16 @@ impl<V: VectorFactory> Clone for ResultType<V> {
 }
 
 pub struct Global<V: VectorFactory> {
-    pub ty: GlobalType, // TODO: global_type
+    pub ty: Globaltype, // TODO: global_type
     pub init: Expr<V>,
 }
 
 impl<V: VectorFactory> Global<V> {
     pub fn init(&self) -> Result<Value, ExecutionError> {
-        if self.init.len() != 1 {
+        if self.init.instrs().len() != 1 {
             return Err(ExecutionError::InvalidGlobalInitializer);
         }
-        let Some(instr) = self.init.iter().next() else {
+        let Some(instr) = self.init.instrs().iter().next() else {
             return Err(ExecutionError::InvalidGlobalInitializer);
         };
         match (self.ty.val_type(), instr) {
@@ -533,7 +505,7 @@ impl<V: VectorFactory> Global<V> {
 
 impl<V: VectorFactory> Decode for Global<V> {
     fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
-        let ty = GlobalType::decode(reader)?;
+        let ty = Globaltype::decode(reader)?;
         let init = Expr::decode(reader)?;
         Ok(Self { ty, init })
     }
@@ -562,25 +534,19 @@ pub struct Expr<V: VectorFactory> {
 }
 
 impl<V: VectorFactory> Expr<V> {
-    pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
+    pub fn instrs(&self) -> &[Instr<V>] {
+        &self.instrs
+    }
+}
+
+impl<V: VectorFactory> Decode for Expr<V> {
+    fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         let mut instrs = V::create_vector(None);
         while reader.peek_u8()? != 0x0b {
             instrs.push(Instr::decode(reader)?);
         }
         reader.read_u8()?;
         Ok(Self { instrs })
-    }
-
-    pub fn len(&self) -> usize {
-        self.instrs.len()
-    }
-
-    pub fn instrs(&self) -> &[Instr<V>] {
-        &self.instrs
-    }
-
-    pub fn iter(&self) -> impl '_ + Iterator<Item = &Instr<V>> {
-        self.instrs.iter()
     }
 }
 
@@ -615,14 +581,14 @@ impl MemArg {
 }
 
 pub struct Elem<V: VectorFactory> {
-    pub table: TableIdx,
+    pub table: Tableidx,
     pub offset: Expr<V>,
     pub init: V::Vector<Funcidx>,
 }
 
 impl<V: VectorFactory> Decode for Elem<V> {
     fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
-        let table = TableIdx::decode(reader)?;
+        let table = Tableidx::decode(reader)?;
         let offset = Expr::decode(reader)?;
         let init = Funcidx::decode_vector::<V>(reader)?;
         Ok(Self {
@@ -653,24 +619,9 @@ impl<V: VectorFactory> Clone for Elem<V> {
     }
 }
 
-// TODO: priv
-pub struct Code<V: VectorFactory> {
+pub(crate) struct Code<V: VectorFactory> {
     pub locals: V::Vector<Valtype>,
     pub body: Expr<V>,
-}
-
-impl<V: VectorFactory> Code<V> {
-    pub fn locals(&self) -> impl '_ + Iterator<Item = Valtype> {
-        self.locals.iter().copied()
-    }
-
-    pub fn body_iter(&self) -> impl '_ + Iterator<Item = &Instr<V>> {
-        self.body.iter()
-    }
-
-    pub fn instrs(&self) -> &[Instr<V>] {
-        &self.body.instrs
-    }
 }
 
 impl<V: VectorFactory> Decode for Code<V> {
@@ -688,24 +639,6 @@ impl<V: VectorFactory> Decode for Code<V> {
         }
         let body = Expr::decode(&mut reader)?;
         Ok(Self { locals, body })
-    }
-}
-
-impl<V: VectorFactory> Debug for Code<V> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        f.debug_struct("Code")
-            .field("locals", &self.locals.as_ref())
-            .field("body", &self.body)
-            .finish()
-    }
-}
-
-impl<V: VectorFactory> Clone for Code<V> {
-    fn clone(&self) -> Self {
-        Self {
-            locals: V::clone_vector(&self.locals),
-            body: self.body.clone(),
-        }
     }
 }
 
@@ -751,14 +684,14 @@ impl S33 {
 }
 
 pub struct Data<V: VectorFactory> {
-    pub data: MemIdx,
+    pub data: Memidx,
     pub offset: Expr<V>,
     pub init: V::Vector<u8>,
 }
 
 impl<V: VectorFactory> Decode for Data<V> {
     fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
-        let data = MemIdx::decode(reader)?;
+        let data = Memidx::decode(reader)?;
         let offset = Expr::decode(reader)?;
         let init = u8::decode_vector::<V>(reader)?;
         Ok(Self { data, offset, init })

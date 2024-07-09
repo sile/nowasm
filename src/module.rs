@@ -1,7 +1,7 @@
 use crate::{
     components::{
-        Code, Data, Elem, Export, Func, Funcidx, Functype, Global, Import, Magic, Memtype,
-        Tabletype, Typeidx, Version,
+        Code, Data, Elem, Export, Func, Funcidx, Functype, Global, Import, Memtype, Tabletype,
+        Typeidx,
     },
     decode::Decode,
     reader::Reader,
@@ -232,6 +232,32 @@ impl<V: VectorFactory> Clone for Module<V> {
             imports: V::clone_vector(&self.imports),
             exports: V::clone_vector(&self.exports),
         }
+    }
+}
+
+struct Magic;
+
+impl Magic {
+    fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
+        let mut value = [0; 4];
+        reader.read_exact(&mut value)?;
+        if value != *b"\0asm" {
+            return Err(DecodeError::InvalidMagic { value });
+        }
+        Ok(Self)
+    }
+}
+
+struct Version;
+
+impl Version {
+    fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
+        let mut value = [0; 4];
+        reader.read_exact(&mut value)?;
+        if value != [1, 0, 0, 0] {
+            return Err(DecodeError::InvalidVersion { value });
+        }
+        Ok(Self)
     }
 }
 

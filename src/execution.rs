@@ -1,5 +1,5 @@
 use crate::{
-    components::{BlockType, ExportDesc, Funcidx, Functype, LocalIdx, Valtype},
+    components::{BlockType, Exportdesc, Funcidx, Functype, Localidx, Valtype},
     Instr, Module, Vector, VectorFactory,
 };
 
@@ -93,12 +93,12 @@ impl<V: VectorFactory> State<V> {
         self.current_block = prev;
     }
 
-    pub fn set_local(&mut self, i: LocalIdx, v: Value) {
+    pub fn set_local(&mut self, i: Localidx, v: Value) {
         let i = self.current_frame.locals_start + i.get() as usize;
         self.locals[i] = v;
     }
 
-    pub fn get_local(&self, i: LocalIdx) -> Value {
+    pub fn get_local(&self, i: Localidx) -> Value {
         let i = self.current_frame.locals_start + i.get() as usize;
         self.locals[i]
     }
@@ -156,10 +156,10 @@ impl<V: VectorFactory> State<V> {
                 Instr::Unreachable => return Err(ExecutionError::Trapped),
                 Instr::GlobalSet(idx) => {
                     let v = self.pop_value();
-                    self.globals[idx.as_usize()] = v;
+                    self.globals[idx.get()] = v;
                 }
                 Instr::GlobalGet(idx) => {
-                    let v = self.globals[idx.as_usize()];
+                    let v = self.globals[idx.get()];
                     self.push_value(v);
                 }
                 Instr::LocalSet(idx) => {
@@ -277,11 +277,11 @@ impl<V: VectorFactory> ModuleInstance<V> {
         args: &[Value],
     ) -> Result<Option<Value>, ExecutionError> {
         let Some(export) = self.module.exports().iter().find(|export| {
-            matches!(export.desc, ExportDesc::Func(_)) && function_name == export.name.as_str()
+            matches!(export.desc, Exportdesc::Func(_)) && function_name == export.name.as_str()
         }) else {
             return Err(ExecutionError::NotExportedFunction);
         };
-        let ExportDesc::Func(func_idx) = export.desc else {
+        let Exportdesc::Func(func_idx) = export.desc else {
             unreachable!();
         };
 

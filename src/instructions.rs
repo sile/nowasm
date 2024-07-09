@@ -2,7 +2,7 @@
 use crate::instructions_sign_extension::SignExtensionInstr;
 use crate::vector::Vector;
 use crate::{
-    components::{BlockType, Funcidx, GlobalIdx, LabelIdx, LocalIdx, MemArg, Typeidx},
+    components::{BlockType, Funcidx, Globalidx, Labelidx, Localidx, MemArg, Typeidx},
     decode::Decode,
     reader::Reader,
     DecodeError, VectorFactory,
@@ -16,8 +16,8 @@ pub enum Instr<V: VectorFactory> {
     Block(BlockInstr<V>),
     Loop(LoopInstr<V>),
     If(IfInstr<V>),
-    Br(LabelIdx),
-    BrIf(LabelIdx),
+    Br(Labelidx),
+    BrIf(Labelidx),
     BrTable(BrTableInstr<V>),
     Return,
     Call(Funcidx),
@@ -28,11 +28,11 @@ pub enum Instr<V: VectorFactory> {
     Select,
 
     // Variable Instructions
-    LocalGet(LocalIdx),
-    LocalSet(LocalIdx),
-    LocalTee(LocalIdx),
-    GlobalGet(GlobalIdx),
-    GlobalSet(GlobalIdx),
+    LocalGet(Localidx),
+    LocalSet(Localidx),
+    LocalTee(Localidx),
+    GlobalGet(Globalidx),
+    GlobalSet(Globalidx),
 
     // Memory Instructions
     I32Load(MemArg),
@@ -205,8 +205,8 @@ impl<V: VectorFactory> Instr<V> {
             0x02 => Ok(Self::Block(BlockInstr::decode(reader)?)),
             0x03 => Ok(Self::Loop(LoopInstr::decode(reader)?)),
             0x04 => Ok(Self::If(IfInstr::decode(reader)?)),
-            0x0c => Ok(Self::Br(LabelIdx::decode(reader)?)),
-            0x0d => Ok(Self::BrIf(LabelIdx::decode(reader)?)),
+            0x0c => Ok(Self::Br(Labelidx::decode(reader)?)),
+            0x0d => Ok(Self::BrIf(Labelidx::decode(reader)?)),
             0x0e => Ok(Self::BrTable(BrTableInstr::decode(reader)?)),
             0x0f => Ok(Self::Return),
             0x10 => Ok(Self::Call(Funcidx::decode(reader)?)),
@@ -226,11 +226,11 @@ impl<V: VectorFactory> Instr<V> {
             0x1b => Ok(Self::Select),
 
             // Variable Instructions
-            0x20 => Ok(Self::LocalGet(LocalIdx::decode(reader)?)),
-            0x21 => Ok(Self::LocalSet(LocalIdx::decode(reader)?)),
-            0x22 => Ok(Self::LocalTee(LocalIdx::decode(reader)?)),
-            0x23 => Ok(Self::GlobalGet(GlobalIdx::decode(reader)?)),
-            0x24 => Ok(Self::GlobalSet(GlobalIdx::decode(reader)?)),
+            0x20 => Ok(Self::LocalGet(Localidx::decode(reader)?)),
+            0x21 => Ok(Self::LocalSet(Localidx::decode(reader)?)),
+            0x22 => Ok(Self::LocalTee(Localidx::decode(reader)?)),
+            0x23 => Ok(Self::GlobalGet(Globalidx::decode(reader)?)),
+            0x24 => Ok(Self::GlobalSet(Globalidx::decode(reader)?)),
 
             // Memory Instructions
             0x28 => Ok(Self::I32Load(MemArg::decode(reader)?)),
@@ -905,7 +905,7 @@ impl<V: VectorFactory> Clone for IfInstr<V> {
 }
 
 pub struct BrTableInstr<V: VectorFactory> {
-    pub labels: V::Vector<LabelIdx>,
+    pub labels: V::Vector<Labelidx>,
 }
 
 impl<V: VectorFactory> BrTableInstr<V> {
@@ -913,7 +913,7 @@ impl<V: VectorFactory> BrTableInstr<V> {
         let n = reader.read_u32()? as usize + 1;
         let mut labels = V::create_vector(Some(n));
         for _ in 0..n {
-            labels.push(LabelIdx::decode(reader)?);
+            labels.push(Labelidx::decode(reader)?);
         }
         Ok(Self { labels })
     }
