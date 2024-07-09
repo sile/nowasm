@@ -103,7 +103,7 @@ impl<V: VectorFactory> Clone for Import<V> {
 pub enum ImportDesc {
     Func(Typeidx),
     Table(TableType),
-    Mem(MemType),
+    Mem(Memtype),
     Global(GlobalType),
 }
 
@@ -112,7 +112,7 @@ impl ImportDesc {
         match reader.read_u8()? {
             0x00 => Ok(Self::Func(Typeidx::decode(reader)?)),
             0x01 => Ok(Self::Table(TableType::decode(reader)?)),
-            0x02 => Ok(Self::Mem(MemType::decode(reader)?)),
+            0x02 => Ok(Self::Mem(Memtype::decode(reader)?)),
             0x03 => Ok(Self::Global(GlobalType::decode(reader)?)),
             value => Err(DecodeError::InvalidImportDescTag { value }),
         }
@@ -328,11 +328,11 @@ impl Limits {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct MemType {
+pub struct Memtype {
     pub limits: Limits,
 }
 
-impl MemType {
+impl Memtype {
     pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         Ok(Self {
             limits: Limits::decode(reader)?,

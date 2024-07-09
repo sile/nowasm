@@ -257,7 +257,7 @@ impl<V: VectorFactory> ModuleInstance<V> {
         // TODO: Use builder
         mem: V::Vector<u8>,
     ) -> Result<Self, ExecutionError> {
-        if module.start_function().is_some() {
+        if module.start().is_some() {
             todo!()
         }
 

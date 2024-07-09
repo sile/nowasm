@@ -1,6 +1,6 @@
 use crate::{
     components::{
-        Code, Data, Elem, Export, Func, Funcidx, Functype, Global, Import, Magic, MemType,
+        Code, Data, Elem, Export, Func, Funcidx, Functype, Global, Import, Magic, Memtype,
         TableType, Typeidx, Version,
     },
     decode::Decode,
@@ -14,14 +14,14 @@ use core::fmt::{Debug, Formatter};
 pub struct Module<V: VectorFactory> {
     types: V::Vector<Functype<V>>,
     funcs: V::Vector<Func<V>>,
+    tables: V::Vector<TableType>,
     imports: V::Vector<Import<V>>,
-    table_types: V::Vector<TableType>,
-    memory_type: Option<MemType>,
+    mem: Option<Memtype>,
     globals: V::Vector<Global<V>>,
+    elem: V::Vector<Elem<V>>,
+    data: V::Vector<Data<V>>,
+    start: Option<Funcidx>,
     exports: V::Vector<Export<V>>,
-    start_function: Option<Funcidx>,
-    elements: V::Vector<Elem<V>>,
-    data_segments: V::Vector<Data<V>>,
 }
 
 impl<V: VectorFactory> Module<V> {
@@ -29,14 +29,14 @@ impl<V: VectorFactory> Module<V> {
         let mut this = Self {
             types: V::create_vector(None),
             funcs: V::create_vector(None),
-            imports: V::create_vector(None),
-            table_types: V::create_vector(None),
-            memory_type: None,
+            tables: V::create_vector(None),
+            mem: None,
             globals: V::create_vector(None),
+            elem: V::create_vector(None),
+            data: V::create_vector(None),
+            start: None,
+            imports: V::create_vector(None),
             exports: V::create_vector(None),
-            start_function: None,
-            elements: V::create_vector(None),
-            data_segments: V::create_vector(None),
         };
         let mut reader = Reader::new(wasm_bytes);
 
@@ -81,7 +81,7 @@ impl<V: VectorFactory> Module<V> {
                     function_section = Decode::decode_vector::<V>(&mut section_reader)?;
                 }
                 SectionId::Table => {
-                    self.table_types = Decode::decode_vector::<V>(&mut section_reader)?;
+                    self.tables = Decode::decode_vector::<V>(&mut section_reader)?;
                 }
                 SectionId::Memory => {
                     let value = section_reader.read_u32()? as usize;
@@ -89,8 +89,8 @@ impl<V: VectorFactory> Module<V> {
                         return Err(DecodeError::InvalidMemoryCount { value });
                     }
                     if value == 1 {
-                        let mem = MemType::decode(&mut section_reader)?;
-                        self.memory_type = Some(mem);
+                        let mem = Memtype::decode(&mut section_reader)?;
+                        self.mem = Some(mem);
                     }
                 }
                 SectionId::Global => {
@@ -100,10 +100,10 @@ impl<V: VectorFactory> Module<V> {
                     self.exports = Decode::decode_vector::<V>(&mut section_reader)?;
                 }
                 SectionId::Start => {
-                    self.start_function = Some(Decode::decode(&mut section_reader)?);
+                    self.start = Some(Decode::decode(&mut section_reader)?);
                 }
                 SectionId::Element => {
-                    self.elements = Decode::decode_vector::<V>(&mut section_reader)?;
+                    self.elem = Decode::decode_vector::<V>(&mut section_reader)?;
                 }
                 SectionId::Code => {
                     let code_section: V::Vector<Code<V>> =
@@ -124,7 +124,7 @@ impl<V: VectorFactory> Module<V> {
                     }
                 }
                 SectionId::Data => {
-                    self.data_segments = Decode::decode_vector::<V>(&mut section_reader)?;
+                    self.data = Decode::decode_vector::<V>(&mut section_reader)?;
                 }
             }
             last_section_id = section_id;
@@ -153,36 +153,36 @@ impl<V: VectorFactory> Module<V> {
         &self.funcs
     }
 
-    pub fn imports(&self) -> &[Import<V>] {
-        &self.imports
+    pub fn tables(&self) -> &[TableType] {
+        &self.tables
     }
 
-    pub fn table_types(&self) -> &[TableType] {
-        &self.table_types
-    }
-
-    pub fn memory_type(&self) -> Option<MemType> {
-        self.memory_type
+    pub fn mem(&self) -> Option<Memtype> {
+        self.mem
     }
 
     pub fn globals(&self) -> &[Global<V>] {
         &self.globals
     }
 
+    pub fn elem(&self) -> &[Elem<V>] {
+        &self.elem
+    }
+
+    pub fn data(&self) -> &[Data<V>] {
+        &self.data
+    }
+
+    pub fn start(&self) -> Option<Funcidx> {
+        self.start
+    }
+
+    pub fn imports(&self) -> &[Import<V>] {
+        &self.imports
+    }
+
     pub fn exports(&self) -> &[Export<V>] {
         &self.exports
-    }
-
-    pub fn start_function(&self) -> Option<Funcidx> {
-        self.start_function
-    }
-
-    pub fn elements(&self) -> &[Elem<V>] {
-        &self.elements
-    }
-
-    pub fn data_segments(&self) -> &[Data<V>] {
-        &self.data_segments
     }
 }
 
@@ -191,14 +191,14 @@ impl<V: VectorFactory> Debug for Module<V> {
         f.debug_struct("Module")
             .field("types", &self.types.as_ref())
             .field("funcs", &self.funcs.as_ref())
-            .field("imports", &self.imports.as_ref())
-            .field("table_types", &self.table_types.as_ref())
-            .field("memory_type", &self.memory_type)
+            .field("tables", &self.tables.as_ref())
+            .field("mem", &self.mem)
             .field("globals", &self.globals.as_ref())
+            .field("elem", &self.elem.as_ref())
+            .field("data", &self.data.as_ref())
+            .field("start", &self.start)
+            .field("imports", &self.imports.as_ref())
             .field("exports", &self.exports.as_ref())
-            .field("start_function", &self.start_function)
-            .field("elements", &self.elements.as_ref())
-            .field("data_segments", &self.data_segments.as_ref())
             .finish()
     }
 }
@@ -208,14 +208,14 @@ impl<V: VectorFactory> Clone for Module<V> {
         Self {
             types: V::clone_vector(&self.types),
             funcs: V::clone_vector(&self.funcs),
-            imports: V::clone_vector(&self.imports),
-            table_types: V::clone_vector(&self.table_types),
-            memory_type: self.memory_type,
+            tables: V::clone_vector(&self.tables),
+            mem: self.mem,
             globals: V::clone_vector(&self.globals),
+            elem: V::clone_vector(&self.elem),
+            data: V::clone_vector(&self.data),
+            start: self.start,
+            imports: V::clone_vector(&self.imports),
             exports: V::clone_vector(&self.exports),
-            start_function: self.start_function,
-            elements: V::clone_vector(&self.elements),
-            data_segments: V::clone_vector(&self.data_segments),
         }
     }
 }
