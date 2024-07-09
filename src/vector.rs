@@ -4,14 +4,7 @@ pub trait VectorFactory {
     type Vector<T>: Vector<T>;
 
     fn create_vector<T>(capacity: Option<usize>) -> Self::Vector<T>;
-
-    fn clone_vector<T: Clone>(vector: &Self::Vector<T>) -> Self::Vector<T> {
-        let mut cloned = Self::create_vector(Some(vector.len()));
-        for v in vector.as_ref() {
-            cloned.push(v.clone());
-        }
-        cloned
-    }
+    fn clone_vector<T: Clone>(vector: &Self::Vector<T>) -> Self::Vector<T>;
 }
 
 pub trait Vector<T>: Deref<Target = [T]> + DerefMut<Target = [T]> {

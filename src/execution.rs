@@ -1,12 +1,13 @@
 use crate::{
-    components::{BlockType, ExportDesc, FuncType, Function, LocalIdx, ValType},
+    components::{BlockType, ExportDesc, Funcidx, Functype, LocalIdx, Valtype},
     Instr, Module, Vector, VectorFactory,
 };
 
 #[derive(Debug, Clone, Copy)]
 pub enum ExecutionError {
     NotExportedFunction,
-    InvalidFuncIdx,
+    InvalidFuncidx,
+    InvalidTypeidx,
     InvalidFuncArgs,
     InvalidGlobalInitializer,
     Trapped, // TODO: Add reason
@@ -35,7 +36,7 @@ impl<V: VectorFactory> State<V> {
         }
     }
 
-    pub fn enter_frame(&mut self, ty: &FuncType<V>, level: usize) -> Frame {
+    pub fn enter_frame(&mut self, ty: &Functype<V>, level: usize) -> Frame {
         let locals_start = self.locals.len();
         for _ in 0..ty.args_len() {
             let v = self.pop_value();
@@ -55,7 +56,7 @@ impl<V: VectorFactory> State<V> {
     }
 
     // TODO: delete unused parameter
-    pub fn exit_frame(&mut self, _ty: &FuncType<V>, prev: Frame) {
+    pub fn exit_frame(&mut self, _ty: &Functype<V>, prev: Frame) {
         let frame = self.current_frame;
 
         assert!(frame.locals_start <= self.locals.len());
@@ -119,24 +120,26 @@ impl<V: VectorFactory> State<V> {
 
     pub fn call_function(
         &mut self,
-        func_idx: Function,
+        func_idx: Funcidx,
         module: &Module<V>,
     ) -> Result<usize, ExecutionError> {
         // TODO: check trapped flag
 
         // TODO: Add validation phase
-        let func_type = func_idx
-            .get_type(module)
-            .ok_or(ExecutionError::InvalidFuncIdx)?;
-        let code = func_idx
-            .get_code(module)
-            .ok_or(ExecutionError::InvalidFuncIdx)?;
+        let func = module
+            .funcs()
+            .get(func_idx.get())
+            .ok_or(ExecutionError::InvalidFuncidx)?;
+        let func_type = module
+            .types()
+            .get(func.ty.get())
+            .ok_or(ExecutionError::InvalidFuncidx)?; // TODO: change reason
 
         let prev_frame = self.enter_frame(func_type, 0);
-        for v in code.locals().map(Value::zero) {
+        for v in func.locals.iter().copied().map(Value::zero) {
             self.locals.push(v);
         }
-        let value = self.execute_instrs(code.instrs(), 0, module)?; // TODO: set trapped flag if needed
+        let value = self.execute_instrs(func.body.instrs(), 0, module)?; // TODO: set trapped flag if needed
         self.exit_frame(func_type, prev_frame);
         Ok(value)
     }
@@ -282,9 +285,16 @@ impl<V: VectorFactory> ModuleInstance<V> {
             unreachable!();
         };
 
-        let func_type = func_idx
-            .get_type(&self.module)
-            .ok_or(ExecutionError::InvalidFuncIdx)?;
+        let func = self
+            .module
+            .funcs()
+            .get(func_idx.get())
+            .ok_or(ExecutionError::InvalidFuncidx)?;
+        let func_type = self
+            .module
+            .types()
+            .get(func.ty.get())
+            .ok_or(ExecutionError::InvalidTypeidx)?;
         func_type.validate_args(args, &self.module)?;
 
         for v in args.iter().copied() {
@@ -311,21 +321,21 @@ pub enum Value {
 }
 
 impl Value {
-    pub fn ty(self) -> ValType {
+    pub fn ty(self) -> Valtype {
         match self {
-            Value::I32(_) => ValType::I32,
-            Value::I64(_) => ValType::I64,
-            Value::F32(_) => ValType::F32,
-            Value::F64(_) => ValType::F64,
+            Value::I32(_) => Valtype::I32,
+            Value::I64(_) => Valtype::I64,
+            Value::F32(_) => Valtype::F32,
+            Value::F64(_) => Valtype::F64,
         }
     }
 
-    pub fn zero(ty: ValType) -> Self {
+    pub fn zero(ty: Valtype) -> Self {
         match ty {
-            ValType::I32 => Self::I32(0),
-            ValType::I64 => Self::I64(0),
-            ValType::F32 => Self::F32(0.0),
-            ValType::F64 => Self::F64(0.0),
+            Valtype::I32 => Self::I32(0),
+            Valtype::I64 => Self::I64(0),
+            Valtype::F32 => Self::F32(0.0),
+            Valtype::F64 => Self::F64(0.0),
         }
     }
 

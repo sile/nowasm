@@ -101,7 +101,7 @@ impl<V: VectorFactory> Clone for Import<V> {
 
 #[derive(Debug, Clone, Copy)]
 pub enum ImportDesc {
-    Func(TypeIdx),
+    Func(Typeidx),
     Table(TableType),
     Mem(MemType),
     Global(GlobalType),
@@ -110,7 +110,7 @@ pub enum ImportDesc {
 impl ImportDesc {
     pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         match reader.read_u8()? {
-            0x00 => Ok(Self::Func(TypeIdx::decode(reader)?)),
+            0x00 => Ok(Self::Func(Typeidx::decode(reader)?)),
             0x01 => Ok(Self::Table(TableType::decode(reader)?)),
             0x02 => Ok(Self::Mem(MemType::decode(reader)?)),
             0x03 => Ok(Self::Global(GlobalType::decode(reader)?)),
@@ -152,7 +152,7 @@ impl<V: VectorFactory> Clone for Export<V> {
 
 #[derive(Debug, Clone, Copy)]
 pub enum ExportDesc {
-    Func(Function),
+    Func(Funcidx),
     Table(TableIdx),
     Mem(MemIdx),
     Global(GlobalIdx),
@@ -161,7 +161,7 @@ pub enum ExportDesc {
 impl ExportDesc {
     pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         match reader.read_u8()? {
-            0x00 => Ok(Self::Func(Function::decode(reader)?)),
+            0x00 => Ok(Self::Func(Funcidx::decode(reader)?)),
             0x01 => Ok(Self::Table(TableIdx::decode(reader)?)),
             0x02 => Ok(Self::Mem(MemIdx::decode(reader)?)),
             0x03 => Ok(Self::Global(GlobalIdx::decode(reader)?)),
@@ -171,39 +171,37 @@ impl ExportDesc {
 }
 
 #[derive(Debug, Default, Clone, Copy)]
-pub struct TypeIdx(u32);
+pub struct Typeidx(u32);
 
-impl From<TypeIdx> for u32 {
-    fn from(idx: TypeIdx) -> u32 {
+impl Typeidx {
+    pub const fn get(self) -> usize {
+        self.0 as usize
+    }
+}
+
+// TODO: delete
+impl From<Typeidx> for u32 {
+    fn from(idx: Typeidx) -> u32 {
         idx.0
     }
 }
 
-impl Decode for TypeIdx {
+impl Decode for Typeidx {
     fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         reader.read_u32().map(Self)
     }
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct Function(u32);
+pub struct Funcidx(u32);
 
-impl Function {
-    pub const fn index(self) -> usize {
+impl Funcidx {
+    pub const fn get(self) -> usize {
         self.0 as usize
-    }
-
-    pub fn get_type<V: VectorFactory>(self, module: &Module<V>) -> Option<&FuncType<V>> {
-        let type_idx = module.functions().get(self.index())?;
-        module.function_types().get(type_idx.0 as usize)
-    }
-
-    pub fn get_code<V: VectorFactory>(self, module: &Module<V>) -> Option<&Code<V>> {
-        module.function_codes().get(self.index())
     }
 }
 
-impl Decode for Function {
+impl Decode for Funcidx {
     fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         reader.read_u32().map(Self)
     }
@@ -344,13 +342,13 @@ impl MemType {
 
 #[derive(Debug, Clone, Copy)]
 pub enum GlobalType {
-    Const(ValType),
-    Var(ValType),
+    Const(Valtype),
+    Var(Valtype),
 }
 
 impl GlobalType {
     pub fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
-        let t = ValType::decode(reader)?;
+        let t = Valtype::decode(reader)?;
         match reader.read_u8()? {
             0x00 => Ok(Self::Const(t)),
             0x01 => Ok(Self::Var(t)),
@@ -358,7 +356,7 @@ impl GlobalType {
         }
     }
 
-    pub fn val_type(self) -> ValType {
+    pub fn val_type(self) -> Valtype {
         match self {
             Self::Const(t) => t,
             Self::Var(t) => t,
@@ -367,14 +365,14 @@ impl GlobalType {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum ValType {
+pub enum Valtype {
     I32,
     I64,
     F32,
     F64,
 }
 
-impl Decode for ValType {
+impl Decode for Valtype {
     fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         match reader.read_u8()? {
             0x7f => Ok(Self::I32),
@@ -386,12 +384,38 @@ impl Decode for ValType {
     }
 }
 
-pub struct FuncType<V: VectorFactory> {
+pub struct Func<V: VectorFactory> {
+    pub ty: Typeidx,
+    pub locals: V::Vector<Valtype>,
+    pub body: Expr<V>,
+}
+
+impl<V: VectorFactory> Debug for Func<V> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("Func")
+            .field("ty", &self.ty)
+            .field("locals", &self.locals.as_ref())
+            .field("body", &self.body)
+            .finish()
+    }
+}
+
+impl<V: VectorFactory> Clone for Func<V> {
+    fn clone(&self) -> Self {
+        Self {
+            ty: self.ty,
+            locals: V::clone_vector(&self.locals),
+            body: self.body.clone(),
+        }
+    }
+}
+
+pub struct Functype<V: VectorFactory> {
     pub rt1: ResultType<V>,
     pub rt2: ResultType<V>,
 }
 
-impl<V: VectorFactory> FuncType<V> {
+impl<V: VectorFactory> Functype<V> {
     pub fn validate_args(
         &self,
         args: &[Value],
@@ -419,7 +443,7 @@ impl<V: VectorFactory> FuncType<V> {
     }
 }
 
-impl<V: VectorFactory> Decode for FuncType<V> {
+impl<V: VectorFactory> Decode for Functype<V> {
     fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         let tag = reader.read_u8()?;
         if tag != 0x60 {
@@ -431,7 +455,7 @@ impl<V: VectorFactory> Decode for FuncType<V> {
     }
 }
 
-impl<V: VectorFactory> Debug for FuncType<V> {
+impl<V: VectorFactory> Debug for Functype<V> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("FuncType")
             .field("rt1", &self.rt1)
@@ -440,7 +464,7 @@ impl<V: VectorFactory> Debug for FuncType<V> {
     }
 }
 
-impl<V: VectorFactory> Clone for FuncType<V> {
+impl<V: VectorFactory> Clone for Functype<V> {
     fn clone(&self) -> Self {
         Self {
             rt1: self.rt1.clone(),
@@ -450,7 +474,7 @@ impl<V: VectorFactory> Clone for FuncType<V> {
 }
 
 pub struct ResultType<V: VectorFactory> {
-    pub types: V::Vector<ValType>,
+    pub types: V::Vector<Valtype>,
 }
 
 impl<V: VectorFactory> ResultType<V> {
@@ -463,7 +487,7 @@ impl<V: VectorFactory> ResultType<V> {
         self.types.len()
     }
 
-    pub fn iter(&self) -> impl '_ + Iterator<Item = ValType> {
+    pub fn iter(&self) -> impl '_ + Iterator<Item = Valtype> {
         self.types.iter().copied()
     }
 }
@@ -498,10 +522,10 @@ impl<V: VectorFactory> Global<V> {
             return Err(ExecutionError::InvalidGlobalInitializer);
         };
         match (self.ty.val_type(), instr) {
-            (ValType::I32, Instr::I32Const(x)) => Ok(Value::I32(*x)),
-            (ValType::I64, Instr::I64Const(x)) => Ok(Value::I64(*x)),
-            (ValType::F32, Instr::F32Const(x)) => Ok(Value::F32(*x)),
-            (ValType::F64, Instr::F64Const(x)) => Ok(Value::F64(*x)),
+            (Valtype::I32, Instr::I32Const(x)) => Ok(Value::I32(*x)),
+            (Valtype::I64, Instr::I64Const(x)) => Ok(Value::I64(*x)),
+            (Valtype::F32, Instr::F32Const(x)) => Ok(Value::F32(*x)),
+            (Valtype::F64, Instr::F64Const(x)) => Ok(Value::F64(*x)),
             _ => Err(ExecutionError::InvalidGlobalInitializer),
         }
     }
@@ -551,6 +575,10 @@ impl<V: VectorFactory> Expr<V> {
         self.instrs.len()
     }
 
+    pub fn instrs(&self) -> &[Instr<V>] {
+        &self.instrs
+    }
+
     pub fn iter(&self) -> impl '_ + Iterator<Item = &Instr<V>> {
         self.instrs.iter()
     }
@@ -589,14 +617,14 @@ impl MemArg {
 pub struct Elem<V: VectorFactory> {
     pub table: TableIdx,
     pub offset: Expr<V>,
-    pub init: V::Vector<Function>,
+    pub init: V::Vector<Funcidx>,
 }
 
 impl<V: VectorFactory> Decode for Elem<V> {
     fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         let table = TableIdx::decode(reader)?;
         let offset = Expr::decode(reader)?;
-        let init = Function::decode_vector::<V>(reader)?;
+        let init = Funcidx::decode_vector::<V>(reader)?;
         Ok(Self {
             table,
             offset,
@@ -625,13 +653,14 @@ impl<V: VectorFactory> Clone for Elem<V> {
     }
 }
 
+// TODO: priv
 pub struct Code<V: VectorFactory> {
-    pub locals: V::Vector<ValType>,
+    pub locals: V::Vector<Valtype>,
     pub body: Expr<V>,
 }
 
 impl<V: VectorFactory> Code<V> {
-    pub fn locals(&self) -> impl '_ + Iterator<Item = ValType> {
+    pub fn locals(&self) -> impl '_ + Iterator<Item = Valtype> {
         self.locals.iter().copied()
     }
 
@@ -652,7 +681,7 @@ impl<V: VectorFactory> Decode for Code<V> {
         let locals_len = reader.read_usize()?;
         for _ in 0..locals_len {
             let val_types_len = reader.read_usize()?;
-            let val_type = ValType::decode(&mut reader)?;
+            let val_type = Valtype::decode(&mut reader)?;
             for _ in 0..val_types_len {
                 locals.push(val_type);
             }
@@ -683,7 +712,7 @@ impl<V: VectorFactory> Clone for Code<V> {
 #[derive(Debug, Clone, Copy)]
 pub enum BlockType {
     Empty,
-    Val(ValType),
+    Val(Valtype),
     TypeIndex(S33),
 }
 
@@ -702,7 +731,7 @@ impl BlockType {
         }
 
         reader.unread_u8();
-        if let Ok(t) = ValType::decode(reader) {
+        if let Ok(t) = Valtype::decode(reader) {
             return Ok(Self::Val(t));
         }
 

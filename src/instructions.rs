@@ -2,7 +2,7 @@
 use crate::instructions_sign_extension::SignExtensionInstr;
 use crate::vector::Vector;
 use crate::{
-    components::{BlockType, Function, GlobalIdx, LabelIdx, LocalIdx, MemArg, TypeIdx},
+    components::{BlockType, Funcidx, GlobalIdx, LabelIdx, LocalIdx, MemArg, Typeidx},
     decode::Decode,
     reader::Reader,
     DecodeError, VectorFactory,
@@ -20,8 +20,8 @@ pub enum Instr<V: VectorFactory> {
     BrIf(LabelIdx),
     BrTable(BrTableInstr<V>),
     Return,
-    Call(Function),
-    CallIndirect(TypeIdx),
+    Call(Funcidx),
+    CallIndirect(Typeidx),
 
     // Parametric Instructions
     Drop,
@@ -209,9 +209,9 @@ impl<V: VectorFactory> Instr<V> {
             0x0d => Ok(Self::BrIf(LabelIdx::decode(reader)?)),
             0x0e => Ok(Self::BrTable(BrTableInstr::decode(reader)?)),
             0x0f => Ok(Self::Return),
-            0x10 => Ok(Self::Call(Function::decode(reader)?)),
+            0x10 => Ok(Self::Call(Funcidx::decode(reader)?)),
             0x11 => {
-                let idx = TypeIdx::decode(reader)?;
+                let idx = Typeidx::decode(reader)?;
                 let table = reader.read_u8()?;
                 if table != 0 {
                     return Err(DecodeError::InvalidTableIdx {

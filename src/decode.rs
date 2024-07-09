@@ -73,12 +73,16 @@ pub enum DecodeError {
         last_section_id: u8,
         current_section_id: u8,
     },
-    InvalidSectionSize {
+    InvalidSectionByteSize {
         section_id: u8,
-        expected_size: usize,
-        actual_size: usize,
+        expected_byte_size: usize,
+        actual_byte_size: usize,
     },
     InvalidUtf8(Utf8Error),
+    MismatchFunctionAndCodeSectionSize {
+        function_section_size: usize,
+        code_section_size: usize,
+    },
     MalformedInteger,
 }
 
@@ -111,12 +115,16 @@ impl Display for DecodeError {
                 f,
                 "Invalid section order (last={last_section_id:?}), current={current_section_id:?})"
             ),
-            Self::InvalidSectionSize {
+            Self::InvalidSectionByteSize {
                 section_id,
-                expected_size,
-                actual_size,
-            } => write!(f,"Invalid section {section_id:?} size (expected={expected_size:?} bytes, actual={actual_size:?} bytes)"),
+                expected_byte_size,
+                actual_byte_size
+            } => write!(f,"Invalid section {section_id:?} byte size (expected={expected_byte_size:?} bytes, actual={actual_byte_size:?} bytes)"),
             Self::InvalidUtf8(e) => write!(f,"Invalid UTF-8 bytes ({e})"),
+            Self::MismatchFunctionAndCodeSectionSize {
+                function_section_size,
+                code_section_size
+            } => write!(f,"Mismatch function section size ({function_section_size:?}) and code section size ({code_section_size:?})"),
             Self::MalformedInteger => write!(f,"Malformed LEB128 integer"),
         }
     }

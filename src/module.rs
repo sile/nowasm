@@ -1,42 +1,41 @@
 use crate::{
     components::{
-        Code, Data, Elem, Export, FuncType, Function, Global, Import, Magic, MemType, TableType,
-        TypeIdx, Version,
+        Code, Data, Elem, Export, Func, Funcidx, Functype, Global, Import, Magic, MemType,
+        TableType, Typeidx, Version,
     },
     decode::Decode,
     reader::Reader,
     validate::ValidateError,
+    vector::Vector,
     DecodeError, VectorFactory,
 };
 use core::fmt::{Debug, Formatter};
 
 pub struct Module<V: VectorFactory> {
-    function_types: V::Vector<FuncType<V>>,
+    types: V::Vector<Functype<V>>,
+    funcs: V::Vector<Func<V>>,
     imports: V::Vector<Import<V>>,
-    functions: V::Vector<TypeIdx>, //TODO: Rename
     table_types: V::Vector<TableType>,
     memory_type: Option<MemType>,
     globals: V::Vector<Global<V>>,
     exports: V::Vector<Export<V>>,
-    start_function: Option<Function>,
+    start_function: Option<Funcidx>,
     elements: V::Vector<Elem<V>>,
-    function_codes: V::Vector<Code<V>>,
     data_segments: V::Vector<Data<V>>,
 }
 
 impl<V: VectorFactory> Module<V> {
     pub fn decode(wasm_bytes: &[u8]) -> Result<Self, DecodeError> {
         let mut this = Self {
-            function_types: V::create_vector(None),
+            types: V::create_vector(None),
+            funcs: V::create_vector(None),
             imports: V::create_vector(None),
-            functions: V::create_vector(None),
             table_types: V::create_vector(None),
             memory_type: None,
             globals: V::create_vector(None),
             exports: V::create_vector(None),
             start_function: None,
             elements: V::create_vector(None),
-            function_codes: V::create_vector(None),
             data_segments: V::create_vector(None),
         };
         let mut reader = Reader::new(wasm_bytes);
@@ -53,6 +52,7 @@ impl<V: VectorFactory> Module<V> {
 
     fn decode_sections(&mut self, reader: &mut Reader) -> Result<(), DecodeError> {
         let mut last_section_id = SectionId::Custom;
+        let mut function_section: V::Vector<Typeidx> = V::create_vector(None);
         while !reader.is_empty() {
             let section_id = SectionId::decode(reader)?;
             let section_size = reader.read_u32()? as usize;
@@ -72,13 +72,13 @@ impl<V: VectorFactory> Module<V> {
             match section_id {
                 SectionId::Custom => unreachable!(),
                 SectionId::Type => {
-                    self.function_types = Decode::decode_vector::<V>(&mut section_reader)?;
+                    self.types = Decode::decode_vector::<V>(&mut section_reader)?;
                 }
                 SectionId::Import => {
                     self.imports = Decode::decode_vector::<V>(&mut section_reader)?;
                 }
                 SectionId::Function => {
-                    self.functions = Decode::decode_vector::<V>(&mut section_reader)?;
+                    function_section = Decode::decode_vector::<V>(&mut section_reader)?;
                 }
                 SectionId::Table => {
                     self.table_types = Decode::decode_vector::<V>(&mut section_reader)?;
@@ -106,7 +106,22 @@ impl<V: VectorFactory> Module<V> {
                     self.elements = Decode::decode_vector::<V>(&mut section_reader)?;
                 }
                 SectionId::Code => {
-                    self.function_codes = Decode::decode_vector::<V>(&mut section_reader)?;
+                    let code_section: V::Vector<Code<V>> =
+                        Decode::decode_vector::<V>(&mut section_reader)?;
+                    if function_section.len() != code_section.len() {
+                        return Err(DecodeError::MismatchFunctionAndCodeSectionSize {
+                            function_section_size: function_section.len(),
+                            code_section_size: code_section.len(),
+                        });
+                    }
+                    self.funcs = V::create_vector(Some(function_section.len()));
+                    for (&ty, code) in function_section.iter().zip(code_section.iter()) {
+                        self.funcs.push(Func {
+                            ty,
+                            locals: V::clone_vector(&code.locals),
+                            body: code.body.clone(),
+                        });
+                    }
                 }
                 SectionId::Data => {
                     self.data_segments = Decode::decode_vector::<V>(&mut section_reader)?;
@@ -115,10 +130,10 @@ impl<V: VectorFactory> Module<V> {
             last_section_id = section_id;
 
             if !section_reader.is_empty() {
-                return Err(DecodeError::InvalidSectionSize {
+                return Err(DecodeError::InvalidSectionByteSize {
                     section_id: section_id as u8,
-                    expected_size: section_size,
-                    actual_size: section_reader.position(),
+                    expected_byte_size: section_size,
+                    actual_byte_size: section_reader.position(),
                 });
             }
         }
@@ -130,16 +145,16 @@ impl<V: VectorFactory> Module<V> {
         Ok(())
     }
 
-    pub fn function_types(&self) -> &[FuncType<V>] {
-        &self.function_types
+    pub fn types(&self) -> &[Functype<V>] {
+        &self.types
+    }
+
+    pub fn funcs(&self) -> &[Func<V>] {
+        &self.funcs
     }
 
     pub fn imports(&self) -> &[Import<V>] {
         &self.imports
-    }
-
-    pub fn functions(&self) -> &[TypeIdx] {
-        &self.functions
     }
 
     pub fn table_types(&self) -> &[TableType] {
@@ -158,16 +173,12 @@ impl<V: VectorFactory> Module<V> {
         &self.exports
     }
 
-    pub fn start_function(&self) -> Option<Function> {
+    pub fn start_function(&self) -> Option<Funcidx> {
         self.start_function
     }
 
     pub fn elements(&self) -> &[Elem<V>] {
         &self.elements
-    }
-
-    pub fn function_codes(&self) -> &[Code<V>] {
-        &self.function_codes
     }
 
     pub fn data_segments(&self) -> &[Data<V>] {
@@ -178,16 +189,15 @@ impl<V: VectorFactory> Module<V> {
 impl<V: VectorFactory> Debug for Module<V> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("Module")
-            .field("function_types", &self.function_types.as_ref())
+            .field("types", &self.types.as_ref())
+            .field("funcs", &self.funcs.as_ref())
             .field("imports", &self.imports.as_ref())
-            .field("functions", &self.functions.as_ref())
             .field("table_types", &self.table_types.as_ref())
             .field("memory_type", &self.memory_type)
             .field("globals", &self.globals.as_ref())
             .field("exports", &self.exports.as_ref())
             .field("start_function", &self.start_function)
             .field("elements", &self.elements.as_ref())
-            .field("function_codes", &self.function_codes.as_ref())
             .field("data_segments", &self.data_segments.as_ref())
             .finish()
     }
@@ -196,21 +206,21 @@ impl<V: VectorFactory> Debug for Module<V> {
 impl<V: VectorFactory> Clone for Module<V> {
     fn clone(&self) -> Self {
         Self {
-            function_types: V::clone_vector(&self.function_types),
+            types: V::clone_vector(&self.types),
+            funcs: V::clone_vector(&self.funcs),
             imports: V::clone_vector(&self.imports),
-            functions: V::clone_vector(&self.functions),
             table_types: V::clone_vector(&self.table_types),
             memory_type: self.memory_type,
             globals: V::clone_vector(&self.globals),
             exports: V::clone_vector(&self.exports),
             start_function: self.start_function,
             elements: V::clone_vector(&self.elements),
-            function_codes: V::clone_vector(&self.function_codes),
             data_segments: V::clone_vector(&self.data_segments),
         }
     }
 }
 
+// TODO: delete
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum SectionId {
     Custom = 0,
