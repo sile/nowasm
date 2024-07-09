@@ -3,10 +3,10 @@
 
 pub(crate) mod decode;
 pub(crate) mod execute;
-#[cfg(feature = "sign_extension")]
-pub(crate) mod instructions_sign_extension;
 pub(crate) mod module;
 pub(crate) mod reader;
+#[cfg(feature = "sign_extension")]
+pub(crate) mod sign_extension;
 pub(crate) mod vector;
 
 pub mod components;

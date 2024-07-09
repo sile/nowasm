@@ -8,7 +8,7 @@ use crate::{
 use core::fmt::{Debug, Formatter};
 
 #[cfg(feature = "sign_extension")]
-pub use crate::instructions_sign_extension::SignExtensionInstr;
+pub use crate::sign_extension::SignExtensionInstr;
 
 pub enum Instr<V: VectorFactory> {
     // Control Instructions
