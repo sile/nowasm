@@ -1,3 +1,5 @@
+use core::fmt::{Debug, Formatter};
+
 use crate::{
     components::{Blocktype, Exportdesc, Funcidx, Functype, Localidx, Valtype},
     instructions::Instr,
@@ -245,6 +247,32 @@ pub struct Block {
     pub values_start: usize,
 }
 
+pub struct ModuleInstanceOptions<V: VectorFactory> {
+    pub mem: Option<V::Vector<u8>>,
+}
+
+impl<V: VectorFactory> Default for ModuleInstanceOptions<V> {
+    fn default() -> Self {
+        Self { mem: None }
+    }
+}
+
+impl<V: VectorFactory> Clone for ModuleInstanceOptions<V> {
+    fn clone(&self) -> Self {
+        Self {
+            mem: self.mem.as_ref().map(V::clone_vector),
+        }
+    }
+}
+
+impl<V: VectorFactory> Debug for ModuleInstanceOptions<V> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("ModuleInstanceOptions")
+            .field("mem", &self.mem.as_ref().map(|v| v.as_ref()))
+            .finish()
+    }
+}
+
 // TODO: #[derive(Debug)]
 pub struct ModuleInstance<V: VectorFactory> {
     pub module: Module<V>,
@@ -252,7 +280,8 @@ pub struct ModuleInstance<V: VectorFactory> {
 }
 
 impl<V: VectorFactory> ModuleInstance<V> {
-    pub fn new(
+    // TODO:
+    pub(crate) fn new(
         module: Module<V>,
 
         // TODO: Use builder

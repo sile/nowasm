@@ -1,6 +1,6 @@
 use clap::Parser;
 use nowasm::{
-    execute::{ModuleInstance, Value},
+    execute::{ModuleInstanceOptions, Value},
     Module, StdVector, StdVectorFactory,
 };
 use orfail::{Failure, OrFail};
@@ -21,8 +21,12 @@ pub fn main() -> orfail::Result<()> {
         .map_err(|e| Failure::new(format!("{e:?}")))
         .or_fail()?;
 
-    let mem = StdVector::new(vec![0; 1024 * 1024]);
-    let mut instance = ModuleInstance::new(module, mem)
+    let options = ModuleInstanceOptions {
+        mem: Some(StdVector::new(vec![0; 1024 * 1024])),
+        ..Default::default()
+    };
+    let mut instance = module
+        .instantiate(options)
         .map_err(|e| Failure::new(format!("{e:?}")))
         .or_fail()?;
 

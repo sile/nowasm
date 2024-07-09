@@ -4,8 +4,8 @@ use crate::{
         Typeidx,
     },
     decode::Decode,
+    execute::{ExecutionError, ModuleInstance, ModuleInstanceOptions},
     reader::Reader,
-    validate::ValidateError,
     vector::Vector,
     DecodeError, VectorFactory,
 };
@@ -155,9 +155,14 @@ impl<V: VectorFactory> Module<V> {
         Ok(())
     }
 
-    pub fn instantiate(&self) -> Result<(), ValidateError> {
+    pub fn instantiate(
+        self,
+        options: ModuleInstanceOptions<V>,
+    ) -> Result<ModuleInstance<V>, ExecutionError> {
         // TODO: validate
-        Ok(())
+        let mem = options.mem.unwrap_or_else(|| V::create_vector(None));
+        let instance = ModuleInstance::new(self, mem)?;
+        Ok(instance)
     }
 
     pub fn types(&self) -> &[Functype<V>] {

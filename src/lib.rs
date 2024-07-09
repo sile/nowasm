@@ -7,7 +7,6 @@ pub mod execute; // TODO: priv
 pub(crate) mod instructions_sign_extension;
 pub(crate) mod module;
 pub(crate) mod reader;
-pub(crate) mod validate;
 pub(crate) mod vector;
 
 pub mod components;
@@ -15,7 +14,6 @@ pub mod instructions;
 
 pub use decode::DecodeError;
 pub use module::Module;
-pub use validate::ValidateError;
 pub use vector::{Vector, VectorFactory};
 
 #[cfg(feature = "std")]
