@@ -1,7 +1,7 @@
 use crate::{
     components::{Blocktype, Funcidx, Functype, Localidx, Valtype},
+    instance::FuncInst,
     instructions::Instr,
-    module_instance::FuncInst,
     Module, Vector, VectorFactory,
 };
 
@@ -38,12 +38,13 @@ impl<V: VectorFactory, H> State<V, H> {
     pub fn new(
         mem: V::Vector<u8>,
         table: V::Vector<Option<Funcidx>>,
+        globals: V::Vector<GlobalVal>,
         funcs: V::Vector<FuncInst<H>>,
     ) -> Self {
         Self {
             mem,
             table,
-            globals: V::create_vector(None),
+            globals,
             funcs,
             locals: V::create_vector(None),
             values: V::create_vector(None),

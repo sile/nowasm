@@ -3,8 +3,8 @@
 
 pub(crate) mod decode;
 pub(crate) mod execute;
+pub(crate) mod instance;
 pub(crate) mod module;
-pub(crate) mod module_instance; // TODO: rename (instance)
 pub(crate) mod reader;
 #[cfg(feature = "sign_extension")]
 pub(crate) mod sign_extension;
@@ -15,8 +15,8 @@ pub mod instructions;
 
 pub use decode::DecodeError;
 pub use execute::{ExecuteError, GlobalVal, Val};
+pub use instance::{HostFunc, ModuleInstance, Resolve};
 pub use module::Module;
-pub use module_instance::{HostFunc, ModuleInstance, Resolve};
 #[cfg(feature = "std")]
 pub use vector::{StdVector, StdVectorFactory};
 pub use vector::{Vector, VectorFactory};

@@ -126,14 +126,14 @@ impl<V: VectorFactory, H> ModuleInstance<V, H> {
             funcs.push(FuncInst::Module { funcs_index: i });
         }
 
-        if module.start().is_some() {
+        let state = State::<V, H>::new(mem, table, globals, funcs);
+        let this = Self { module, state };
+
+        if this.module.start().is_some() {
             todo!()
         }
 
-        let mut state = State::<V, H>::new(mem, table, funcs);
-        state.globals = globals;
-
-        Ok(Self { module, state })
+        Ok(this)
     }
 
     fn init_globals(
