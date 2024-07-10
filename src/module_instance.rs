@@ -65,7 +65,7 @@ impl<V: VectorFactory, H> ModuleInstance<V, H> {
         R: Resolve<HostFunc = H>,
     {
         let mut imported_mem = None;
-
+        let mut imported_globals = V::create_vector(None);
         for (index, import) in module.imports().iter().enumerate() {
             match &import.desc {
                 Importdesc::Func(_) => todo!(),
@@ -77,12 +77,17 @@ impl<V: VectorFactory, H> ModuleInstance<V, H> {
                     let resolved = V::clone_vector(resolved);
                     imported_mem = Some(resolved);
                 }
-                Importdesc::Global(_) => todo!(),
+                Importdesc::Global(ty) => {
+                    let resolved = resolver
+                        .resolve_global(import.module.as_str(), import.name.as_str(), ty.valtype())
+                        .ok_or_else(|| ExecuteError::UnresolvedImport { index })?;
+                    imported_globals.push(resolved);
+                }
             }
         }
 
-        let globals = []; // TODO
-        let mem = Self::init_mem(&globals, &module, imported_mem)?;
+        let globals = Self::init_globals(&imported_globals, &module)?;
+        let mem = Self::init_mem(&globals, imported_mem, &module)?;
 
         if module.start().is_some() {
             todo!()
@@ -97,10 +102,19 @@ impl<V: VectorFactory, H> ModuleInstance<V, H> {
         Ok(Self { module, state })
     }
 
+    fn init_globals(
+        imported_globals: &[Val],
+        module: &Module<V>,
+    ) -> Result<V::Vector<Val>, ExecuteError> {
+        // todo!()
+        dbg!(module.globals());
+        Ok(V::create_vector(None))
+    }
+
     fn init_mem(
         globals: &[Val],
-        module: &Module<V>,
         mut mem: Option<V::Vector<u8>>,
+        module: &Module<V>,
     ) -> Result<V::Vector<u8>, ExecuteError> {
         if let Some(ty) = module.mem() {
             if let Some(v) = &mem {

@@ -337,7 +337,7 @@ pub enum Globaltype {
 }
 
 impl Globaltype {
-    pub fn val_type(self) -> Valtype {
+    pub fn valtype(self) -> Valtype {
         match self {
             Self::Const(t) => t,
             Self::Var(t) => t,
@@ -489,7 +489,7 @@ pub struct Global {
 
 impl Global {
     pub fn init(&self /* TODO: imported globals */) -> Result<Val, ExecuteError> {
-        match (self.ty.val_type(), self.init) {
+        match (self.ty.valtype(), self.init) {
             (Valtype::I32, ConstantExpr::I32(x)) => Ok(Val::I32(x)),
             (Valtype::I64, ConstantExpr::I64(x)) => Ok(Val::I64(x)),
             (Valtype::F32, ConstantExpr::F32(x)) => Ok(Val::F32(x)),
@@ -522,13 +522,23 @@ impl I32ConstantExpr {
         match self {
             Self::I32(v) => Some(v),
             Self::Global(idx) => {
-                let Global {
-                    ty: Globaltype::Const(Valtype::I32),
-                    ..
-                } = module.globals().get(idx.get())?
+                // TODO: Remove once validation is implemented
+                let Globaltype::Const(Valtype::I32) = module
+                    .imports()
+                    .iter()
+                    .filter_map(|i| {
+                        if let Importdesc::Global(ty) = i.desc {
+                            Some(ty)
+                        } else {
+                            None
+                        }
+                    })
+                    .chain(module.globals().iter().map(|g| g.ty))
+                    .nth(idx.get())?
                 else {
                     return None;
                 };
+
                 let Val::I32(v) = globals.get(idx.get()).copied()? else {
                     return None;
                 };

@@ -12,3 +12,4 @@ TODO until v0.1.0
 
 - [ ] Add validation phase
 - [ ] Add doc comments
+- [ ] Add tests
