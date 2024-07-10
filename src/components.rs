@@ -488,17 +488,22 @@ pub struct Global {
 }
 
 impl Global {
-    pub fn init(&self /* TODO: imported globals */) -> Result<Val, ExecuteError> {
+    pub fn init(&self, imported_globals: &[Val]) -> Option<Val> {
         match (self.ty.valtype(), self.init) {
-            (Valtype::I32, ConstantExpr::I32(x)) => Ok(Val::I32(x)),
-            (Valtype::I64, ConstantExpr::I64(x)) => Ok(Val::I64(x)),
-            (Valtype::F32, ConstantExpr::F32(x)) => Ok(Val::F32(x)),
-            (Valtype::F64, ConstantExpr::F64(x)) => Ok(Val::F64(x)),
-            (_ty, ConstantExpr::Global(_idx)) => {
-                // TODO
-                Err(ExecuteError::InvalidGlobalInitializer)
+            (Valtype::I32, ConstantExpr::I32(v)) => Some(Val::I32(v)),
+            (Valtype::I64, ConstantExpr::I64(v)) => Some(Val::I64(v)),
+            (Valtype::F32, ConstantExpr::F32(v)) => Some(Val::F32(v)),
+            (Valtype::F64, ConstantExpr::F64(v)) => Some(Val::F64(v)),
+            (ty, ConstantExpr::Global(idx)) => {
+                // TODO: mutability check (use GlobalVal instead of Val)
+                let v = imported_globals.get(idx.get()).copied()?;
+                if v.ty() == ty {
+                    Some(v)
+                } else {
+                    None
+                }
             }
-            _ => Err(ExecuteError::InvalidGlobalInitializer),
+            _ => None,
         }
     }
 }
@@ -522,7 +527,7 @@ impl I32ConstantExpr {
         match self {
             Self::I32(v) => Some(v),
             Self::Global(idx) => {
-                // TODO: Remove once validation is implemented
+                // TODO: Remove this check once validation is implemented
                 let Globaltype::Const(Valtype::I32) = module
                     .imports()
                     .iter()

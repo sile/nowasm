@@ -94,10 +94,7 @@ impl<V: VectorFactory, H> ModuleInstance<V, H> {
         }
 
         let mut state = State::<V, H>::new(mem);
-
-        for global in module.globals().iter() {
-            state.globals.push(global.init()?);
-        }
+        state.globals = globals;
 
         Ok(Self { module, state })
     }
@@ -106,9 +103,20 @@ impl<V: VectorFactory, H> ModuleInstance<V, H> {
         imported_globals: &[Val],
         module: &Module<V>,
     ) -> Result<V::Vector<Val>, ExecuteError> {
-        // todo!()
-        dbg!(module.globals());
-        Ok(V::create_vector(None))
+        let n = imported_globals.len() + module.globals().len();
+        let mut globals = V::create_vector(Some(n));
+
+        for global in imported_globals {
+            globals.push(*global);
+        }
+
+        for (index, global) in module.globals().iter().enumerate() {
+            let v = global
+                .init(imported_globals)
+                .ok_or_else(|| ExecuteError::InvalidGlobal { index })?;
+            globals.push(v);
+        }
+        Ok(globals)
     }
 
     fn init_mem(
@@ -165,6 +173,15 @@ impl<V: VectorFactory, H> ModuleInstance<V, H> {
 
     pub fn mem_mut(&mut self) -> &mut [u8] {
         &mut self.state.mem
+    }
+
+    pub fn globals(&self) -> &[Val] {
+        &self.state.globals
+    }
+
+    pub fn globals_mut(&mut self) -> &mut [Val] {
+        // TODO: check mutability
+        &mut self.state.globals
     }
 
     // TODO: table

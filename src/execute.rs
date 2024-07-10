@@ -14,7 +14,7 @@ pub enum ExecuteError {
     InvalidFuncidx,
     InvalidTypeidx,
     InvalidFuncArgs,
-    InvalidGlobalInitializer,
+    InvalidGlobal { index: usize },
     Trapped, // TODO: Add reason
 }
 
