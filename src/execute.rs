@@ -4,6 +4,7 @@ use crate::{
     instructions::Instr,
     GlobalVal, Module, Val, Vector, VectorFactory,
 };
+use core::fmt::{Display, Formatter};
 
 #[derive(Debug, Clone, Copy)]
 pub enum ExecuteError {
@@ -13,13 +14,35 @@ pub enum ExecuteError {
     InvalidImportedTable,
     InvalidData { index: usize },
     InvalidElem { index: usize },
+    InvalidGlobal { index: usize },
     InvalidMemidx,
     InvalidFuncidx,
     InvalidTypeidx,
     InvalidFuncArgs,
-    InvalidGlobal { index: usize },
-    Trapped, // TODO: Add reason
+    Trapped,
 }
+
+impl Display for ExecuteError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        match self {
+            Self::NotExportedFunction => write!(f, "Not exported function"),
+            Self::UnresolvedImport { index } => write!(f, "Unresolved import: {}", index),
+            Self::InvalidImportedMem => write!(f, "Invalid imported memory"),
+            Self::InvalidImportedTable => write!(f, "Invalid imported table"),
+            Self::InvalidData { index } => write!(f, "Invalid data: {}", index),
+            Self::InvalidElem { index } => write!(f, "Invalid elem: {}", index),
+            Self::InvalidGlobal { index } => write!(f, "Invalid global: {}", index),
+            Self::InvalidMemidx => write!(f, "Invalid memidx"),
+            Self::InvalidFuncidx => write!(f, "Invalid funcidx"),
+            Self::InvalidTypeidx => write!(f, "Invalid typeidx"),
+            Self::InvalidFuncArgs => write!(f, "Invalid function arguments"),
+            Self::Trapped => write!(f, "Trapped"),
+        }
+    }
+}
+
+#[cfg(feature = "std")]
+impl std::error::Error for ExecuteError {}
 
 // TODO: Rename
 #[derive(Debug)]
