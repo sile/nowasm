@@ -84,13 +84,13 @@ impl<V: VectorFactory> Module<V> {
 
             match section_id {
                 SECTION_ID_TYPE => {
-                    self.types = Decode::decode_vector::<V>(&mut section_reader)?;
+                    self.types = Decode::<V>::decode_vector(&mut section_reader)?;
                 }
                 SECTION_ID_IMPORT => {
-                    self.imports = Decode::decode_vector::<V>(&mut section_reader)?;
+                    self.imports = Decode::<V>::decode_vector(&mut section_reader)?;
                 }
                 SECTION_ID_FUNCTION => {
-                    function_section = Decode::decode_vector::<V>(&mut section_reader)?;
+                    function_section = Decode::<V>::decode_vector(&mut section_reader)?;
                 }
                 SECTION_ID_TABLE => {
                     let value = section_reader.read_u32()? as usize;
@@ -98,7 +98,7 @@ impl<V: VectorFactory> Module<V> {
                         return Err(DecodeError::InvalidTableCount { value });
                     }
                     if value == 1 {
-                        let table = Decode::decode(&mut section_reader)?;
+                        let table = Decode::<V>::decode(&mut section_reader)?;
                         self.table = Some(table);
                     }
                 }
@@ -108,25 +108,25 @@ impl<V: VectorFactory> Module<V> {
                         return Err(DecodeError::InvalidMemoryCount { value });
                     }
                     if value == 1 {
-                        let mem = Decode::decode(&mut section_reader)?;
+                        let mem = Decode::<V>::decode(&mut section_reader)?;
                         self.mem = Some(mem);
                     }
                 }
                 SECTION_ID_GLOBAL => {
-                    self.globals = Decode::decode_vector::<V>(&mut section_reader)?;
+                    self.globals = Decode::<V>::decode_vector(&mut section_reader)?;
                 }
                 SECTION_ID_EXPORT => {
-                    self.exports = Decode::decode_vector::<V>(&mut section_reader)?;
+                    self.exports = Decode::<V>::decode_vector(&mut section_reader)?;
                 }
                 SECTION_ID_START => {
-                    self.start = Some(Decode::decode(&mut section_reader)?);
+                    self.start = Some(Decode::<V>::decode(&mut section_reader)?);
                 }
                 SECTION_ID_ELEMENT => {
-                    self.elems = Decode::decode_vector::<V>(&mut section_reader)?;
+                    self.elems = Decode::<V>::decode_vector(&mut section_reader)?;
                 }
                 SECTION_ID_CODE => {
                     let code_section: V::Vector<Code<V>> =
-                        Decode::decode_vector::<V>(&mut section_reader)?;
+                        Decode::<V>::decode_vector(&mut section_reader)?;
                     if function_section.len() != code_section.len() {
                         return Err(DecodeError::MismatchFunctionAndCodeSectionSize {
                             function_section_size: function_section.len(),
@@ -143,7 +143,7 @@ impl<V: VectorFactory> Module<V> {
                     }
                 }
                 SECTION_ID_DATA => {
-                    self.datas = Decode::decode_vector::<V>(&mut section_reader)?;
+                    self.datas = Decode::<V>::decode_vector(&mut section_reader)?;
                 }
                 _ => {
                     return Err(DecodeError::InvalidSectionId { value: section_id });

@@ -3,12 +3,10 @@ use crate::{reader::Reader, VectorFactory};
 use core::fmt::{Display, Formatter};
 use core::str::Utf8Error;
 
-pub trait Decode: Sized {
+pub trait Decode<V: VectorFactory>: Sized {
     fn decode(reader: &mut Reader) -> Result<Self, DecodeError>;
 
-    fn decode_vector<V: VectorFactory>(
-        reader: &mut Reader,
-    ) -> Result<V::Vector<Self>, DecodeError> {
+    fn decode_vector(reader: &mut Reader) -> Result<V::Vector<Self>, DecodeError> {
         let len = reader.read_usize()?;
         let mut items = V::create_vector(Some(len));
         for _ in 0..len {
@@ -18,7 +16,7 @@ pub trait Decode: Sized {
     }
 }
 
-impl Decode for u8 {
+impl<V: VectorFactory> Decode<V> for u8 {
     fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         reader.read_u8()
     }
