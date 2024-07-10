@@ -1,6 +1,7 @@
 use crate::{
     components::{Blocktype, Funcidx, Functype, Localidx, Valtype},
     instructions::Instr,
+    module_instance::FuncInst,
     Module, Vector, VectorFactory,
 };
 
@@ -26,24 +27,28 @@ pub struct State<V: VectorFactory, H> {
     pub mem: V::Vector<u8>,
     pub table: V::Vector<Option<Funcidx>>,
     pub globals: V::Vector<GlobalVal>,
+    pub funcs: V::Vector<FuncInst<H>>,
     pub locals: V::Vector<Val>,
     pub values: V::Vector<Val>,
     pub current_frame: Frame,
     pub current_block: Block,
-    pub host_funcs: V::Vector<H>,
 }
 
 impl<V: VectorFactory, H> State<V, H> {
-    pub fn new(mem: V::Vector<u8>, table: V::Vector<Option<Funcidx>>) -> Self {
+    pub fn new(
+        mem: V::Vector<u8>,
+        table: V::Vector<Option<Funcidx>>,
+        funcs: V::Vector<FuncInst<H>>,
+    ) -> Self {
         Self {
             mem,
             table,
             globals: V::create_vector(None),
+            funcs,
             locals: V::create_vector(None),
             values: V::create_vector(None),
             current_frame: Frame::root(),
             current_block: Block::default(),
-            host_funcs: V::create_vector(None),
         }
     }
 

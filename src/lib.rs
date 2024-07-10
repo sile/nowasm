@@ -4,7 +4,7 @@
 pub(crate) mod decode;
 pub(crate) mod execute;
 pub(crate) mod module;
-pub(crate) mod module_instance;
+pub(crate) mod module_instance; // TODO: rename (instance)
 pub(crate) mod reader;
 #[cfg(feature = "sign_extension")]
 pub(crate) mod sign_extension;

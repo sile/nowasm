@@ -15,6 +15,12 @@ impl HostFunc for () {
     }
 }
 
+#[derive(Debug)]
+pub enum FuncInst<H> {
+    Imported { imports_index: usize, host_func: H },
+    Module { funcs_index: usize },
+}
+
 pub trait Resolve {
     type HostFunc: HostFunc;
 
@@ -67,9 +73,27 @@ impl<V: VectorFactory, H> ModuleInstance<V, H> {
         let mut imported_mem = None;
         let mut imported_table = None;
         let mut imported_globals = V::create_vector(None);
+        let mut imported_funcs = V::create_vector(None);
         for (index, import) in module.imports().iter().enumerate() {
             match &import.desc {
-                Importdesc::Func(_) => todo!(),
+                Importdesc::Func(typeidx) => {
+                    let ty = module
+                        .types()
+                        .get(typeidx.get())
+                        .ok_or_else(|| ExecuteError::UnresolvedImport { index })?;
+                    let host_func = resolver
+                        .resolve_func(
+                            import.module.as_str(),
+                            import.name.as_str(),
+                            &ty.params,
+                            ty.result,
+                        )
+                        .ok_or_else(|| ExecuteError::UnresolvedImport { index })?;
+                    imported_funcs.push(FuncInst::Imported {
+                        imports_index: index,
+                        host_func,
+                    });
+                }
                 Importdesc::Table(ty) => {
                     let resolved = resolver
                         .resolve_table(import.module.as_str(), import.name.as_str(), ty.limits)
@@ -97,11 +121,16 @@ impl<V: VectorFactory, H> ModuleInstance<V, H> {
         let mem = Self::init_mem(&globals, imported_mem, &module)?;
         let table = Self::init_table(&globals, imported_table, &module)?;
 
+        let mut funcs = imported_funcs;
+        for i in 0..module.funcs().len() {
+            funcs.push(FuncInst::Module { funcs_index: i });
+        }
+
         if module.start().is_some() {
             todo!()
         }
 
-        let mut state = State::<V, H>::new(mem, table);
+        let mut state = State::<V, H>::new(mem, table, funcs);
         state.globals = globals;
 
         Ok(Self { module, state })
