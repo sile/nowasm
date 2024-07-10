@@ -9,6 +9,7 @@ pub enum ExecuteError {
     NotExportedFunction,
     UnresolvedImport { index: usize },
     InvalidImportedMem,
+    InvalidData { index: usize },
     InvalidMemidx,
     InvalidFuncidx,
     InvalidTypeidx,

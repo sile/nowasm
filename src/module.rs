@@ -30,7 +30,7 @@ pub struct Module<V: VectorFactory> {
     table: Option<Tabletype>,
     imports: V::Vector<Import<V>>,
     mem: Option<Memtype>,
-    globals: V::Vector<Global<V>>,
+    globals: V::Vector<Global>,
     elems: V::Vector<Elem<V>>,
     datas: V::Vector<Data<V>>,
     start: Option<Funcidx>,
@@ -187,7 +187,7 @@ impl<V: VectorFactory> Module<V> {
         self.mem
     }
 
-    pub fn globals(&self) -> &[Global<V>] {
+    pub fn globals(&self) -> &[Global] {
         &self.globals
     }
 

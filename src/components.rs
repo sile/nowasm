@@ -481,52 +481,33 @@ impl Decode for Resulttype {
     }
 }
 
-pub struct Global<V: VectorFactory> {
+#[derive(Debug, Clone)]
+pub struct Global {
     pub ty: Globaltype,
-    pub init: Expr<V>,
+    pub init: ConstantExpr,
 }
 
-impl<V: VectorFactory> Global<V> {
-    pub fn init(&self) -> Result<Val, ExecuteError> {
-        if self.init.instrs().len() != 1 {
-            return Err(ExecuteError::InvalidGlobalInitializer);
-        }
-        let Some(instr) = self.init.instrs().iter().next() else {
-            return Err(ExecuteError::InvalidGlobalInitializer);
-        };
-        match (self.ty.val_type(), instr) {
-            (Valtype::I32, Instr::I32Const(x)) => Ok(Val::I32(*x)),
-            (Valtype::I64, Instr::I64Const(x)) => Ok(Val::I64(*x)),
-            (Valtype::F32, Instr::F32Const(x)) => Ok(Val::F32(*x)),
-            (Valtype::F64, Instr::F64Const(x)) => Ok(Val::F64(*x)),
+impl Global {
+    pub fn init(&self /* TODO: imported globals */) -> Result<Val, ExecuteError> {
+        match (self.ty.val_type(), self.init) {
+            (Valtype::I32, ConstantExpr::I32(x)) => Ok(Val::I32(x)),
+            (Valtype::I64, ConstantExpr::I64(x)) => Ok(Val::I64(x)),
+            (Valtype::F32, ConstantExpr::F32(x)) => Ok(Val::F32(x)),
+            (Valtype::F64, ConstantExpr::F64(x)) => Ok(Val::F64(x)),
+            (_ty, ConstantExpr::Global(_idx)) => {
+                // TODO
+                Err(ExecuteError::InvalidGlobalInitializer)
+            }
             _ => Err(ExecuteError::InvalidGlobalInitializer),
         }
     }
 }
 
-impl<V: VectorFactory> Decode for Global<V> {
+impl Decode for Global {
     fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         let ty = Globaltype::decode(reader)?;
-        let init = Expr::decode(reader)?;
+        let init = ConstantExpr::decode(reader)?;
         Ok(Self { ty, init })
-    }
-}
-
-impl<V: VectorFactory> Debug for Global<V> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        f.debug_struct("Global")
-            .field("ty", &self.ty)
-            .field("init", &self.init)
-            .finish()
-    }
-}
-
-impl<V: VectorFactory> Clone for Global<V> {
-    fn clone(&self) -> Self {
-        Self {
-            ty: self.ty.clone(),
-            init: self.init.clone(),
-        }
     }
 }
 
@@ -534,6 +515,27 @@ impl<V: VectorFactory> Clone for Global<V> {
 pub enum I32ConstantExpr {
     I32(i32),
     Global(Globalidx),
+}
+
+impl I32ConstantExpr {
+    pub fn get<V: VectorFactory>(self, globals: &[Val], module: &Module<V>) -> Option<i32> {
+        match self {
+            Self::I32(v) => Some(v),
+            Self::Global(idx) => {
+                let Global {
+                    ty: Globaltype::Const(Valtype::I32),
+                    ..
+                } = module.globals().get(idx.get())?
+                else {
+                    return None;
+                };
+                let Val::I32(v) = globals.get(idx.get()).copied()? else {
+                    return None;
+                };
+                Some(v)
+            }
+        }
+    }
 }
 
 impl Decode for I32ConstantExpr {

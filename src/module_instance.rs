@@ -81,7 +81,8 @@ impl<V: VectorFactory, H> ModuleInstance<V, H> {
             }
         }
 
-        let mem = Self::init_mem(&module, imported_mem)?;
+        let globals = []; // TODO
+        let mem = Self::init_mem(&globals, &module, imported_mem)?;
 
         if module.start().is_some() {
             todo!()
@@ -97,6 +98,7 @@ impl<V: VectorFactory, H> ModuleInstance<V, H> {
     }
 
     fn init_mem(
+        globals: &[Val],
         module: &Module<V>,
         mut mem: Option<V::Vector<u8>>,
     ) -> Result<V::Vector<u8>, ExecuteError> {
@@ -115,14 +117,25 @@ impl<V: VectorFactory, H> ModuleInstance<V, H> {
         } else if mem.is_some() {
             return Err(ExecuteError::InvalidImportedMem);
         }
-        let mem = mem.unwrap_or_else(|| V::create_vector(None));
 
-        for data in module.datas() {
+        let mut mem = mem.unwrap_or_else(|| V::create_vector(None));
+        for (index, data) in module.datas().iter().enumerate() {
             if module.mem().is_none() {
-                return Err(ExecuteError::InvalidMemidx);
+                return Err(ExecuteError::InvalidData { index });
             }
-            // data.offset;
-            // data.init;
+            let Some(offset) = data.offset.get(globals, module) else {
+                return Err(ExecuteError::InvalidData { index });
+            };
+            if offset < 0 {
+                return Err(ExecuteError::InvalidData { index });
+            }
+
+            let start = offset as usize;
+            let end = start + data.init.len();
+            if mem.len() < end {
+                return Err(ExecuteError::InvalidData { index });
+            }
+            (&mut mem[start..end]).copy_from_slice(&data.init);
         }
 
         Ok(mem)
