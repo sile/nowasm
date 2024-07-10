@@ -127,10 +127,11 @@ impl<V: VectorFactory, H> ModuleInstance<V, H> {
         }
 
         let state = State::<V, H>::new(mem, table, globals, funcs);
-        let this = Self { module, state };
+        let mut this = Self { module, state };
 
-        if this.module.start().is_some() {
-            todo!()
+        if let Some(funcidx) = this.module.start() {
+            // TODO: check function type (in decoding phase?)
+            this.state.call_function(funcidx, &this.module)?;
         }
 
         Ok(this)
