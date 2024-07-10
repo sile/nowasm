@@ -1,8 +1,8 @@
 use crate::{
-    components::{Blocktype, Funcidx, Functype, Localidx, Valtype},
+    components::{Blocktype, Funcidx, Functype, Localidx},
     instance::FuncInst,
     instructions::Instr,
-    Module, Vector, VectorFactory,
+    GlobalVal, Module, Val, Vector, VectorFactory,
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -259,111 +259,4 @@ impl Frame {
 pub struct Block {
     pub arity: usize,
     pub values_start: usize,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct GlobalVal {
-    is_const: bool,
-    val: Val,
-}
-
-impl GlobalVal {
-    pub(crate) const fn new(is_const: bool, val: Val) -> Self {
-        Self { is_const, val }
-    }
-
-    pub const fn is_const(self) -> bool {
-        self.is_const
-    }
-
-    pub const fn get(self) -> Val {
-        self.val
-    }
-
-    pub fn set(&mut self, val: Val) -> bool {
-        if !self.is_const {
-            self.val = val;
-            true
-        } else {
-            false
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum Val {
-    I32(i32),
-    I64(i64),
-    F32(f32),
-    F64(f64),
-}
-
-impl Val {
-    pub const fn ty(self) -> Valtype {
-        match self {
-            Self::I32(_) => Valtype::I32,
-            Self::I64(_) => Valtype::I64,
-            Self::F32(_) => Valtype::F32,
-            Self::F64(_) => Valtype::F64,
-        }
-    }
-
-    pub const fn as_i32(self) -> Option<i32> {
-        if let Self::I32(v) = self {
-            Some(v)
-        } else {
-            None
-        }
-    }
-
-    pub const fn as_i64(self) -> Option<i64> {
-        if let Self::I64(v) = self {
-            Some(v)
-        } else {
-            None
-        }
-    }
-
-    pub const fn as_f32(self) -> Option<f32> {
-        if let Self::F32(v) = self {
-            Some(v)
-        } else {
-            None
-        }
-    }
-
-    pub const fn as_f64(self) -> Option<f64> {
-        if let Self::F64(v) = self {
-            Some(v)
-        } else {
-            None
-        }
-    }
-
-    pub(crate) fn zero(ty: Valtype) -> Self {
-        match ty {
-            Valtype::I32 => Self::I32(0),
-            Valtype::I64 => Self::I64(0),
-            Valtype::F32 => Self::F32(0.0),
-            Valtype::F64 => Self::F64(0.0),
-        }
-    }
-
-    pub(crate) fn byte_size(self) -> usize {
-        match self {
-            Self::I32(_) => 4,
-            Self::I64(_) => 8,
-            Self::F32(_) => 4,
-            Self::F64(_) => 8,
-        }
-    }
-
-    pub(crate) fn copy_to(self, mem: &mut [u8]) {
-        match self {
-            Self::I32(v) => mem.copy_from_slice(&v.to_le_bytes()),
-            Self::I64(v) => mem.copy_from_slice(&v.to_le_bytes()),
-            Self::F32(v) => mem.copy_from_slice(&v.to_le_bytes()),
-            Self::F64(v) => mem.copy_from_slice(&v.to_le_bytes()),
-        }
-    }
 }

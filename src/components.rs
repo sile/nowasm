@@ -1,9 +1,8 @@
 use crate::decode::Decode;
-use crate::execute::{ExecuteError, Val};
 use crate::instructions::Instr;
 use crate::reader::Reader;
 use crate::vector::Vector;
-use crate::{DecodeError, GlobalVal, Module, VectorFactory, PAGE_SIZE};
+use crate::{DecodeError, ExecuteError, GlobalVal, Module, Val, VectorFactory, PAGE_SIZE};
 use core::fmt::{Debug, Formatter};
 
 pub struct Name<V: VectorFactory>(V::Vector<u8>);
