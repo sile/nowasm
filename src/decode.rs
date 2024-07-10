@@ -75,6 +75,7 @@ pub enum DecodeError {
     InvalidOpcode {
         value: u8,
     },
+    UnexpectedExpr,
     InvalidSectionOrder {
         last_section_id: u8,
         current_section_id: u8,
@@ -116,6 +117,7 @@ impl Display for DecodeError {
             Self::InvalidMemIdx { value } => write!(f, "Invalid memory index {value:?}"),
             Self::InvalidTableIdx { value } => write!(f, "Invalid table index {value:?}"),
             Self::InvalidOpcode { value } => write!(f, "Invalid opcode {value:?}"),
+            Self::UnexpectedExpr => write!(f, "Unexpected expression"),
             Self::InvalidSectionOrder {
                 last_section_id,
                 current_section_id,
@@ -127,12 +129,12 @@ impl Display for DecodeError {
                 section_id,
                 expected_byte_size,
                 actual_byte_size
-            } => write!(f,"Invalid section {section_id:?} byte size (expected={expected_byte_size:?} bytes, actual={actual_byte_size:?} bytes)"),
+            } => write!(f, "Invalid section {section_id:?} byte size (expected={expected_byte_size:?} bytes, actual={actual_byte_size:?} bytes)"),
             Self::InvalidUtf8(e) => write!(f,"Invalid UTF-8 bytes ({e})"),
             Self::MismatchFunctionAndCodeSectionSize {
                 function_section_size,
                 code_section_size
-            } => write!(f,"Mismatch function section size ({function_section_size:?}) and code section size ({code_section_size:?})"),
+            } => write!(f, "Mismatch function section size ({function_section_size:?}) and code section size ({code_section_size:?})"),
             Self::MalformedInteger => write!(f,"Malformed LEB128 integer"),
         }
     }

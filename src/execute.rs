@@ -8,7 +8,8 @@ use crate::{
 pub enum ExecuteError {
     NotExportedFunction,
     UnresolvedImport { index: usize },
-    InvalidMem,
+    InvalidImportedMem,
+    InvalidMemidx,
     InvalidFuncidx,
     InvalidTypeidx,
     InvalidFuncArgs,

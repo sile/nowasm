@@ -1,4 +1,7 @@
-use core::ops::{Deref, DerefMut, RangeBounds};
+use core::{
+    marker::PhantomData,
+    ops::{Deref, DerefMut, RangeBounds},
+};
 
 pub trait VectorFactory {
     type Vector<T>: Vector<T>;
@@ -12,6 +15,47 @@ pub trait Vector<T>: Deref<Target = [T]> + DerefMut<Target = [T]> {
     fn pop(&mut self) -> Option<T>;
     fn truncate(&mut self, len: usize);
     fn remove_range<R: RangeBounds<usize>>(&mut self, range: R);
+}
+
+#[derive(Debug)]
+pub struct NullVectorFactory;
+
+impl VectorFactory for NullVectorFactory {
+    type Vector<T> = NullVector<T>;
+
+    fn create_vector<T>(_capacity: Option<usize>) -> Self::Vector<T> {
+        NullVector(PhantomData)
+    }
+
+    fn clone_vector<T: Clone>(_vector: &[T]) -> Self::Vector<T> {
+        NullVector(PhantomData)
+    }
+}
+
+#[derive(Debug)]
+pub struct NullVector<T>(PhantomData<T>);
+
+impl<T> Vector<T> for NullVector<T> {
+    fn push(&mut self, _item: T) {}
+    fn pop(&mut self) -> Option<T> {
+        None
+    }
+    fn truncate(&mut self, _len: usize) {}
+    fn remove_range<R: RangeBounds<usize>>(&mut self, _range: R) {}
+}
+
+impl<T> Deref for NullVector<T> {
+    type Target = [T];
+
+    fn deref(&self) -> &Self::Target {
+        &[]
+    }
+}
+
+impl<T> DerefMut for NullVector<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut []
+    }
 }
 
 #[cfg(feature = "std")]

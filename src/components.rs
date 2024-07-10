@@ -2,7 +2,7 @@ use crate::decode::Decode;
 use crate::execute::{ExecuteError, Val};
 use crate::instructions::Instr;
 use crate::reader::Reader;
-use crate::vector::Vector;
+use crate::vector::{NullVectorFactory, Vector};
 use crate::{DecodeError, Module, VectorFactory, PAGE_SIZE};
 use core::fmt::{Debug, Formatter};
 
@@ -530,6 +530,52 @@ impl<V: VectorFactory> Clone for Global<V> {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+pub enum I32ConstantExpr {
+    I32(i32),
+    Global(Globalidx),
+}
+
+impl Decode for I32ConstantExpr {
+    fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
+        let expr = Expr::<NullVectorFactory>::decode(reader)?;
+        if expr.instrs().len() != 1 {
+            return Err(DecodeError::UnexpectedExpr);
+        }
+        match &expr.instrs()[0] {
+            Instr::I32Const(x) => Ok(Self::I32(*x)),
+            Instr::GlobalGet(x) => Ok(Self::Global(*x)),
+            _ => Err(DecodeError::UnexpectedExpr),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum ConstantExpr {
+    I32(i32),
+    I64(i64),
+    F32(f32),
+    F64(f64),
+    Global(Globalidx),
+}
+
+impl Decode for ConstantExpr {
+    fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
+        let expr = Expr::<NullVectorFactory>::decode(reader)?;
+        if expr.instrs().len() != 1 {
+            return Err(DecodeError::UnexpectedExpr);
+        }
+        match &expr.instrs()[0] {
+            Instr::I32Const(x) => Ok(Self::I32(*x)),
+            Instr::I64Const(x) => Ok(Self::I64(*x)),
+            Instr::F32Const(x) => Ok(Self::F32(*x)),
+            Instr::F64Const(x) => Ok(Self::F64(*x)),
+            Instr::GlobalGet(x) => Ok(Self::Global(*x)),
+            _ => Err(DecodeError::UnexpectedExpr),
+        }
+    }
+}
+
 pub struct Expr<V: VectorFactory> {
     instrs: V::Vector<Instr<V>>,
 }
@@ -583,14 +629,14 @@ impl Decode for Memarg {
 
 pub struct Elem<V: VectorFactory> {
     pub table: Tableidx,
-    pub offset: Expr<V>,
+    pub offset: I32ConstantExpr,
     pub init: V::Vector<Funcidx>,
 }
 
 impl<V: VectorFactory> Decode for Elem<V> {
     fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         let table = Tableidx::decode(reader)?;
-        let offset = Expr::decode(reader)?;
+        let offset = I32ConstantExpr::decode(reader)?;
         let init = Funcidx::decode_vector::<V>(reader)?;
         Ok(Self {
             table,
@@ -672,14 +718,14 @@ impl Decode for Blocktype {
 
 pub struct Data<V: VectorFactory> {
     pub data: Memidx,
-    pub offset: Expr<V>,
+    pub offset: I32ConstantExpr,
     pub init: V::Vector<u8>,
 }
 
 impl<V: VectorFactory> Decode for Data<V> {
     fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         let data = Memidx::decode(reader)?;
-        let offset = Expr::decode(reader)?;
+        let offset = I32ConstantExpr::decode(reader)?;
         let init = u8::decode_vector::<V>(reader)?;
         Ok(Self { data, offset, init })
     }

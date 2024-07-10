@@ -1,7 +1,7 @@
 use crate::{
-    components::{Exportdesc, Importdesc, Limits, Resulttype, Typeidx, Valtype},
+    components::{Exportdesc, Importdesc, Limits, Memtype, Resulttype, Typeidx, Valtype},
     execute::State,
-    ExecuteError, Module, Val, Vector, VectorFactory,
+    ExecuteError, Module, Val, Vector, VectorFactory, PAGE_SIZE,
 };
 use core::fmt::{Debug, Formatter};
 
@@ -19,7 +19,7 @@ pub trait Resolve {
     type HostFunc: HostFunc;
 
     #[allow(unused_variables)]
-    fn resolve_mem(&self, module: &str, name: &str, limits: Limits) -> Option<&[u8]> {
+    fn resolve_mem(&self, module: &str, name: &str, ty: Memtype) -> Option<&[u8]> {
         None
     }
 
@@ -64,7 +64,7 @@ impl<V: VectorFactory, H> ModuleInstance<V, H> {
     where
         R: Resolve<HostFunc = H>,
     {
-        let mut mem = None;
+        let mut imported_mem = None;
 
         for (index, import) in module.imports().iter().enumerate() {
             match &import.desc {
@@ -72,19 +72,38 @@ impl<V: VectorFactory, H> ModuleInstance<V, H> {
                 Importdesc::Table(_) => todo!(),
                 Importdesc::Mem(ty) => {
                     let resolved = resolver
-                        .resolve_mem(import.module.as_str(), import.name.as_str(), ty.limits)
+                        .resolve_mem(import.module.as_str(), import.name.as_str(), *ty)
                         .ok_or_else(|| ExecuteError::UnresolvedImport { index })?;
                     let resolved = V::clone_vector(resolved);
-                    mem = Some(resolved);
+                    imported_mem = Some(resolved);
                 }
                 Importdesc::Global(_) => todo!(),
             }
         }
 
+        let mem = Self::init_mem(&module, imported_mem)?;
+
+        if module.start().is_some() {
+            todo!()
+        }
+
+        let mut state = State::<V, H>::new(mem);
+
+        for global in module.globals().iter() {
+            state.globals.push(global.init()?);
+        }
+
+        Ok(Self { module, state })
+    }
+
+    fn init_mem(
+        module: &Module<V>,
+        mut mem: Option<V::Vector<u8>>,
+    ) -> Result<V::Vector<u8>, ExecuteError> {
         if let Some(ty) = module.mem() {
             if let Some(v) = &mem {
-                if !ty.contains(v.len()) {
-                    return Err(ExecuteError::InvalidMem);
+                if !ty.contains(v.len()) || v.len() % PAGE_SIZE != 0 {
+                    return Err(ExecuteError::InvalidImportedMem);
                 }
             } else {
                 let mut m = V::create_vector(Some(ty.min_bytes()));
@@ -94,22 +113,19 @@ impl<V: VectorFactory, H> ModuleInstance<V, H> {
                 mem = Some(m);
             }
         } else if mem.is_some() {
-            return Err(ExecuteError::InvalidMem);
+            return Err(ExecuteError::InvalidImportedMem);
         }
         let mem = mem.unwrap_or_else(|| V::create_vector(None));
 
-        if module.start().is_some() {
-            todo!()
+        for data in module.datas() {
+            if module.mem().is_none() {
+                return Err(ExecuteError::InvalidMemidx);
+            }
+            // data.offset;
+            // data.init;
         }
 
-        // TODO: check mem (min, max, pagesize)
-        let mut state = State::<V, H>::new(mem);
-
-        for global in module.globals().iter() {
-            state.globals.push(global.init()?);
-        }
-
-        Ok(Self { module, state })
+        Ok(mem)
     }
 
     pub fn module(&self) -> &Module<V> {
