@@ -3,7 +3,7 @@ use crate::execute::{ExecuteError, Val};
 use crate::instructions::Instr;
 use crate::reader::Reader;
 use crate::vector::Vector;
-use crate::{DecodeError, Module, VectorFactory, PAGE_SIZE};
+use crate::{DecodeError, GlobalVal, Module, VectorFactory, PAGE_SIZE};
 use core::fmt::{Debug, Formatter};
 
 pub struct Name<V: VectorFactory>(V::Vector<u8>);
@@ -337,6 +337,10 @@ pub enum Globaltype {
 }
 
 impl Globaltype {
+    pub fn is_const(self) -> bool {
+        matches!(self, Self::Const(_))
+    }
+
     pub fn valtype(self) -> Valtype {
         match self {
             Self::Const(t) => t,
@@ -488,17 +492,27 @@ pub struct Global {
 }
 
 impl Global {
-    pub fn init(&self, imported_globals: &[Val]) -> Option<Val> {
+    pub fn init(&self, imported_globals: &[GlobalVal]) -> Option<GlobalVal> {
         match (self.ty.valtype(), self.init) {
-            (Valtype::I32, ConstantExpr::I32(v)) => Some(Val::I32(v)),
-            (Valtype::I64, ConstantExpr::I64(v)) => Some(Val::I64(v)),
-            (Valtype::F32, ConstantExpr::F32(v)) => Some(Val::F32(v)),
-            (Valtype::F64, ConstantExpr::F64(v)) => Some(Val::F64(v)),
+            (Valtype::I32, ConstantExpr::I32(v)) => {
+                Some(GlobalVal::new(self.ty.is_const(), Val::I32(v)))
+            }
+            (Valtype::I64, ConstantExpr::I64(v)) => {
+                Some(GlobalVal::new(self.ty.is_const(), Val::I64(v)))
+            }
+            (Valtype::F32, ConstantExpr::F32(v)) => {
+                Some(GlobalVal::new(self.ty.is_const(), Val::F32(v)))
+            }
+            (Valtype::F64, ConstantExpr::F64(v)) => {
+                Some(GlobalVal::new(self.ty.is_const(), Val::F64(v)))
+            }
             (ty, ConstantExpr::Global(idx)) => {
-                // TODO: mutability check (use GlobalVal instead of Val)
-                let v = imported_globals.get(idx.get()).copied()?;
-                if v.ty() == ty {
-                    Some(v)
+                let g = imported_globals.get(idx.get()).copied()?;
+                if !g.is_const() {
+                    return None;
+                }
+                if g.get().ty() == ty {
+                    Some(g)
                 } else {
                     None
                 }
@@ -523,28 +537,15 @@ pub enum I32ConstantExpr {
 }
 
 impl I32ConstantExpr {
-    pub fn get<V: VectorFactory>(self, globals: &[Val], module: &Module<V>) -> Option<i32> {
+    pub fn get(self, globals: &[GlobalVal]) -> Option<i32> {
         match self {
             Self::I32(v) => Some(v),
             Self::Global(idx) => {
-                // TODO: Remove this check once validation is implemented
-                let Globaltype::Const(Valtype::I32) = module
-                    .imports()
-                    .iter()
-                    .filter_map(|i| {
-                        if let Importdesc::Global(ty) = i.desc {
-                            Some(ty)
-                        } else {
-                            None
-                        }
-                    })
-                    .chain(module.globals().iter().map(|g| g.ty))
-                    .nth(idx.get())?
-                else {
+                let g = globals.get(idx.get()).copied()?;
+                if !g.is_const() {
                     return None;
-                };
-
-                let Val::I32(v) = globals.get(idx.get()).copied()? else {
+                }
+                let Val::I32(v) = g.get() else {
                     return None;
                 };
                 Some(v)

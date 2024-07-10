@@ -1,7 +1,7 @@
 use crate::{
     components::{Exportdesc, Importdesc, Limits, Memtype, Resulttype, Typeidx, Valtype},
     execute::State,
-    ExecuteError, Module, Val, Vector, VectorFactory, PAGE_SIZE,
+    ExecuteError, GlobalVal, Module, Val, Vector, VectorFactory, PAGE_SIZE,
 };
 use core::fmt::{Debug, Formatter};
 
@@ -81,7 +81,7 @@ impl<V: VectorFactory, H> ModuleInstance<V, H> {
                     let resolved = resolver
                         .resolve_global(import.module.as_str(), import.name.as_str(), ty.valtype())
                         .ok_or_else(|| ExecuteError::UnresolvedImport { index })?;
-                    imported_globals.push(resolved);
+                    imported_globals.push(GlobalVal::new(ty.is_const(), resolved));
                 }
             }
         }
@@ -100,9 +100,9 @@ impl<V: VectorFactory, H> ModuleInstance<V, H> {
     }
 
     fn init_globals(
-        imported_globals: &[Val],
+        imported_globals: &[GlobalVal],
         module: &Module<V>,
-    ) -> Result<V::Vector<Val>, ExecuteError> {
+    ) -> Result<V::Vector<GlobalVal>, ExecuteError> {
         let n = imported_globals.len() + module.globals().len();
         let mut globals = V::create_vector(Some(n));
 
@@ -120,7 +120,7 @@ impl<V: VectorFactory, H> ModuleInstance<V, H> {
     }
 
     fn init_mem(
-        globals: &[Val],
+        globals: &[GlobalVal],
         mut mem: Option<V::Vector<u8>>,
         module: &Module<V>,
     ) -> Result<V::Vector<u8>, ExecuteError> {
@@ -145,7 +145,7 @@ impl<V: VectorFactory, H> ModuleInstance<V, H> {
             if module.mem().is_none() {
                 return Err(ExecuteError::InvalidData { index });
             }
-            let Some(offset) = data.offset.get(globals, module) else {
+            let Some(offset) = data.offset.get(globals) else {
                 return Err(ExecuteError::InvalidData { index });
             };
             if offset < 0 {
@@ -175,12 +175,11 @@ impl<V: VectorFactory, H> ModuleInstance<V, H> {
         &mut self.state.mem
     }
 
-    pub fn globals(&self) -> &[Val] {
+    pub fn globals(&self) -> &[GlobalVal] {
         &self.state.globals
     }
 
-    pub fn globals_mut(&mut self) -> &mut [Val] {
-        // TODO: check mutability
+    pub fn globals_mut(&mut self) -> &mut [GlobalVal] {
         &mut self.state.globals
     }
 

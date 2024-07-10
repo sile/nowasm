@@ -22,7 +22,7 @@ pub enum ExecuteError {
 #[derive(Debug)]
 pub struct State<V: VectorFactory, H> {
     pub mem: V::Vector<u8>,
-    pub globals: V::Vector<Val>,
+    pub globals: V::Vector<GlobalVal>,
     pub locals: V::Vector<Val>,
     pub values: V::Vector<Val>,
     pub current_frame: Frame,
@@ -163,10 +163,10 @@ impl<V: VectorFactory, H> State<V, H> {
                 Instr::Unreachable => return Err(ExecuteError::Trapped),
                 Instr::GlobalSet(idx) => {
                     let v = self.pop_value();
-                    self.globals[idx.get()] = v;
+                    self.globals[idx.get()].set(v);
                 }
                 Instr::GlobalGet(idx) => {
-                    let v = self.globals[idx.get()];
+                    let v = self.globals[idx.get()].get();
                     self.push_value(v);
                 }
                 Instr::LocalSet(idx) => {
@@ -252,6 +252,35 @@ pub struct Block {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
+pub struct GlobalVal {
+    is_const: bool,
+    val: Val,
+}
+
+impl GlobalVal {
+    pub(crate) const fn new(is_const: bool, val: Val) -> Self {
+        Self { is_const, val }
+    }
+
+    pub const fn is_const(self) -> bool {
+        self.is_const
+    }
+
+    pub const fn get(self) -> Val {
+        self.val
+    }
+
+    pub fn set(&mut self, val: Val) -> bool {
+        if !self.is_const {
+            self.val = val;
+            true
+        } else {
+            false
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Val {
     I32(i32),
     I64(i64),
@@ -260,7 +289,7 @@ pub enum Val {
 }
 
 impl Val {
-    pub fn ty(self) -> Valtype {
+    pub const fn ty(self) -> Valtype {
         match self {
             Self::I32(_) => Valtype::I32,
             Self::I64(_) => Valtype::I64,
@@ -269,7 +298,7 @@ impl Val {
         }
     }
 
-    pub fn as_i32(self) -> Option<i32> {
+    pub const fn as_i32(self) -> Option<i32> {
         if let Self::I32(v) = self {
             Some(v)
         } else {
@@ -277,7 +306,7 @@ impl Val {
         }
     }
 
-    pub fn as_i64(self) -> Option<i64> {
+    pub const fn as_i64(self) -> Option<i64> {
         if let Self::I64(v) = self {
             Some(v)
         } else {
@@ -285,7 +314,7 @@ impl Val {
         }
     }
 
-    pub fn as_f32(self) -> Option<f32> {
+    pub const fn as_f32(self) -> Option<f32> {
         if let Self::F32(v) = self {
             Some(v)
         } else {
@@ -293,7 +322,7 @@ impl Val {
         }
     }
 
-    pub fn as_f64(self) -> Option<f64> {
+    pub const fn as_f64(self) -> Option<f64> {
         if let Self::F64(v) = self {
             Some(v)
         } else {
