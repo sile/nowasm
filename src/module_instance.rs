@@ -1,5 +1,5 @@
 use crate::{
-    components::{Exportdesc, Importdesc, Limits, Memtype, Resulttype, Typeidx, Valtype},
+    components::{Exportdesc, Funcidx, Importdesc, Limits, Memtype, Resulttype, Valtype},
     execute::State,
     ExecuteError, GlobalVal, Module, Val, Vector, VectorFactory, PAGE_SIZE,
 };
@@ -29,7 +29,7 @@ pub trait Resolve {
         module: &str,
         name: &str,
         limits: Limits,
-    ) -> Option<&[Option<Typeidx>]> {
+    ) -> Option<&[Option<Funcidx>]> {
         None
     }
 
@@ -65,11 +65,18 @@ impl<V: VectorFactory, H> ModuleInstance<V, H> {
         R: Resolve<HostFunc = H>,
     {
         let mut imported_mem = None;
+        let mut imported_table = None;
         let mut imported_globals = V::create_vector(None);
         for (index, import) in module.imports().iter().enumerate() {
             match &import.desc {
                 Importdesc::Func(_) => todo!(),
-                Importdesc::Table(_) => todo!(),
+                Importdesc::Table(ty) => {
+                    let resolved = resolver
+                        .resolve_table(import.module.as_str(), import.name.as_str(), ty.limits)
+                        .ok_or_else(|| ExecuteError::UnresolvedImport { index })?;
+                    let resolved = V::clone_vector(resolved);
+                    imported_table = Some(resolved);
+                }
                 Importdesc::Mem(ty) => {
                     let resolved = resolver
                         .resolve_mem(import.module.as_str(), import.name.as_str(), *ty)
@@ -88,12 +95,13 @@ impl<V: VectorFactory, H> ModuleInstance<V, H> {
 
         let globals = Self::init_globals(&imported_globals, &module)?;
         let mem = Self::init_mem(&globals, imported_mem, &module)?;
+        let table = Self::init_table(&globals, imported_table, &module)?;
 
         if module.start().is_some() {
             todo!()
         }
 
-        let mut state = State::<V, H>::new(mem);
+        let mut state = State::<V, H>::new(mem, table);
         state.globals = globals;
 
         Ok(Self { module, state })
@@ -163,6 +171,54 @@ impl<V: VectorFactory, H> ModuleInstance<V, H> {
         Ok(mem)
     }
 
+    fn init_table(
+        globals: &[GlobalVal],
+        mut table: Option<V::Vector<Option<Funcidx>>>,
+        module: &Module<V>,
+    ) -> Result<V::Vector<Option<Funcidx>>, ExecuteError> {
+        if let Some(ty) = module.table() {
+            if let Some(v) = &table {
+                if !ty.contains(v.len()) {
+                    return Err(ExecuteError::InvalidImportedTable);
+                }
+            } else {
+                let mut vs = V::create_vector(Some(ty.limits.min as usize));
+                for _ in 0..ty.limits.min {
+                    vs.push(None);
+                }
+                table = Some(vs);
+            }
+        } else if table.is_some() {
+            return Err(ExecuteError::InvalidImportedTable);
+        }
+
+        let mut table = table.unwrap_or_else(|| V::create_vector(None));
+        for (index, elem) in module.elems().iter().enumerate() {
+            if module.table().is_none() {
+                return Err(ExecuteError::InvalidElem { index });
+            }
+            let Some(offset) = elem.offset.get(globals) else {
+                return Err(ExecuteError::InvalidElem { index });
+            };
+            if offset < 0 {
+                return Err(ExecuteError::InvalidElem { index });
+            }
+
+            let start = offset as usize;
+            let end = start + elem.init.len();
+            if table.len() < end {
+                return Err(ExecuteError::InvalidElem { index });
+            }
+            for (i, funcidx) in (start..).zip(elem.init.iter().copied()) {
+                table[i] = Some(funcidx);
+            }
+        }
+
+        // TODO: Funcidx check
+
+        Ok(table)
+    }
+
     pub fn module(&self) -> &Module<V> {
         &self.module
     }
@@ -183,8 +239,13 @@ impl<V: VectorFactory, H> ModuleInstance<V, H> {
         &mut self.state.globals
     }
 
-    // TODO: table
-    // TODO: global
+    pub fn table(&self) -> &[Option<Funcidx>] {
+        &self.state.table
+    }
+
+    pub fn table_mut(&mut self) -> &mut [Option<Funcidx>] {
+        &mut self.state.table
+    }
 
     pub fn invoke(
         &mut self,

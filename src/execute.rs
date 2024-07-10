@@ -9,7 +9,9 @@ pub enum ExecuteError {
     NotExportedFunction,
     UnresolvedImport { index: usize },
     InvalidImportedMem,
+    InvalidImportedTable,
     InvalidData { index: usize },
+    InvalidElem { index: usize },
     InvalidMemidx,
     InvalidFuncidx,
     InvalidTypeidx,
@@ -22,6 +24,7 @@ pub enum ExecuteError {
 #[derive(Debug)]
 pub struct State<V: VectorFactory, H> {
     pub mem: V::Vector<u8>,
+    pub table: V::Vector<Option<Funcidx>>,
     pub globals: V::Vector<GlobalVal>,
     pub locals: V::Vector<Val>,
     pub values: V::Vector<Val>,
@@ -31,9 +34,10 @@ pub struct State<V: VectorFactory, H> {
 }
 
 impl<V: VectorFactory, H> State<V, H> {
-    pub fn new(mem: V::Vector<u8>) -> Self {
+    pub fn new(mem: V::Vector<u8>, table: V::Vector<Option<Funcidx>>) -> Self {
         Self {
             mem,
+            table,
             globals: V::create_vector(None),
             locals: V::create_vector(None),
             values: V::create_vector(None),

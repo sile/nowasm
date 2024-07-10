@@ -255,6 +255,15 @@ pub struct Tabletype {
     pub limits: Limits,
 }
 
+impl Tabletype {
+    pub fn contains(self, size: usize) -> bool {
+        match self.limits.max {
+            Some(max) => size >= self.limits.min as usize && size <= max as usize,
+            None => size >= self.limits.min as usize,
+        }
+    }
+}
+
 impl<V: VectorFactory> Decode<V> for Tabletype {
     fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         let elemtype = Decode::<V>::decode(reader)?;
