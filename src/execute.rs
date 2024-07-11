@@ -4,7 +4,7 @@ use crate::{
     instructions::Instr,
     GlobalVal, Module, Val, Vector, VectorFactory,
 };
-use core::fmt::{Display, Formatter};
+use core::fmt::{Debug, Display, Formatter};
 
 #[derive(Debug, Clone, Copy)]
 pub enum ExecuteError {
@@ -44,7 +44,6 @@ impl Display for ExecuteError {
 #[cfg(feature = "std")]
 impl std::error::Error for ExecuteError {}
 
-#[derive(Debug)]
 pub struct Executor<V: VectorFactory, H> {
     pub mem: V::Vector<u8>,
     pub table: V::Vector<Option<Funcidx>>,
@@ -70,7 +69,7 @@ impl<V: VectorFactory, H> Executor<V, H> {
             funcs,
             locals: V::create_vector(None),
             values: V::create_vector(None),
-            current_frame: Frame::root(),
+            current_frame: Frame::default(),
             current_block: Block::default(),
         }
     }
@@ -262,6 +261,13 @@ impl<V: VectorFactory, H> Executor<V, H> {
     }
 }
 
+impl<V: VectorFactory, H> Debug for Executor<V, H> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        // TODO
+        f.debug_struct("Executor").finish_non_exhaustive()
+    }
+}
+
 // TODO: Activation(?)
 #[derive(Debug, Default, Clone, Copy)]
 pub struct Frame {
@@ -269,12 +275,6 @@ pub struct Frame {
     pub arity: usize,
     pub locals_start: usize,
     pub values_start: usize,
-}
-
-impl Frame {
-    pub fn root() -> Self {
-        Self::default()
-    }
 }
 
 #[derive(Debug, Default, Clone, Copy)]

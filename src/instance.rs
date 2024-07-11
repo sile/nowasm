@@ -329,7 +329,7 @@ impl<V: VectorFactory, H> Debug for ModuleInstance<V, H> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("ModuleInstance")
             .field("module", &self.module)
-            // TODO: .field("executor", &self.executor)
+            .field("executor", &self.executor)
             .finish()
     }
 }
