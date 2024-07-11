@@ -1,5 +1,5 @@
 use crate::{
-    components::{Blocktype, Funcidx, Functype, Localidx},
+    components::{Blocktype, Funcidx, Functype, Importdesc, Localidx},
     instance::FuncInst,
     instructions::Instr,
     GlobalVal, HostFunc, Module, Val, Vector, VectorFactory,
@@ -156,23 +156,36 @@ impl<V: VectorFactory> Executor<V> {
     pub fn call_function<H: HostFunc>(
         &mut self,
         func_idx: Funcidx,
+        level: usize,
         funcs: &mut [FuncInst<H>],
         module: &Module<V>,
     ) -> Result<usize, ExecuteError> {
-        // TODO: check trapped flag
-
         // TODO: Add validation phase
         let func = funcs
-            .get(func_idx.get())
+            .get_mut(func_idx.get())
             .ok_or(ExecuteError::InvalidFuncidx)?;
         let func_type = func.get_type(module).ok_or(ExecuteError::InvalidFuncidx)?; // TODO: change reason
 
         let prev_frame = self.enter_frame(func_type, 0);
-        let value = match func {
+        match func {
             FuncInst::Imported {
                 imports_index,
                 host_func,
-            } => todo!(),
+            } => {
+                let Importdesc::Func(typeidx) = module.imports()[*imports_index].desc else {
+                    unreachable!()
+                };
+                let func_type = &module.types()[typeidx.get()];
+                let args_end = self.values.len();
+                let args_start = args_end - func_type.params.len();
+                let args = &self.values[args_start..args_end];
+                let value = host_func.invoke(args);
+                self.values.truncate(args_start);
+                // TODO: check return value type
+                if let Some(v) = value {
+                    self.values.push(v);
+                }
+            }
             FuncInst::Module { funcs_index } => {
                 let func = module
                     .funcs()
@@ -181,17 +194,18 @@ impl<V: VectorFactory> Executor<V> {
                 for v in func.locals.iter().copied().map(Val::zero) {
                     self.locals.push(v);
                 }
-                self.execute_instrs(func.body.instrs(), 0, module)?
+                self.execute_instrs(func.body.instrs(), level + 1, funcs, module)?;
             }
         };
         self.exit_frame(func_type, prev_frame);
-        Ok(value)
+        Ok(level)
     }
 
-    pub fn execute_instrs(
+    pub fn execute_instrs<H: HostFunc>(
         &mut self,
         instrs: &[Instr<V>],
         level: usize,
+        funcs: &mut [FuncInst<H>],
         module: &Module<V>,
     ) -> Result<usize, ExecuteError> {
         for instr in instrs {
@@ -235,7 +249,8 @@ impl<V: VectorFactory> Executor<V> {
                 }
                 Instr::Block(block) => {
                     let prev_block = self.enter_block(block.blocktype);
-                    let return_level = self.execute_instrs(&block.instrs, level + 1, module)?;
+                    let return_level =
+                        self.execute_instrs(&block.instrs, level + 1, funcs, module)?;
                     self.exit_block(block.blocktype, return_level <= level, prev_block);
                     if return_level <= level {
                         return Ok(return_level);
@@ -250,6 +265,9 @@ impl<V: VectorFactory> Executor<V> {
                 }
                 Instr::Return => {
                     return Ok(self.current_frame.level);
+                }
+                Instr::Call(funcidx) => {
+                    self.call_function(*funcidx, level + 1, funcs, module)?;
                 }
                 _ => todo!("{instr:?}"),
             }

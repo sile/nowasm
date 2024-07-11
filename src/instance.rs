@@ -160,7 +160,7 @@ impl<V: VectorFactory, H: HostFunc> ModuleInstance<V, H> {
         if let Some(funcidx) = this.module.start() {
             // TODO: check function type (in decoding phase?)
             this.executor
-                .call_function(funcidx, &mut this.funcs, &this.module)?;
+                .call_function(funcidx, 0, &mut this.funcs, &this.module)?;
         }
 
         Ok(this)
@@ -341,7 +341,7 @@ impl<V: VectorFactory, H: HostFunc> ModuleInstance<V, H> {
         }
 
         self.executor
-            .call_function(func_idx, &mut self.funcs, &self.module)?;
+            .call_function(func_idx, 0, &mut self.funcs, &self.module)?;
 
         // TODO: validate return value type
         match result_type.len() {
