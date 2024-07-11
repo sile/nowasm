@@ -8,6 +8,7 @@ use crate::{
 use core::fmt::{Debug, Formatter};
 
 pub trait HostFunc {
+    // TODO: Add Env
     fn invoke(&mut self, args: &[Val]) -> Option<Val>;
 }
 
