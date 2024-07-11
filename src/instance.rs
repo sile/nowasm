@@ -1,6 +1,6 @@
 use crate::{
     components::{Exportdesc, Funcidx, Importdesc, Limits, Memtype, Resulttype, Valtype},
-    execute::State,
+    execute::Executor,
     ExecuteError, Module, Vector, VectorFactory, PAGE_SIZE,
 };
 use core::fmt::{Debug, Formatter};
@@ -62,7 +62,7 @@ impl Resolve for () {
 
 pub struct ModuleInstance<V: VectorFactory, H> {
     pub module: Module<V>,
-    pub state: State<V, H>,
+    pub executor: Executor<V, H>,
 }
 
 impl<V: VectorFactory, H> ModuleInstance<V, H> {
@@ -126,12 +126,12 @@ impl<V: VectorFactory, H> ModuleInstance<V, H> {
         let mem = Self::init_mem(&globals, imported_mem, &module)?;
         let table = Self::init_table(&globals, &funcs, imported_table, &module)?;
 
-        let state = State::<V, H>::new(mem, table, globals, funcs);
-        let mut this = Self { module, state };
+        let executor = Executor::<V, H>::new(mem, table, globals, funcs);
+        let mut this = Self { module, executor };
 
         if let Some(funcidx) = this.module.start() {
             // TODO: check function type (in decoding phase?)
-            this.state.call_function(funcidx, &this.module)?;
+            this.executor.call_function(funcidx, &this.module)?;
         }
 
         Ok(this)
@@ -261,27 +261,27 @@ impl<V: VectorFactory, H> ModuleInstance<V, H> {
     }
 
     pub fn mem(&self) -> &[u8] {
-        &self.state.mem
+        &self.executor.mem
     }
 
     pub fn mem_mut(&mut self) -> &mut [u8] {
-        &mut self.state.mem
+        &mut self.executor.mem
     }
 
     pub fn globals(&self) -> &[GlobalVal] {
-        &self.state.globals
+        &self.executor.globals
     }
 
     pub fn globals_mut(&mut self) -> &mut [GlobalVal] {
-        &mut self.state.globals
+        &mut self.executor.globals
     }
 
     pub fn table(&self) -> &[Option<Funcidx>] {
-        &self.state.table
+        &self.executor.table
     }
 
     pub fn table_mut(&mut self) -> &mut [Option<Funcidx>] {
-        &mut self.state.table
+        &mut self.executor.table
     }
 
     pub fn invoke(
@@ -311,15 +311,15 @@ impl<V: VectorFactory, H> ModuleInstance<V, H> {
         func_type.validate_args(args, &self.module)?;
 
         for v in args.iter().copied() {
-            self.state.push_value(v);
+            self.executor.push_value(v);
         }
 
-        self.state.call_function(func_idx, &self.module)?;
+        self.executor.call_function(func_idx, &self.module)?;
 
         // TODO: validate return value type
         match func_type.result.len() {
             0 => Ok(None),
-            1 => Ok(Some(self.state.pop_value())),
+            1 => Ok(Some(self.executor.pop_value())),
             _ => unreachable!(),
         }
     }
@@ -329,7 +329,7 @@ impl<V: VectorFactory, H> Debug for ModuleInstance<V, H> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("ModuleInstance")
             .field("module", &self.module)
-            // TODO: .field("state", &self.state)
+            // TODO: .field("executor", &self.executor)
             .finish()
     }
 }
