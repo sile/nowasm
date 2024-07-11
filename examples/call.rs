@@ -1,5 +1,8 @@
 use clap::Parser;
-use nowasm::{Module, StdVectorFactory, Val};
+use nowasm::{
+    components::{Resulttype, Valtype},
+    HostFunc, Module, Resolve, StdVectorFactory, Val,
+};
 use orfail::{Failure, OrFail};
 use std::{fmt::Debug, path::PathBuf};
 
@@ -19,7 +22,7 @@ pub fn main() -> orfail::Result<()> {
         .or_fail()?;
 
     let mut instance = module
-        .instantiate(())
+        .instantiate(Resolver)
         .map_err(|e| Failure::new(format!("{e:?}")))
         .or_fail()?;
 
@@ -31,4 +34,45 @@ pub fn main() -> orfail::Result<()> {
     println!("=> {:?}", result);
 
     Ok(())
+}
+
+struct Resolver;
+
+impl Resolve for Resolver {
+    type HostFunc = Print;
+
+    fn resolve_func(
+        &self,
+        module: &str,
+        name: &str,
+        params: &[Valtype],
+        result: Resulttype,
+    ) -> Option<Self::HostFunc> {
+        if module == "env"
+            && name == "print"
+            && params == [Valtype::I32, Valtype::I32]
+            && result.len() == 0
+        {
+            Some(Print)
+        } else {
+            None
+        }
+    }
+}
+
+struct Print;
+
+impl HostFunc for Print {
+    fn invoke(&mut self, args: &[Val]) -> Option<Val> {
+        // TODO: improve error handling (make it possible to return Err(_))
+        // TODO: add module and store to args
+        unsafe {
+            let ptr = args[0].as_i32().unwrap() as *const u8;
+            let len = args[1].as_i32().unwrap() as usize;
+            let slice = std::slice::from_raw_parts(ptr, len);
+            let string = std::str::from_utf8(slice).unwrap();
+            print!("{string}");
+        }
+        None
+    }
 }
