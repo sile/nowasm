@@ -2,7 +2,7 @@ use crate::{
     components::{Blocktype, Funcidx, Functype, Localidx},
     instance::FuncInst,
     instructions::Instr,
-    GlobalVal, Module, Val, Vector, VectorFactory,
+    GlobalVal, HostFunc, Module, Val, Vector, VectorFactory,
 };
 use core::fmt::{Debug, Display, Formatter};
 
@@ -44,29 +44,26 @@ impl Display for ExecuteError {
 #[cfg(feature = "std")]
 impl std::error::Error for ExecuteError {}
 
-pub struct Executor<V: VectorFactory, H> {
+pub struct Executor<V: VectorFactory> {
     pub mem: V::Vector<u8>,
     pub table: V::Vector<Option<Funcidx>>,
     pub globals: V::Vector<GlobalVal>,
-    pub funcs: V::Vector<FuncInst<H>>,
     pub locals: V::Vector<Val>,
     pub values: V::Vector<Val>,
     pub current_frame: Frame,
     pub current_block: Block,
 }
 
-impl<V: VectorFactory, H> Executor<V, H> {
+impl<V: VectorFactory> Executor<V> {
     pub fn new(
         mem: V::Vector<u8>,
         table: V::Vector<Option<Funcidx>>,
         globals: V::Vector<GlobalVal>,
-        funcs: V::Vector<FuncInst<H>>,
     ) -> Self {
         Self {
             mem,
             table,
             globals,
-            funcs,
             locals: V::create_vector(None),
             values: V::create_vector(None),
             current_frame: Frame::default(),
@@ -156,28 +153,37 @@ impl<V: VectorFactory, H> Executor<V, H> {
         v
     }
 
-    pub fn call_function(
+    pub fn call_function<H: HostFunc>(
         &mut self,
         func_idx: Funcidx,
+        funcs: &mut [FuncInst<H>],
         module: &Module<V>,
     ) -> Result<usize, ExecuteError> {
         // TODO: check trapped flag
 
         // TODO: Add validation phase
-        let func = module
-            .funcs()
+        let func = funcs
             .get(func_idx.get())
             .ok_or(ExecuteError::InvalidFuncidx)?;
-        let func_type = module
-            .types()
-            .get(func.ty.get())
-            .ok_or(ExecuteError::InvalidFuncidx)?; // TODO: change reason
+        let func_type = func.get_type(module).ok_or(ExecuteError::InvalidFuncidx)?; // TODO: change reason
 
         let prev_frame = self.enter_frame(func_type, 0);
-        for v in func.locals.iter().copied().map(Val::zero) {
-            self.locals.push(v);
-        }
-        let value = self.execute_instrs(func.body.instrs(), 0, module)?; // TODO: set trapped flag if needed
+        let value = match func {
+            FuncInst::Imported {
+                imports_index,
+                host_func,
+            } => todo!(),
+            FuncInst::Module { funcs_index } => {
+                let func = module
+                    .funcs()
+                    .get(*funcs_index)
+                    .ok_or(ExecuteError::InvalidFuncidx)?;
+                for v in func.locals.iter().copied().map(Val::zero) {
+                    self.locals.push(v);
+                }
+                self.execute_instrs(func.body.instrs(), 0, module)?
+            }
+        };
         self.exit_frame(func_type, prev_frame);
         Ok(value)
     }
@@ -261,7 +267,7 @@ impl<V: VectorFactory, H> Executor<V, H> {
     }
 }
 
-impl<V: VectorFactory, H> Debug for Executor<V, H> {
+impl<V: VectorFactory> Debug for Executor<V> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         // TODO
         f.debug_struct("Executor").finish_non_exhaustive()

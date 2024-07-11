@@ -1,5 +1,7 @@
 use crate::{
-    components::{Exportdesc, Funcidx, Importdesc, Limits, Memtype, Resulttype, Valtype},
+    components::{
+        Exportdesc, Funcidx, Functype, Import, Importdesc, Limits, Memtype, Resulttype, Valtype,
+    },
     execute::Executor,
     ExecuteError, Module, Vector, VectorFactory, PAGE_SIZE,
 };
@@ -19,6 +21,27 @@ impl HostFunc for () {
 pub enum FuncInst<H> {
     Imported { imports_index: usize, host_func: H },
     Module { funcs_index: usize },
+}
+
+impl<H: HostFunc> FuncInst<H> {
+    pub fn get_type<'a, V: VectorFactory>(&self, module: &'a Module<V>) -> Option<&'a Functype<V>> {
+        match self {
+            FuncInst::Imported { imports_index, .. } => {
+                let Import {
+                    desc: Importdesc::Func(typeidx),
+                    ..
+                } = module.imports().get(*imports_index)?
+                else {
+                    return None;
+                };
+                module.types().get(typeidx.get())
+            }
+            FuncInst::Module { funcs_index } => {
+                let func = module.funcs().get(*funcs_index)?;
+                module.types().get(func.ty.get())
+            }
+        }
+    }
 }
 
 pub trait Resolve {
@@ -62,10 +85,11 @@ impl Resolve for () {
 
 pub struct ModuleInstance<V: VectorFactory, H> {
     pub module: Module<V>,
-    pub executor: Executor<V, H>,
+    pub executor: Executor<V>,
+    pub funcs: V::Vector<FuncInst<H>>,
 }
 
-impl<V: VectorFactory, H> ModuleInstance<V, H> {
+impl<V: VectorFactory, H: HostFunc> ModuleInstance<V, H> {
     pub(crate) fn new<R>(module: Module<V>, resolver: R) -> Result<Self, ExecuteError>
     where
         R: Resolve<HostFunc = H>,
@@ -126,12 +150,17 @@ impl<V: VectorFactory, H> ModuleInstance<V, H> {
         let mem = Self::init_mem(&globals, imported_mem, &module)?;
         let table = Self::init_table(&globals, &funcs, imported_table, &module)?;
 
-        let executor = Executor::<V, H>::new(mem, table, globals, funcs);
-        let mut this = Self { module, executor };
+        let executor = Executor::<V>::new(mem, table, globals);
+        let mut this = Self {
+            module,
+            executor,
+            funcs,
+        };
 
         if let Some(funcidx) = this.module.start() {
             // TODO: check function type (in decoding phase?)
-            this.executor.call_function(funcidx, &this.module)?;
+            this.executor
+                .call_function(funcidx, &mut this.funcs, &this.module)?;
         }
 
         Ok(this)
@@ -298,26 +327,24 @@ impl<V: VectorFactory, H> ModuleInstance<V, H> {
             unreachable!();
         };
 
-        let func = self
-            .module
-            .funcs()
-            .get(func_idx.get())
-            .ok_or(ExecuteError::InvalidFuncidx)?;
         let func_type = self
-            .module
-            .types()
-            .get(func.ty.get())
-            .ok_or(ExecuteError::InvalidTypeidx)?;
+            .funcs
+            .get(func_idx.get())
+            .ok_or(ExecuteError::InvalidFuncidx)?
+            .get_type(&self.module)
+            .ok_or(ExecuteError::InvalidFuncidx)?;
         func_type.validate_args(args, &self.module)?;
+        let result_type = func_type.result;
 
         for v in args.iter().copied() {
             self.executor.push_value(v);
         }
 
-        self.executor.call_function(func_idx, &self.module)?;
+        self.executor
+            .call_function(func_idx, &mut self.funcs, &self.module)?;
 
         // TODO: validate return value type
-        match func_type.result.len() {
+        match result_type.len() {
             0 => Ok(None),
             1 => Ok(Some(self.executor.pop_value())),
             _ => unreachable!(),
