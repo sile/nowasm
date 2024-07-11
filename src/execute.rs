@@ -166,7 +166,7 @@ impl<V: VectorFactory> Executor<V> {
             .ok_or(ExecuteError::InvalidFuncidx)?;
         let func_type = func.get_type(module).ok_or(ExecuteError::InvalidFuncidx)?; // TODO: change reason
 
-        let prev_frame = self.enter_frame(func_type, 0);
+        let prev_frame = self.enter_frame(func_type, level);
         match func {
             FuncInst::Imported {
                 imports_index,
@@ -176,11 +176,10 @@ impl<V: VectorFactory> Executor<V> {
                     unreachable!()
                 };
                 let func_type = &module.types()[typeidx.get()];
-                let args_end = self.values.len();
+                let args_end = self.locals.len();
                 let args_start = args_end - func_type.params.len();
-                let args = &self.values[args_start..args_end];
+                let args = &self.locals[args_start..args_end];
                 let value = host_func.invoke(args);
-                self.values.truncate(args_start);
                 // TODO: check return value type
                 if let Some(v) = value {
                     self.values.push(v);
