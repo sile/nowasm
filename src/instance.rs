@@ -117,14 +117,14 @@ impl<V: VectorFactory, H> ModuleInstance<V, H> {
             }
         }
 
-        let globals = Self::init_globals(&imported_globals, &module)?;
-        let mem = Self::init_mem(&globals, imported_mem, &module)?;
-        let table = Self::init_table(&globals, imported_table, &module)?;
-
         let mut funcs = imported_funcs;
         for i in 0..module.funcs().len() {
             funcs.push(FuncInst::Module { funcs_index: i });
         }
+
+        let globals = Self::init_globals(&imported_globals, &module)?;
+        let mem = Self::init_mem(&globals, imported_mem, &module)?;
+        let table = Self::init_table(&globals, &funcs, imported_table, &module)?;
 
         let state = State::<V, H>::new(mem, table, globals, funcs);
         let mut this = Self { module, state };
@@ -203,6 +203,7 @@ impl<V: VectorFactory, H> ModuleInstance<V, H> {
 
     fn init_table(
         globals: &[GlobalVal],
+        funcs: &[FuncInst<H>],
         mut table: Option<V::Vector<Option<Funcidx>>>,
         module: &Module<V>,
     ) -> Result<V::Vector<Option<Funcidx>>, ExecuteError> {
@@ -244,7 +245,13 @@ impl<V: VectorFactory, H> ModuleInstance<V, H> {
             }
         }
 
-        // TODO: Funcidx check
+        if table
+            .iter()
+            .filter_map(|i| *i)
+            .any(|i| funcs.len() <= i.get())
+        {
+            return Err(ExecuteError::InvalidFuncidx);
+        }
 
         Ok(table)
     }
