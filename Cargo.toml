@@ -15,6 +15,11 @@ path = "examples/wasm/add.rs"
 crate-type = ["lib", "cdylib"]
 
 [[example]]
+name = "fib"
+path = "examples/wasm/fib.rs"
+crate-type = ["lib", "cdylib"]
+
+[[example]]
 name = "hello"
 path = "examples/wasm/hello.rs"
 crate-type = ["lib", "cdylib"]
