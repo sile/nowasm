@@ -233,6 +233,11 @@ impl<V: VectorFactory> Executor<V> {
                     let v = self.get_local(*idx);
                     self.push_value(v);
                 }
+                Instr::LocalTee(idx) => {
+                    let v = self.pop_value();
+                    self.set_local(*idx, v);
+                    self.push_value(v);
+                }
                 Instr::I32Const(v) => self.push_value(Val::I32(*v)),
                 Instr::I64Const(v) => self.push_value(Val::I64(*v)),
                 Instr::F32Const(v) => self.push_value(Val::F32(*v)),
@@ -242,7 +247,46 @@ impl<V: VectorFactory> Executor<V> {
                 Instr::I32Xor => self.apply_binop_i32(|v0, v1| v0 ^ v1),
                 Instr::I32And => self.apply_binop_i32(|v0, v1| v0 & v1),
                 Instr::I32LtS => self.apply_binop_i32(|v0, v1| if v0 < v1 { 1 } else { 0 }),
+                Instr::I32LeS => self.apply_binop_i32(|v0, v1| if v0 <= v1 { 1 } else { 0 }),
+                Instr::I32GtS => self.apply_binop_i32(|v0, v1| if v0 > v1 { 1 } else { 0 }),
+                Instr::I32GeS => self.apply_binop_i32(|v0, v1| if v0 >= v1 { 1 } else { 0 }),
+                Instr::I32Load(arg) => {
+                    // TODO: handle alignment
+                    let i = self.pop_value_i32();
+                    let start = (i + arg.offset as i32) as usize;
+                    let end = start + 4;
+                    if self.mem.len() < end {
+                        return Err(ExecuteError::Trapped);
+                    }
+                    let v = i32::from_le_bytes(self.mem[start..end].try_into().unwrap()); // TODO
+                    self.values.push(Val::I32(v));
+                }
                 Instr::I32Store(arg) => {
+                    // TODO: handle alignment
+                    let v = self.pop_value();
+                    let i = self.pop_value_i32();
+                    let start = (i + arg.offset as i32) as usize;
+                    let end = start + v.byte_size();
+                    if self.mem.len() < end {
+                        return Err(ExecuteError::Trapped);
+                    }
+                    v.copy_to(&mut self.mem[start..end]);
+                }
+                Instr::I32Store16(arg) => {
+                    // TODO: handle alignment
+                    let v = self.pop_value();
+                    let i = self.pop_value_i32();
+                    let start = (i + arg.offset as i32) as usize;
+                    let end = start + 2;
+                    if self.mem.len() < end {
+                        return Err(ExecuteError::Trapped);
+                    }
+
+                    let v = v.as_i32().ok_or(ExecuteError::Trapped)? as i16; // TODO:
+                    (&mut self.mem[start..end]).copy_from_slice(&v.to_le_bytes());
+                }
+                Instr::I64Store(arg) => {
+                    // TODO: handle alignment
                     let v = self.pop_value();
                     let i = self.pop_value_i32();
                     let start = (i + arg.offset as i32) as usize;
@@ -264,8 +308,7 @@ impl<V: VectorFactory> Executor<V> {
                 Instr::BrIf(label) => {
                     let c = self.pop_value_i32();
                     if c != 0 {
-                        dbg!(label);
-                        todo!();
+                        return Ok(level - label.get());
                     }
                 }
                 Instr::Return => {
