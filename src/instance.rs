@@ -7,13 +7,19 @@ use crate::{
 };
 use core::fmt::{Debug, Formatter};
 
+// TODO: rename
+#[derive(Debug)]
+pub struct Env<'a> {
+    pub mem: &'a mut [u8],
+    pub globals: &'a mut [GlobalVal],
+}
+
 pub trait HostFunc {
-    // TODO: Add Env
-    fn invoke(&mut self, args: &[Val]) -> Option<Val>;
+    fn invoke(&mut self, args: &[Val], env: &mut Env) -> Option<Val>;
 }
 
 impl HostFunc for () {
-    fn invoke(&mut self, _args: &[Val]) -> Option<Val> {
+    fn invoke(&mut self, _args: &[Val], _env: &mut Env) -> Option<Val> {
         panic!();
     }
 }

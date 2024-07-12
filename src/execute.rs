@@ -2,7 +2,7 @@ use crate::{
     components::{Blocktype, Funcidx, Functype, Importdesc, Localidx},
     instance::FuncInst,
     instructions::Instr,
-    GlobalVal, HostFunc, Module, Val, Vector, VectorFactory,
+    Env, GlobalVal, HostFunc, Module, Val, Vector, VectorFactory,
 };
 use core::fmt::{Debug, Display, Formatter};
 
@@ -179,7 +179,13 @@ impl<V: VectorFactory> Executor<V> {
                 let args_end = self.locals.len();
                 let args_start = args_end - func_type.params.len();
                 let args = &self.locals[args_start..args_end];
-                let value = host_func.invoke(args);
+
+                let mut env = Env {
+                    mem: &mut self.mem,
+                    globals: &mut self.globals,
+                };
+                let value = host_func.invoke(args, &mut env);
+
                 // TODO: check return value type
                 if let Some(v) = value {
                     self.values.push(v);

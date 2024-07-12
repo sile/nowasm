@@ -1,7 +1,7 @@
 use clap::Parser;
 use nowasm::{
     components::{Resulttype, Valtype},
-    HostFunc, Module, Resolve, StdVectorFactory, Val,
+    Env, HostFunc, Module, Resolve, StdVectorFactory, Val,
 };
 use orfail::{Failure, OrFail};
 use std::{fmt::Debug, path::PathBuf};
@@ -63,16 +63,14 @@ impl Resolve for Resolver {
 struct Print;
 
 impl HostFunc for Print {
-    fn invoke(&mut self, args: &[Val]) -> Option<Val> {
+    fn invoke(&mut self, args: &[Val], env: &mut Env) -> Option<Val> {
         // TODO: improve error handling (make it possible to return Err(_))
         // TODO: add module and store to args
-        unsafe {
-            let ptr = args[0].as_i32().unwrap() as *const u8;
-            let len = args[1].as_i32().unwrap() as usize;
-            let slice = std::slice::from_raw_parts(ptr, len);
-            let string = std::str::from_utf8(slice).unwrap();
-            print!("{string}");
-        }
+        let ptr = args[0].as_i32().unwrap() as usize;
+        let len = args[1].as_i32().unwrap() as usize;
+        let slice = &env.mem[ptr..ptr + len];
+        let string = std::str::from_utf8(slice).unwrap();
+        print!("{string}");
         None
     }
 }
