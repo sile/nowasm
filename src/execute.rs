@@ -305,11 +305,22 @@ impl<V: VectorFactory> Executor<V> {
                         return Ok(return_level);
                     }
                 }
+                Instr::Br(label) => {
+                    return Ok(level - label.get());
+                }
                 Instr::BrIf(label) => {
                     let c = self.pop_value_i32();
                     if c != 0 {
                         return Ok(level - label.get());
                     }
+                }
+                Instr::BrTable(table) => {
+                    let i = self.pop_value_i32() as usize;
+                    let label = table
+                        .labels
+                        .get(i)
+                        .unwrap_or_else(|| table.labels.last().expect("unreachable"));
+                    return Ok(level - label.get());
                 }
                 Instr::Return => {
                     return Ok(self.current_frame.level);
