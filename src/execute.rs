@@ -153,6 +153,13 @@ impl<V: VectorFactory> Executor<V> {
         v
     }
 
+    pub fn pop_value_u32(&mut self) -> u32 {
+        let Some(Val::I32(v)) = self.values.pop() else {
+            unreachable!();
+        };
+        v as u32
+    }
+
     pub fn call_function<H: HostFunc>(
         &mut self,
         func_idx: Funcidx,
@@ -253,6 +260,7 @@ impl<V: VectorFactory> Executor<V> {
                 Instr::I32LeS => self.apply_binop_i32(|v0, v1| if v0 <= v1 { 1 } else { 0 }),
                 Instr::I32GtS => self.apply_binop_i32(|v0, v1| if v0 > v1 { 1 } else { 0 }),
                 Instr::I32GeS => self.apply_binop_i32(|v0, v1| if v0 >= v1 { 1 } else { 0 }),
+                Instr::I32GtU => self.apply_binop_u32(|v0, v1| if v0 > v1 { 1 } else { 0 }),
                 Instr::I32Load8U(arg) => {
                     // TODO: handle alignment
                     let i = self.pop_value_i32();
@@ -401,6 +409,15 @@ impl<V: VectorFactory> Executor<V> {
     {
         let v0 = self.pop_value_i32();
         let v1 = self.pop_value_i32();
+        self.push_value(Val::I32(f(v1, v0)));
+    }
+
+    fn apply_binop_u32<F>(&mut self, f: F)
+    where
+        F: FnOnce(u32, u32) -> i32,
+    {
+        let v0 = self.pop_value_u32();
+        let v1 = self.pop_value_u32();
         self.push_value(Val::I32(f(v1, v0)));
     }
 }
