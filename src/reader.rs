@@ -116,7 +116,6 @@ impl<'a> Reader<'a> {
         let mut offset = 0;
         loop {
             let b = self.read_u8()?;
-
             if b < 0b0100_0000 {
                 let remaining_bits = bits - offset;
                 if b >= 1u8
@@ -132,7 +131,7 @@ impl<'a> Reader<'a> {
                 if remaining_bits <= 8 && b < (0b1000_0000 - (1u8 << (remaining_bits as u32 - 1))) {
                     return Err(DecodeError::MalformedInteger);
                 }
-                n += ((b as i64) - 0b1000_000) << offset;
+                n += ((b as i64) - 0b1000_0000) << offset;
                 break;
             }
 
