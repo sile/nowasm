@@ -159,6 +159,13 @@ impl<V: VectorFactory> Executor<V> {
         v as u32
     }
 
+    pub fn pop_value_f32(&mut self) -> f32 {
+        let Some(Val::F32(v)) = self.values.pop() else {
+            unreachable!();
+        };
+        v
+    }
+
     pub fn call_function<H: HostFunc>(
         &mut self,
         func_idx: Funcidx,
@@ -421,6 +428,10 @@ impl<V: VectorFactory> Executor<V> {
                     } else {
                         self.push_value(Val::I32(-1));
                     };
+                }
+                Instr::I32ReinterpretF32 => {
+                    let v = self.pop_value_f32();
+                    self.push_value(Val::I32(v.to_bits() as i32));
                 }
                 _ => todo!("{instr:?}"),
             }
@@ -748,6 +759,38 @@ mod tests {
             panic!()
         };
         assert_eq!(&[Val::I32(10), Val::I32(-3)][..], &host_func.messages);
+    }
+
+    #[test]
+    fn numeric_reinterpret_test() {
+        // From: https://developer.mozilla.org/en-US/docs/WebAssembly/Reference/Numeric/Reinterpret
+        //
+        // (module
+        //   (import "console" "log" (func $log (param i32)))
+        //   (func $main
+        //     ;; the value `10000000_00000000_00000000_00000000` in binary
+        //     ;; maps to `-0` as a floating point and to `-2147483648` as an integer.
+        //
+        //     f32.const -0 ;; push an f32 onto the stack
+        //
+        //     i32.reinterpret_f32 ;; reinterpret the bytes of the f32 as i32
+        //
+        //     call $log ;; log the result
+        //   )
+        //   (start $main)
+        // )
+        let input = [
+            0, 97, 115, 109, 1, 0, 0, 0, 1, 8, 2, 96, 1, 127, 0, 96, 0, 0, 2, 15, 1, 7, 99, 111,
+            110, 115, 111, 108, 101, 3, 108, 111, 103, 0, 0, 3, 2, 1, 1, 8, 1, 1, 10, 12, 1, 10, 0,
+            67, 0, 0, 0, 128, 188, 16, 0, 11,
+        ];
+        let module = Module::<StdVectorFactory>::decode(&input).expect("decode");
+        let instance = module.instantiate(Resolver).expect("instantiate");
+
+        let FuncInst::Imported { host_func, .. } = &instance.funcs()[0] else {
+            panic!()
+        };
+        assert_eq!(&[Val::I32(-2147483648)][..], &host_func.messages);
     }
 
     #[derive(Debug)]
