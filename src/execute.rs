@@ -2,7 +2,7 @@ use crate::{
     components::{Blocktype, Funcidx, Functype, Importdesc, Localidx},
     instance::FuncInst,
     instructions::Instr,
-    Env, GlobalVal, HostFunc, Module, Val, Vector, VectorFactory,
+    Env, GlobalVal, HostFunc, Module, Val, Vector, VectorFactory, PAGE_SIZE,
 };
 use core::fmt::{Debug, Display, Formatter};
 
@@ -403,6 +403,10 @@ impl<V: VectorFactory> Executor<V> {
                     let v1 = self.pop_value();
                     self.push_value(if c != 0 { v0 } else { v1 });
                 }
+                Instr::MemorySize => {
+                    let size = self.mem.len() / PAGE_SIZE;
+                    self.push_value(Val::I32(size as i32));
+                }
                 _ => todo!("{instr:?}"),
             }
         }
@@ -637,6 +641,35 @@ mod tests {
             panic!()
         };
         assert_eq!(&[Val::I32(99), Val::I32(101)][..], &host_func.messages);
+    }
+
+    #[test]
+    fn memory_size_test() {
+        // From: https://developer.mozilla.org/en-US/docs/WebAssembly/Reference/Memory/Size
+        //
+        // (module
+        //   (import "console" "log" (func $log (param i32)))
+        //   (memory 2)
+        //   (func $main
+        //
+        //     memory.size ;; get the memory size
+        //     call $log ;; log the result
+        //
+        //   )
+        //   (start $main)
+        // )
+        let input = [
+            0, 97, 115, 109, 1, 0, 0, 0, 1, 8, 2, 96, 1, 127, 0, 96, 0, 0, 2, 15, 1, 7, 99, 111,
+            110, 115, 111, 108, 101, 3, 108, 111, 103, 0, 0, 3, 2, 1, 1, 5, 3, 1, 0, 2, 8, 1, 1,
+            10, 8, 1, 6, 0, 63, 0, 16, 0, 11,
+        ];
+        let module = Module::<StdVectorFactory>::decode(&input).expect("decode");
+        let instance = module.instantiate(Resolver).expect("instantiate");
+
+        let FuncInst::Imported { host_func, .. } = &instance.funcs()[0] else {
+            panic!()
+        };
+        assert_eq!(&[Val::I32(2)][..], &host_func.messages);
     }
 
     #[test]
