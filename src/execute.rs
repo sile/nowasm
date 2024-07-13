@@ -212,9 +212,8 @@ impl<V: VectorFactory> Executor<V> {
         level: usize,
         funcs: &mut [FuncInst<H>],
         module: &Module<V>,
-    ) -> Result<usize, ExecuteError> {
+    ) -> Result<Option<usize>, ExecuteError> {
         for instr in instrs {
-            dbg!(level, instr);
             match instr {
                 Instr::Nop => {}
                 Instr::Unreachable => return Err(ExecuteError::Trapped),
@@ -322,18 +321,38 @@ impl<V: VectorFactory> Executor<V> {
                     let prev_block = self.enter_block(block.blocktype);
                     let return_level =
                         self.execute_instrs(&block.instrs, level + 1, funcs, module)?;
-                    self.exit_block(block.blocktype, return_level <= level, prev_block);
-                    if return_level <= level {
+                    let skipped = return_level.map_or(false, |return_level| return_level <= level);
+                    self.exit_block(block.blocktype, skipped, prev_block);
+                    if skipped {
                         return Ok(return_level);
                     }
                 }
+                Instr::Loop(block) => {
+                    let current_level = level + 1;
+                    let blocktype = Blocktype::Empty;
+                    let prev_block = self.enter_block(blocktype);
+                    loop {
+                        let return_level =
+                            self.execute_instrs(&block.instrs, current_level, funcs, module)?;
+                        if return_level == Some(current_level) {
+                            continue;
+                        }
+                        let skipped =
+                            return_level.map_or(false, |return_level| return_level <= level);
+                        self.exit_block(blocktype, skipped, prev_block);
+                        if skipped {
+                            return Ok(return_level);
+                        }
+                        break;
+                    }
+                }
                 Instr::Br(label) => {
-                    return Ok(level - label.get());
+                    return Ok(Some(level - label.get()));
                 }
                 Instr::BrIf(label) => {
                     let c = self.pop_value_i32();
                     if c != 0 {
-                        return Ok(level - label.get());
+                        return Ok(Some(level - label.get()));
                     }
                 }
                 Instr::BrTable(table) => {
@@ -342,10 +361,10 @@ impl<V: VectorFactory> Executor<V> {
                         .labels
                         .get(i)
                         .unwrap_or_else(|| table.labels.last().expect("unreachable"));
-                    return Ok(level - label.get());
+                    return Ok(Some(level - label.get()));
                 }
                 Instr::Return => {
-                    return Ok(self.current_frame.level);
+                    return Ok(Some(self.current_frame.level));
                 }
                 Instr::Call(funcidx) => {
                     self.call_function(*funcidx, level + 1, funcs, module)?;
@@ -353,7 +372,7 @@ impl<V: VectorFactory> Executor<V> {
                 _ => todo!("{instr:?}"),
             }
         }
-        Ok(level)
+        Ok(None)
     }
 
     fn apply_binop_i32<F>(&mut self, f: F)
@@ -390,10 +409,10 @@ pub struct Block {
 
 #[cfg(test)]
 mod tests {
-    use crate::{Module, StdVectorFactory};
+    use crate::{Env, FuncInst, HostFunc, Module, Resolve, StdVectorFactory, Val};
 
     #[test]
-    fn it_works() {
+    fn control_flow_br_test() {
         // From: https://developer.mozilla.org/en-US/docs/WebAssembly/Reference/Control_flow/br
         //
         // (module
@@ -434,5 +453,46 @@ mod tests {
             65, 10, 72, 13, 0, 11, 11,
         ];
         let module = Module::<StdVectorFactory>::decode(&input).expect("decode");
+        let instance = module.instantiate(Resolver).expect("instantiate");
+        let FuncInst::Imported { host_func, .. } = &instance.funcs()[0] else {
+            panic!()
+        };
+        assert_eq!(10, host_func.messages.len());
+        for (i, m) in host_func.messages.iter().enumerate() {
+            assert_eq!(Val::I32((i + 1) as i32), *m);
+        }
+    }
+
+    #[derive(Debug)]
+    struct Resolver;
+
+    impl Resolve for Resolver {
+        type HostFunc = Log;
+
+        fn resolve_func(
+            &self,
+            module: &str,
+            name: &str,
+            params: &[crate::components::Valtype],
+            result: crate::components::Resulttype,
+        ) -> Option<Self::HostFunc> {
+            if module == "console" && name == "log" && params.len() > 0 && result.len() == 0 {
+                Some(Log::default())
+            } else {
+                None
+            }
+        }
+    }
+
+    #[derive(Debug, Default)]
+    struct Log {
+        messages: Vec<Val>,
+    }
+
+    impl HostFunc for Log {
+        fn invoke(&mut self, args: &[Val], _env: &mut Env) -> Option<Val> {
+            self.messages.push(args[0]);
+            None
+        }
     }
 }

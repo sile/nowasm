@@ -320,6 +320,10 @@ impl<V: VectorFactory, H: HostFunc> ModuleInstance<V, H> {
         &mut self.executor.table
     }
 
+    pub fn funcs(&self) -> &[FuncInst<H>] {
+        &self.funcs
+    }
+
     pub fn invoke(
         &mut self,
         function_name: &str,
