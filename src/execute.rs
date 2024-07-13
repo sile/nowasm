@@ -407,6 +407,21 @@ impl<V: VectorFactory> Executor<V> {
                     let size = self.mem.len() / PAGE_SIZE;
                     self.push_value(Val::I32(size as i32));
                 }
+                Instr::MemoryGrow => {
+                    let delta = self.pop_value_i32();
+                    let max = module.mem().and_then(|m| m.limits.max).unwrap_or_default();
+                    let current = self.mem.len() / PAGE_SIZE;
+                    let new = current + delta as usize;
+                    if new <= max as usize {
+                        // TODO: use resize()
+                        for _ in 0..delta as usize * PAGE_SIZE {
+                            self.mem.push(0);
+                        }
+                        self.push_value(Val::I32(current as i32));
+                    } else {
+                        self.push_value(Val::I32(-1));
+                    };
+                }
                 _ => todo!("{instr:?}"),
             }
         }
@@ -670,6 +685,40 @@ mod tests {
             panic!()
         };
         assert_eq!(&[Val::I32(2)][..], &host_func.messages);
+    }
+
+    #[test]
+    fn memory_grow_test() {
+        // From: https://developer.mozilla.org/en-US/docs/WebAssembly/Reference/Memory/Grow
+        //
+        // (module
+        //   (import "console" "log" (func $log (param i32)))
+        //   (memory 1 2) ;; default memory with one page and max of 2 pages
+        //
+        //   (func $main
+        //     ;; grow default memory by 1 page
+        //     i32.const 1
+        //     memory.grow
+        //     call $log ;; log the result (previous no. pages = 1)
+        //
+        //     ;; grow default memory, using an S-function
+        //     (memory.grow (i32.const 1))
+        //     call $log ;; log the result (-1: max is 2 pages for default memory declared above!)
+        //   )
+        //   (start $main) ;; call immediately on loading
+        // )
+        let input = [
+            0, 97, 115, 109, 1, 0, 0, 0, 1, 8, 2, 96, 1, 127, 0, 96, 0, 0, 2, 15, 1, 7, 99, 111,
+            110, 115, 111, 108, 101, 3, 108, 111, 103, 0, 0, 3, 2, 1, 1, 5, 4, 1, 1, 1, 2, 8, 1, 1,
+            10, 16, 1, 14, 0, 65, 1, 64, 0, 16, 0, 65, 1, 64, 0, 16, 0, 11,
+        ];
+        let module = Module::<StdVectorFactory>::decode(&input).expect("decode");
+        let instance = module.instantiate(Resolver).expect("instantiate");
+
+        let FuncInst::Imported { host_func, .. } = &instance.funcs()[0] else {
+            panic!()
+        };
+        assert_eq!(&[Val::I32(1), Val::I32(-1)][..], &host_func.messages);
     }
 
     #[test]
