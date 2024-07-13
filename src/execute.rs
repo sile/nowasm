@@ -250,6 +250,16 @@ impl<V: VectorFactory> Executor<V> {
                 Instr::I32LeS => self.apply_binop_i32(|v0, v1| if v0 <= v1 { 1 } else { 0 }),
                 Instr::I32GtS => self.apply_binop_i32(|v0, v1| if v0 > v1 { 1 } else { 0 }),
                 Instr::I32GeS => self.apply_binop_i32(|v0, v1| if v0 >= v1 { 1 } else { 0 }),
+                Instr::I32Load8U(arg) => {
+                    // TODO: handle alignment
+                    let i = self.pop_value_i32();
+                    let i = (i + arg.offset as i32) as usize;
+                    if self.mem.len() < i {
+                        return Err(ExecuteError::Trapped);
+                    }
+                    let v = self.mem[i] as i32;
+                    self.values.push(Val::I32(v));
+                }
                 Instr::I32Load(arg) => {
                     // TODO: handle alignment
                     let i = self.pop_value_i32();
@@ -271,6 +281,17 @@ impl<V: VectorFactory> Executor<V> {
                         return Err(ExecuteError::Trapped);
                     }
                     v.copy_to(&mut self.mem[start..end]);
+                }
+                Instr::I32Store8(arg) => {
+                    // TODO: handle alignment
+                    let v = self.pop_value();
+                    let i = self.pop_value_i32();
+                    let i = (i + arg.offset as i32) as usize;
+                    if self.mem.len() < i {
+                        return Err(ExecuteError::Trapped);
+                    }
+                    let v = v.as_i32().ok_or(ExecuteError::Trapped)? as u8; // TODO:
+                    self.mem[i] = v;
                 }
                 Instr::I32Store16(arg) => {
                     // TODO: handle alignment
