@@ -248,6 +248,7 @@ impl<V: VectorFactory> Executor<V> {
                 Instr::I32Add => self.apply_binop_i32(|v0, v1| v0 + v1),
                 Instr::I32Xor => self.apply_binop_i32(|v0, v1| v0 ^ v1),
                 Instr::I32And => self.apply_binop_i32(|v0, v1| v0 & v1),
+                Instr::I32Eq => self.apply_binop_i32(|v0, v1| if v0 == v1 { 1 } else { 0 }),
                 Instr::I32LtS => self.apply_binop_i32(|v0, v1| if v0 < v1 { 1 } else { 0 }),
                 Instr::I32LeS => self.apply_binop_i32(|v0, v1| if v0 <= v1 { 1 } else { 0 }),
                 Instr::I32GtS => self.apply_binop_i32(|v0, v1| if v0 > v1 { 1 } else { 0 }),
@@ -348,6 +349,20 @@ impl<V: VectorFactory> Executor<V> {
                         break;
                     }
                 }
+                Instr::If(block) => {
+                    let c = self.pop_value_i32();
+                    let prev_block = self.enter_block(block.blocktype);
+                    let return_level = if c != 0 {
+                        self.execute_instrs(&block.then_instrs, level + 1, funcs, module)?
+                    } else {
+                        self.execute_instrs(&block.else_instrs, level + 1, funcs, module)?
+                    };
+                    let skipped = return_level.map_or(false, |return_level| return_level <= level);
+                    self.exit_block(block.blocktype, skipped, prev_block);
+                    if skipped {
+                        return Ok(return_level);
+                    }
+                }
                 Instr::Br(label) => {
                     return Ok(Some(level - label.get()));
                 }
@@ -371,6 +386,7 @@ impl<V: VectorFactory> Executor<V> {
                     return Ok(Some(self.current_frame.level));
                 }
                 Instr::Call(funcidx) => {
+                    // TODO: remove level arg (e.g., reset to 0)
                     self.call_function(*funcidx, level + 1, funcs, module)?;
                 }
                 _ => todo!("{instr:?}"),
@@ -530,6 +546,35 @@ mod tests {
             panic!()
         };
         assert_eq!(&[Val::I32(99), Val::I32(101)][..], &host_func.messages);
+    }
+
+    #[test]
+    fn consts_test() {
+        // (module
+        //   (import "console" "log" (func $log (param i32)))
+        //   (func $main
+
+        //     i32.const 10
+        //     call $log
+
+        //     i32.const -3
+        //     call $log
+        //   )
+        //   (start $main)
+        // )
+        let input = [
+            0, 97, 115, 109, 1, 0, 0, 0, 1, 8, 2, 96, 1, 127, 0, 96, 0, 0, 2, 15, 1, 7, 99, 111,
+            110, 115, 111, 108, 101, 3, 108, 111, 103, 0, 0, 3, 2, 1, 1, 8, 1, 1, 10, 12, 1, 10, 0,
+            65, 10, 16, 0, 65, 125, 16, 0, 11,
+        ];
+
+        let module = Module::<StdVectorFactory>::decode(&input).expect("decode");
+        let instance = module.instantiate(Resolver).expect("instantiate");
+
+        let FuncInst::Imported { host_func, .. } = &instance.funcs()[0] else {
+            panic!()
+        };
+        assert_eq!(&[Val::I32(10), Val::I32(-3)][..], &host_func.messages);
     }
 
     #[derive(Debug)]

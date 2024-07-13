@@ -6,6 +6,7 @@ nowasm
 - https://github.com/WebAssembly/sign-extension-ops/blob/master/proposals/sign-extension-ops/Overview.md
 - https://webassembly.github.io/wabt/demo/wat2wasm/
 - https://webassembly.github.io/wabt/demo/wasm2wat/
+- https://developer.mozilla.org/en-US/docs/WebAssembly/Reference
 
 TODO until v0.1.0
 -----------------
