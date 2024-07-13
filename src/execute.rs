@@ -394,6 +394,9 @@ impl<V: VectorFactory> Executor<V> {
                 Instr::Call(funcidx) => {
                     self.call_function(*funcidx, funcs, module)?;
                 }
+                Instr::Drop => {
+                    self.pop_value();
+                }
                 _ => todo!("{instr:?}"),
             }
         }
@@ -495,6 +498,38 @@ mod tests {
         for (i, m) in host_func.messages.iter().enumerate() {
             assert_eq!(Val::I32((i + 1) as i32), *m);
         }
+    }
+
+    #[test]
+    fn control_flow_drop_test() {
+        // From: https://developer.mozilla.org/en-US/docs/WebAssembly/Reference/Control_flow/Drop
+        //
+        // (module
+        //   (import "console" "log" (func $log (param i32)))
+        //   (func $main
+        //     ;; load two values onto the stack
+        //     i32.const 10
+        //     i32.const 20
+        //
+        //     ;; drop the top item from the stack (`20`)
+        //     drop
+        //
+        //     call $log ;; log the top value on the stack (`10`)
+        //   )
+        //   (start $main)
+        // )
+        let input = [
+            0, 97, 115, 109, 1, 0, 0, 0, 1, 8, 2, 96, 1, 127, 0, 96, 0, 0, 2, 15, 1, 7, 99, 111,
+            110, 115, 111, 108, 101, 3, 108, 111, 103, 0, 0, 3, 2, 1, 1, 8, 1, 1, 10, 11, 1, 9, 0,
+            65, 10, 65, 20, 26, 16, 0, 11,
+        ];
+        let module = Module::<StdVectorFactory>::decode(&input).expect("decode");
+        let instance = module.instantiate(Resolver).expect("instantiate");
+
+        let FuncInst::Imported { host_func, .. } = &instance.funcs()[0] else {
+            panic!()
+        };
+        assert_eq!(&[Val::I32(10)][..], &host_func.messages);
     }
 
     #[test]
