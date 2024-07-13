@@ -209,11 +209,13 @@ impl<V: VectorFactory> Executor<V> {
     pub fn execute_instrs<H: HostFunc>(
         &mut self,
         instrs: &[Instr<V>],
-        level: usize,
+        level: usize, // TODO: label
         funcs: &mut [FuncInst<H>],
         module: &Module<V>,
     ) -> Result<Option<usize>, ExecuteError> {
+        dbg!(level);
         for instr in instrs {
+            dbg!(instr);
             match instr {
                 Instr::Nop => {}
                 Instr::Unreachable => return Err(ExecuteError::Trapped),
@@ -351,7 +353,9 @@ impl<V: VectorFactory> Executor<V> {
                 }
                 Instr::BrIf(label) => {
                     let c = self.pop_value_i32();
+                    dbg!(c);
                     if c != 0 {
+                        dbg!(level, label.get());
                         return Ok(Some(level - label.get()));
                     }
                 }
@@ -454,6 +458,7 @@ mod tests {
         ];
         let module = Module::<StdVectorFactory>::decode(&input).expect("decode");
         let instance = module.instantiate(Resolver).expect("instantiate");
+
         let FuncInst::Imported { host_func, .. } = &instance.funcs()[0] else {
             panic!()
         };
@@ -461,6 +466,70 @@ mod tests {
         for (i, m) in host_func.messages.iter().enumerate() {
             assert_eq!(Val::I32((i + 1) as i32), *m);
         }
+    }
+
+    #[test]
+    fn control_flow_block_test() {
+        // From: https://developer.mozilla.org/en-US/docs/WebAssembly/Reference/Control_flow/block
+        //
+        // (module
+        //   ;; import the browser console object, you'll need to pass this in from JavaScript
+        //   (import "console" "log" (func $log (param i32)))
+        //
+        //   ;; create a function that takes in a number as a param,
+        //   ;; and logs that number if it's not equal to 100.
+        //   (func (export "log_if_not_100") (param $num i32)
+        //     (block $my_block
+        //
+        //       ;; $num is equal to 100
+        //       local.get $num
+        //       i32.const 100
+        //       i32.eq
+        //
+        //       (if
+        //         (then
+        //
+        //           ;; branch to the end of the block
+        //           br $my_block
+        //
+        //         )
+        //       )
+        //
+        //       ;; not reachable when $num is 100
+        //       local.get $num
+        //       call $log
+        //
+        //     )
+        //   )
+        // )
+        let input = [
+            0, 97, 115, 109, 1, 0, 0, 0, 1, 5, 1, 96, 1, 127, 0, 2, 15, 1, 7, 99, 111, 110, 115,
+            111, 108, 101, 3, 108, 111, 103, 0, 0, 3, 2, 1, 0, 7, 18, 1, 14, 108, 111, 103, 95,
+            105, 102, 95, 110, 111, 116, 95, 49, 48, 48, 0, 1, 10, 22, 1, 20, 0, 2, 64, 32, 0, 65,
+            228, 0, 70, 4, 64, 12, 1, 11, 32, 0, 16, 0, 11, 11,
+        ];
+        let module = Module::<StdVectorFactory>::decode(&input).expect("decode");
+        let mut instance = module.instantiate(Resolver).expect("instantiate");
+
+        assert!(instance
+            .invoke("log_if_not_100", &[Val::I32(99)])
+            .expect("invoke")
+            .is_none());
+
+        assert!(instance
+            .invoke("log_if_not_100", &[Val::I32(100)])
+            .expect("invoke")
+            .is_none());
+
+        assert!(instance
+            .invoke("log_if_not_100", &[Val::I32(101)])
+            .expect("invoke")
+            .is_none());
+
+        let FuncInst::Imported { host_func, .. } = &instance.funcs()[0] else {
+            panic!()
+        };
+        assert_eq!(&[Val::I32(99), Val::I32(101)][..], &host_func.messages);
     }
 
     #[derive(Debug)]
