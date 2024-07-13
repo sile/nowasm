@@ -71,7 +71,7 @@ impl<V: VectorFactory> Executor<V> {
         }
     }
 
-    pub fn enter_frame(&mut self, ty: &Functype<V>, level: usize) -> Frame {
+    pub fn enter_frame(&mut self, ty: &Functype<V>) -> Frame {
         let locals_start = self.locals.len();
         for _ in 0..ty.params.len() {
             let v = self.pop_value();
@@ -82,7 +82,6 @@ impl<V: VectorFactory> Executor<V> {
 
         let prev = self.current_frame;
         self.current_frame = Frame {
-            level,
             arity: ty.result.len(),
             locals_start,
             values_start,
@@ -163,17 +162,16 @@ impl<V: VectorFactory> Executor<V> {
     pub fn call_function<H: HostFunc>(
         &mut self,
         func_idx: Funcidx,
-        level: usize,
         funcs: &mut [FuncInst<H>],
         module: &Module<V>,
-    ) -> Result<usize, ExecuteError> {
+    ) -> Result<(), ExecuteError> {
         // TODO: Add validation phase
         let func = funcs
             .get_mut(func_idx.get())
             .ok_or(ExecuteError::InvalidFuncidx)?;
         let func_type = func.get_type(module).ok_or(ExecuteError::InvalidFuncidx)?; // TODO: change reason
 
-        let prev_frame = self.enter_frame(func_type, level);
+        let prev_frame = self.enter_frame(func_type);
         match func {
             FuncInst::Imported {
                 imports_index,
@@ -206,11 +204,11 @@ impl<V: VectorFactory> Executor<V> {
                 for v in func.locals.iter().copied().map(Val::zero) {
                     self.locals.push(v);
                 }
-                self.execute_instrs(func.body.instrs(), level + 1, funcs, module)?;
+                self.execute_instrs(func.body.instrs(), 0, funcs, module)?;
             }
         };
         self.exit_frame(func_type, prev_frame);
-        Ok(level)
+        Ok(())
     }
 
     pub fn execute_instrs<H: HostFunc>(
@@ -391,11 +389,10 @@ impl<V: VectorFactory> Executor<V> {
                     return Ok(Some(level - label.get()));
                 }
                 Instr::Return => {
-                    return Ok(Some(self.current_frame.level));
+                    return Ok(Some(0));
                 }
                 Instr::Call(funcidx) => {
-                    // TODO: remove level arg (e.g., reset to 0)
-                    self.call_function(*funcidx, level + 1, funcs, module)?;
+                    self.call_function(*funcidx, funcs, module)?;
                 }
                 _ => todo!("{instr:?}"),
             }
@@ -432,7 +429,6 @@ impl<V: VectorFactory> Debug for Executor<V> {
 // TODO: Activation(?)
 #[derive(Debug, Default, Clone, Copy)]
 pub struct Frame {
-    pub level: usize,
     pub arity: usize,
     pub locals_start: usize,
     pub values_start: usize,
