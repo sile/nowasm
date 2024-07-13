@@ -214,6 +214,7 @@ impl<V: VectorFactory> Executor<V> {
         module: &Module<V>,
     ) -> Result<usize, ExecuteError> {
         for instr in instrs {
+            dbg!(level, instr);
             match instr {
                 Instr::Nop => {}
                 Instr::Unreachable => return Err(ExecuteError::Trapped),
@@ -385,4 +386,53 @@ pub struct Frame {
 pub struct Block {
     pub arity: usize,
     pub values_start: usize,
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{Module, StdVectorFactory};
+
+    #[test]
+    fn it_works() {
+        // From: https://developer.mozilla.org/en-US/docs/WebAssembly/Reference/Control_flow/br
+        //
+        // (module
+        //   ;; import the browser console object, you'll need to pass this in from JavaScript
+        //   (import "console" "log" (func $log (param i32)))
+        //
+        //   ;; create a global variable and initialize it to 0
+        //   (global $i (mut i32) (i32.const 0))
+        //
+        //   (func
+        //     (loop $my_loop
+        //
+        //       ;; add one to $i
+        //       global.get $i
+        //       i32.const 1
+        //       i32.add
+        //       global.set $i
+        //
+        //       ;; log the current value of $i
+        //       global.get $i
+        //       call $log
+        //
+        //       ;; if $i is less than 10 branch to loop
+        //       global.get $i
+        //       i32.const 10
+        //       i32.lt_s
+        //       br_if $my_loop
+        //
+        //     )
+        //   )
+        //
+        //   (start 1) ;; run the first function automatically
+        // )
+        let input = [
+            0, 97, 115, 109, 1, 0, 0, 0, 1, 8, 2, 96, 1, 127, 0, 96, 0, 0, 2, 15, 1, 7, 99, 111,
+            110, 115, 111, 108, 101, 3, 108, 111, 103, 0, 0, 3, 2, 1, 1, 6, 6, 1, 127, 1, 65, 0,
+            11, 8, 1, 1, 10, 25, 1, 23, 0, 3, 64, 35, 0, 65, 1, 106, 36, 0, 35, 0, 16, 0, 35, 0,
+            65, 10, 72, 13, 0, 11, 11,
+        ];
+        let module = Module::<StdVectorFactory>::decode(&input).expect("decode");
+    }
 }
