@@ -397,6 +397,12 @@ impl<V: VectorFactory> Executor<V> {
                 Instr::Drop => {
                     self.pop_value();
                 }
+                Instr::Select => {
+                    let c = self.pop_value_i32();
+                    let v0 = self.pop_value();
+                    let v1 = self.pop_value();
+                    self.push_value(if c != 0 { v0 } else { v1 });
+                }
                 _ => todo!("{instr:?}"),
             }
         }
@@ -530,6 +536,43 @@ mod tests {
             panic!()
         };
         assert_eq!(&[Val::I32(10)][..], &host_func.messages);
+    }
+
+    #[test]
+    fn control_flow_select_test() {
+        // From: https://developer.mozilla.org/en-US/docs/WebAssembly/Reference/Control_flow/Select
+        //
+        // (module
+        //   (func (export "select_simple") (result i32)
+        //     ;; load two values onto the stack
+        //     i32.const 10
+        //     i32.const 20
+        //
+        //     ;; change to `1` (true) to get the first value (`10`)
+        //     i32.const 0
+        //     select
+        //   )
+        //   ;; (func (export "select_externref") (param $value externref) (param $condition i32) (result externref)
+        //   ;;  ;; this is "select t", the explicitly typed variant
+        //   ;;  ref.null extern
+        //   ;;  local.get $value
+        //   ;;  local.get $condition
+        //   ;;  select (result externref)
+        //   ;; )
+        // )
+        let input = [
+            0, 97, 115, 109, 1, 0, 0, 0, 1, 5, 1, 96, 0, 1, 127, 3, 2, 1, 0, 7, 17, 1, 13, 115,
+            101, 108, 101, 99, 116, 95, 115, 105, 109, 112, 108, 101, 0, 0, 10, 11, 1, 9, 0, 65,
+            10, 65, 20, 65, 0, 27, 11,
+        ];
+        let module = Module::<StdVectorFactory>::decode(&input).expect("decode");
+        let mut instance = module.instantiate(Resolver).expect("instantiate");
+
+        let val = instance
+            .invoke("select_simple", &[])
+            .expect("invoke")
+            .expect("result");
+        assert_eq!(Val::I32(10), val);
     }
 
     #[test]
