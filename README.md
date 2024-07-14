@@ -13,8 +13,8 @@ The goal is to provide a lightweight WebAssembly runtime that can be embedded wh
 
 [wasm-core-1]: https://www.w3.org/TR/wasm-core-1/
 
-TODO until v0.1.0
------------------
+TODO list until v0.1.0
+----------------------
 
 - [ ] Add validation phase (TBD)
 - [ ] Add doc comments
@@ -23,7 +23,7 @@ TODO until v0.1.0
 Supported Extensions
 --------------------
 
-`nowasm` supports the following extensions that is necessary to run WebAssembly binaries build with the latest stable Rust compiler.
+`nowasm` supports the following extensions necessary to run WebAssembly binaries built with the latest stable Rust compiler.
 - [sign-extension]
 
 [sign-extension]: https://github.com/WebAssembly/sign-extension-ops/blob/master/proposals/sign-extension-ops/Overview.md
