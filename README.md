@@ -7,7 +7,7 @@ nowasm
 ![License](https://img.shields.io/crates/l/nowasm)
 
 
-`nowasm` is a [WebAssembly 1.0][wasm-core-1] runtime library that is implemented with no-std, no-unsafe and no-dependencies.
+`nowasm` is a [WebAssembly 1.0][wasm-core-1] runtime that is implemented with no-std, no-unsafe and no-dependencies.
 
 The goal is to provide a lightweight WebAssembly runtime that can be embedded wherever Rust is used, with a particular focus on Wasm-in-Wasm scenarios.
 
