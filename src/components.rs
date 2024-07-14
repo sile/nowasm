@@ -443,6 +443,14 @@ impl<V: VectorFactory> Functype<V> {
     }
 }
 
+impl<V: VectorFactory> PartialEq for Functype<V> {
+    fn eq(&self, other: &Self) -> bool {
+        self.params.as_ref() == other.params.as_ref() && self.result == other.result
+    }
+}
+
+impl<V: VectorFactory> Eq for Functype<V> {}
+
 impl<V: VectorFactory> Decode<V> for Functype<V> {
     fn decode(reader: &mut Reader) -> Result<Self, DecodeError> {
         let tag = reader.read_u8()?;
@@ -473,7 +481,7 @@ impl<V: VectorFactory> Clone for Functype<V> {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Resulttype(Option<Valtype>);
 
 impl Resulttype {

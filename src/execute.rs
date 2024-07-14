@@ -19,7 +19,7 @@ pub enum ExecuteError {
     InvalidFuncidx,
     InvalidTypeidx,
     InvalidFuncArgs,
-    Trapped,
+    Trapped, // TODO: Trap
 }
 
 impl Display for ExecuteError {
@@ -318,7 +318,25 @@ impl<V: VectorFactory> Executor<V> {
                     self.call_function(*funcidx, funcs, module)?;
                 }
                 Instr::CallIndirect(typeidx) => {
-                    todo!("CallIndirect: {typeidx:?}");
+                    let expect_type = module
+                        .types()
+                        .get(typeidx.get())
+                        .ok_or(ExecuteError::InvalidTypeidx)?;
+
+                    let i = self.pop_value_i32() as usize;
+                    let funcidx = self
+                        .table
+                        .get(i)
+                        .ok_or(ExecuteError::Trapped)?
+                        .ok_or(ExecuteError::Trapped)?;
+                    let func = funcs
+                        .get(funcidx.get())
+                        .ok_or(ExecuteError::InvalidFuncidx)?;
+                    let actual_type = func.get_type(module).ok_or(ExecuteError::InvalidFuncidx)?; // TODO
+                    if expect_type != actual_type {
+                        return Err(ExecuteError::Trapped);
+                    }
+                    self.call_function(funcidx, funcs, module)?;
                 }
 
                 // Parametric Instructions
