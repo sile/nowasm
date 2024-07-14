@@ -166,6 +166,13 @@ impl<V: VectorFactory> Executor<V> {
         v
     }
 
+    pub fn pop_value_f64(&mut self) -> f64 {
+        let Some(Val::F64(v)) = self.values.pop() else {
+            unreachable!();
+        };
+        v
+    }
+
     pub fn call_function<H: HostFunc>(
         &mut self,
         func_idx: Funcidx,
@@ -440,7 +447,11 @@ impl<V: VectorFactory> Executor<V> {
                 Instr::F32ConvertI32S => {
                     let v = self.pop_value_i32();
                     let v = v as f32; // TODO: error check
-
+                    self.push_value(Val::F32(v));
+                }
+                Instr::F32DemoteF64 => {
+                    let v = self.pop_value_f64();
+                    let v = v as f32; // TODO: error check
                     self.push_value(Val::F32(v));
                 }
                 _ => todo!("{instr:?}"),
@@ -862,6 +873,37 @@ mod tests {
             panic!()
         };
         assert_eq!(&[Val::F32(10.0)][..], &host_func.messages);
+    }
+
+    #[test]
+    fn numeric_demote_test() {
+        // From: https://developer.mozilla.org/en-US/docs/WebAssembly/Reference/Numeric/Demote
+        //
+        // (module
+        //   (import "console" "log" (func $log (param f32)))
+        //   (func $main
+        //
+        //     f64.const 10.5 ;; push an f64 onto the stack
+        //
+        //     f32.demote_f64 ;; demote from f64 to f32
+        //
+        //     call $log ;; log the result
+        //
+        //   )
+        //   (start $main)
+        // )
+        let input = [
+            0, 97, 115, 109, 1, 0, 0, 0, 1, 8, 2, 96, 1, 125, 0, 96, 0, 0, 2, 15, 1, 7, 99, 111,
+            110, 115, 111, 108, 101, 3, 108, 111, 103, 0, 0, 3, 2, 1, 1, 8, 1, 1, 10, 16, 1, 14, 0,
+            68, 0, 0, 0, 0, 0, 0, 37, 64, 182, 16, 0, 11,
+        ];
+        let module = Module::<StdVectorFactory>::decode(&input).expect("decode");
+        let instance = module.instantiate(Resolver).expect("instantiate");
+
+        let FuncInst::Imported { host_func, .. } = &instance.funcs()[0] else {
+            panic!()
+        };
+        assert_eq!(&[Val::F32(10.5)][..], &host_func.messages);
     }
 
     #[derive(Debug)]
