@@ -433,6 +433,10 @@ impl<V: VectorFactory> Executor<V> {
                     let v = self.pop_value_f32();
                     self.push_value(Val::I32(v.to_bits() as i32));
                 }
+                Instr::I32TruncF32S => {
+                    let v = self.pop_value_f32();
+                    self.push_value(Val::I32(v.trunc() as i32));
+                }
                 _ => todo!("{instr:?}"),
             }
         }
@@ -791,6 +795,37 @@ mod tests {
             panic!()
         };
         assert_eq!(&[Val::I32(-2147483648)][..], &host_func.messages);
+    }
+
+    #[test]
+    fn numeric_truncate_float_to_int_test() {
+        // From: https://developer.mozilla.org/en-US/docs/WebAssembly/Reference/Numeric/Truncate_float_to_int
+        //
+        // (module
+        //   (import "console" "log" (func $log (param i32)))
+        //   (func $main
+        //
+        //     f32.const 10.5 ;; push an f32 onto the stack
+        //
+        //     i32.trunc_f32_s ;; convert from f32 to signed i32 rounding towards zero (.5 will be lost)
+        //
+        //     call $log ;; log the result
+        //
+        //   )
+        //   (start $main)
+        // )
+        let input = [
+            0, 97, 115, 109, 1, 0, 0, 0, 1, 8, 2, 96, 1, 127, 0, 96, 0, 0, 2, 15, 1, 7, 99, 111,
+            110, 115, 111, 108, 101, 3, 108, 111, 103, 0, 0, 3, 2, 1, 1, 8, 1, 1, 10, 12, 1, 10, 0,
+            67, 0, 0, 40, 65, 168, 16, 0, 11,
+        ];
+        let module = Module::<StdVectorFactory>::decode(&input).expect("decode");
+        let instance = module.instantiate(Resolver).expect("instantiate");
+
+        let FuncInst::Imported { host_func, .. } = &instance.funcs()[0] else {
+            panic!()
+        };
+        assert_eq!(&[Val::I32(10)][..], &host_func.messages);
     }
 
     #[derive(Debug)]
