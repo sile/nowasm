@@ -31,7 +31,7 @@ Supported Extensions
 Examples
 --------
 
-Please execute the command `$ cargo build --target wasm32-unknown-unknown --example hello` to build a WebAssembly binary that prints "Hello, World!" as follows:
+Please execute the command `$ cargo build --target wasm32-unknown-unknown --example hello` to build the [examples/wasm/hello.rs](examples/wasm/hello.rs) file (as shown below) into a WebAssembly binary that prints "Hello, World!":
 
 ```rust
 extern "C" {
@@ -54,7 +54,7 @@ $ cargo run --example call_hello
 Hello, World!
 ```
 
-The code of [call_hello.rs](examples/call_hello.rs) is as follows:
+The code of [examples/call_hello.rs](examples/call_hello.rs) is as follows:
 ```rust
 use nowasm::{Env, HostFunc, Module, Resolve, StdVectorFactory, Val};
 
