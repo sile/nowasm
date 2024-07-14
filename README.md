@@ -6,12 +6,12 @@ nowasm
 [![Actions Status](https://github.com/sile/nowasm/workflows/CI/badge.svg)](https://github.com/sile/nowasm/actions)
 ![License](https://img.shields.io/crates/l/nowasm)
 
-- https://www.w3.org/TR/wasm-core-1/
-- https://github.com/WebAssembly/spec/tree/main/test/core
-- https://github.com/WebAssembly/sign-extension-ops/blob/master/proposals/sign-extension-ops/Overview.md
-- https://webassembly.github.io/wabt/demo/wat2wasm/
-- https://webassembly.github.io/wabt/demo/wasm2wat/
-- https://developer.mozilla.org/en-US/docs/WebAssembly/Reference
+
+`nowasm` is a runtime library for [WebAssembly 1.0][wasm-core-1] that is implemented with no-std, no-unsafe and no-dependencies.
+The goal is to provide a lightweight WebAssembly runtime that can be embedded wherever Rust is used, with a particular focus on Wasm-in-Wasm scenarios.
+
+
+[wasm-core-1]: https://www.w3.org/TR/wasm-core-1/
 
 TODO until v0.1.0
 -----------------
@@ -19,3 +19,11 @@ TODO until v0.1.0
 - [ ] Add validation phase (TBD)
 - [ ] Add doc comments
 - [ ] Add more tests
+
+Supported Extensions
+--------------------
+
+`nowasm` supports the following extensions that is necessary to run WebAssembly binaries build with the latest stable Rust compiler.
+- [sign-extension]
+
+[sign-extension]: https://github.com/WebAssembly/sign-extension-ops/blob/master/proposals/sign-extension-ops/Overview.md
