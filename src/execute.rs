@@ -770,9 +770,23 @@ impl<V: VectorFactory> Executor<V> {
 
                 // Sign Extension
                 #[cfg(feature = "sign_extension")]
-                Instr::SignExtension(instr) => {
-                    todo!("{instr:?}")
-                }
+                Instr::SignExtension(instr) => match instr {
+                    crate::sign_extension::SignExtensionInstr::I32Extend8S => {
+                        self.convert_from_i32(|v| Val::I32(v as i8 as i32))
+                    }
+                    crate::sign_extension::SignExtensionInstr::I32Extend16S => {
+                        self.convert_from_i32(|v| Val::I32(v as i16 as i32))
+                    }
+                    crate::sign_extension::SignExtensionInstr::I64Extend8S => {
+                        self.convert_from_i64(|v| Val::I64(v as i8 as i64))
+                    }
+                    crate::sign_extension::SignExtensionInstr::I64Extend16S => {
+                        self.convert_from_i64(|v| Val::I64(v as i16 as i64))
+                    }
+                    crate::sign_extension::SignExtensionInstr::I64Extend32S => {
+                        self.convert_from_i64(|v| Val::I64(v as i32 as i64))
+                    }
+                },
             }
         }
         Ok(None)
