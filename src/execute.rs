@@ -437,6 +437,12 @@ impl<V: VectorFactory> Executor<V> {
                     let v = self.pop_value_f32();
                     self.push_value(Val::I32(v.trunc() as i32));
                 }
+                Instr::F32ConvertI32S => {
+                    let v = self.pop_value_i32();
+                    let v = v as f32; // TODO: error check
+
+                    self.push_value(Val::F32(v));
+                }
                 _ => todo!("{instr:?}"),
             }
         }
@@ -826,6 +832,36 @@ mod tests {
             panic!()
         };
         assert_eq!(&[Val::I32(10)][..], &host_func.messages);
+    }
+
+    #[test]
+    fn numeric_convert_test() {
+        // From: https://developer.mozilla.org/en-US/docs/WebAssembly/Reference/Numeric/Convert
+        // (module
+        //   (import "console" "log" (func $log (param f32)))
+        //   (func $main
+        //
+        //     i32.const 10 ;; push an i32 onto the stack
+        //
+        //     f32.convert_i32_s ;; convert from signed i32 to f32
+        //
+        //     call $log ;; log the result
+        //
+        //   )
+        //   (start $main)
+        // )
+        let input = [
+            0, 97, 115, 109, 1, 0, 0, 0, 1, 8, 2, 96, 1, 125, 0, 96, 0, 0, 2, 15, 1, 7, 99, 111,
+            110, 115, 111, 108, 101, 3, 108, 111, 103, 0, 0, 3, 2, 1, 1, 8, 1, 1, 10, 9, 1, 7, 0,
+            65, 10, 178, 16, 0, 11,
+        ];
+        let module = Module::<StdVectorFactory>::decode(&input).expect("decode");
+        let instance = module.instantiate(Resolver).expect("instantiate");
+
+        let FuncInst::Imported { host_func, .. } = &instance.funcs()[0] else {
+            panic!()
+        };
+        assert_eq!(&[Val::F32(10.0)][..], &host_func.messages);
     }
 
     #[derive(Debug)]
