@@ -586,6 +586,7 @@ impl<V: VectorFactory> Debug for Instr<V> {
             Self::I64ReinterpretF64 => write!(f, "I64ReinterpretF64"),
             Self::F32ReinterpretI32 => write!(f, "F32ReinterpretI32"),
             Self::F64ReinterpretI64 => write!(f, "F64ReinterpretI64"),
+            #[cfg(feature = "sign_extension")]
             Self::SignExtension(v) => write!(f, "SignExtension({v:?})"),
         }
     }
@@ -764,6 +765,7 @@ impl<V: VectorFactory> Clone for Instr<V> {
             Self::I64ReinterpretF64 => Self::I64ReinterpretF64,
             Self::F32ReinterpretI32 => Self::F32ReinterpretI32,
             Self::F64ReinterpretI64 => Self::F64ReinterpretI64,
+            #[cfg(feature = "sign_extension")]
             Self::SignExtension(v) => Self::SignExtension(v.clone()),
         }
     }
