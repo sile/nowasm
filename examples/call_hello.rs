@@ -1,7 +1,10 @@
 use nowasm::{Env, HostFunc, Module, Resolve, StdVectorFactory, Val};
 
 pub fn main() {
+    #[cfg(test)]
     let wasm_bytes = include_bytes!("../target/wasm32-unknown-unknown/debug/examples/hello.wasm");
+    #[cfg(not(test))]
+    let wasm_bytes = &[];
 
     let module = Module::<StdVectorFactory>::decode(wasm_bytes).expect("Failed to decode module");
 
