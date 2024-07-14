@@ -152,6 +152,13 @@ impl<V: VectorFactory> Executor<V> {
         v
     }
 
+    pub fn pop_value_i64(&mut self) -> i64 {
+        let Some(Val::I64(v)) = self.values.pop() else {
+            unreachable!();
+        };
+        v
+    }
+
     pub fn pop_value_u32(&mut self) -> u32 {
         let Some(Val::I32(v)) = self.values.pop() else {
             unreachable!();
@@ -457,6 +464,11 @@ impl<V: VectorFactory> Executor<V> {
                 Instr::F64PromoteF32 => {
                     let v = self.pop_value_f32() as f64;
                     self.push_value(Val::F64(v));
+                }
+                Instr::I32WrapI64 => {
+                    let v = self.pop_value_i64();
+                    let v = v as i32; // TODO
+                    self.push_value(Val::I32(v));
                 }
                 _ => todo!("{instr:?}"),
             }
@@ -939,6 +951,36 @@ mod tests {
             panic!()
         };
         assert_eq!(&[Val::F64(10.5)][..], &host_func.messages);
+    }
+
+    #[test]
+    fn numeric_wrap_test() {
+        // Based on https://developer.mozilla.org/en-US/docs/WebAssembly/Reference/Numeric/Wrap
+        //
+        // (module
+        //   (import "console" "log" (func $log (param i32)))
+        //   (func $main
+        //
+        //     i64.const 10 ;; push an i64 onto the stack
+        //
+        //     i32.wrap_i64 ;; wrap from i64 to i32
+        //
+        //     call $log ;; log the result
+        //   )
+        //   (start $main)
+        // )
+        let input = [
+            0, 97, 115, 109, 1, 0, 0, 0, 1, 8, 2, 96, 1, 127, 0, 96, 0, 0, 2, 15, 1, 7, 99, 111,
+            110, 115, 111, 108, 101, 3, 108, 111, 103, 0, 0, 3, 2, 1, 1, 8, 1, 1, 10, 9, 1, 7, 0,
+            66, 10, 167, 16, 0, 11,
+        ];
+        let module = Module::<StdVectorFactory>::decode(&input).expect("decode");
+        let instance = module.instantiate(Resolver).expect("instantiate");
+
+        let FuncInst::Imported { host_func, .. } = &instance.funcs()[0] else {
+            panic!()
+        };
+        assert_eq!(&[Val::I32(10)][..], &host_func.messages);
     }
 
     #[derive(Debug)]
