@@ -470,6 +470,10 @@ impl<V: VectorFactory> Executor<V> {
                     let v = v as i32; // TODO
                     self.push_value(Val::I32(v));
                 }
+                Instr::I64ExtendI32S => {
+                    let v = self.pop_value_i32() as i64;
+                    self.push_value(Val::I64(v));
+                }
                 _ => todo!("{instr:?}"),
             }
         }
@@ -981,6 +985,37 @@ mod tests {
             panic!()
         };
         assert_eq!(&[Val::I32(10)][..], &host_func.messages);
+    }
+
+    #[test]
+    fn numeric_extend_test() {
+        // Based on https://developer.mozilla.org/en-US/docs/WebAssembly/Reference/Numeric/Extend
+        //
+        // (module
+        //   (import "console" "log" (func $log (param i64)))
+        //   (func $main
+        //
+        //     i32.const 10 ;; push an i32 onto the stack
+        //
+        //     i64.extend_i32_s ;; sign-extend from i32 to i64
+        //
+        //     call $log ;; log the result
+        //
+        //   )
+        //   (start $main)
+        // )
+        let input = [
+            0, 97, 115, 109, 1, 0, 0, 0, 1, 8, 2, 96, 1, 126, 0, 96, 0, 0, 2, 15, 1, 7, 99, 111,
+            110, 115, 111, 108, 101, 3, 108, 111, 103, 0, 0, 3, 2, 1, 1, 8, 1, 1, 10, 9, 1, 7, 0,
+            65, 10, 172, 16, 0, 11,
+        ];
+        let module = Module::<StdVectorFactory>::decode(&input).expect("decode");
+        let instance = module.instantiate(Resolver).expect("instantiate");
+
+        let FuncInst::Imported { host_func, .. } = &instance.funcs()[0] else {
+            panic!()
+        };
+        assert_eq!(&[Val::I64(10)][..], &host_func.messages);
     }
 
     #[derive(Debug)]
