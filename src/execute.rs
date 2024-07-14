@@ -998,6 +998,188 @@ pub struct Block {
     pub values_start: usize,
 }
 
+#[cfg(not(feature = "std"))]
+trait FloatExt: Sized {
+    fn abs(self) -> Self;
+    fn ceil(self) -> Self;
+    fn floor(self) -> Self;
+    fn round(self) -> Self;
+    fn trunc(self) -> Self;
+    fn copysign(self, sign: Self) -> Self;
+    fn sqrt(self) -> Self;
+    fn signum(self) -> Self;
+}
+
+#[cfg(not(feature = "std"))]
+impl FloatExt for f32 {
+    fn abs(self) -> Self {
+        if self < 0.0 {
+            -self
+        } else {
+            self
+        }
+    }
+
+    fn ceil(self) -> Self {
+        let int = self as i32;
+        if self - (int as f32) > 0.0 {
+            int as f32 + 1.0
+        } else {
+            int as f32
+        }
+    }
+
+    fn floor(self) -> Self {
+        let int = self as i32;
+        if self - (int as f32) < 0.0 {
+            int as f32 - 1.0
+        } else {
+            int as f32
+        }
+    }
+
+    fn round(self) -> Self {
+        let int = self as i32;
+        if self - (int as f32) >= 0.5 {
+            int as f32 + 1.0
+        } else {
+            int as f32
+        }
+    }
+
+    fn trunc(self) -> Self {
+        self as i32 as f32
+    }
+
+    fn copysign(self, sign: Self) -> Self {
+        if self.is_nan() {
+            if sign.is_sign_positive() {
+                f32::NAN
+            } else {
+                -f32::NAN
+            }
+        } else {
+            self.abs() * sign.signum()
+        }
+    }
+
+    fn sqrt(self) -> Self {
+        if self < 0.0 {
+            panic!()
+        }
+        if self == 0.0 {
+            return 0.0;
+        }
+
+        let mut guess = self / 2.0;
+        let mut previous_guess = 0.0;
+
+        while (guess - previous_guess).abs() > f32::EPSILON {
+            previous_guess = guess;
+            guess = (guess + self / guess) / 2.0;
+        }
+
+        guess
+    }
+
+    fn signum(self) -> Self {
+        if self.is_nan() {
+            f32::NAN
+        } else if self == 0.0 {
+            0.0
+        } else if self > 0.0 {
+            1.0
+        } else {
+            -1.0
+        }
+    }
+}
+
+#[cfg(not(feature = "std"))]
+impl FloatExt for f64 {
+    fn abs(self) -> Self {
+        if self < 0.0 {
+            -self
+        } else {
+            self
+        }
+    }
+
+    fn ceil(self) -> Self {
+        let int = self as i64;
+        if self - int as f64 > 0.0 {
+            int as f64 + 1.0
+        } else {
+            int as f64
+        }
+    }
+
+    fn floor(self) -> Self {
+        let int = self as i64;
+        if self - (int as f64) < 0.0 {
+            int as f64 - 1.0
+        } else {
+            int as f64
+        }
+    }
+
+    fn round(self) -> Self {
+        let int = self as i64;
+        if self - (int as f64) >= 0.5 {
+            int as f64 + 1.0
+        } else {
+            int as f64
+        }
+    }
+
+    fn trunc(self) -> Self {
+        self as i64 as f64
+    }
+
+    fn copysign(self, sign: Self) -> Self {
+        if self.is_nan() {
+            if sign.is_sign_positive() {
+                f64::NAN
+            } else {
+                -f64::NAN
+            }
+        } else {
+            self.abs() * sign.signum()
+        }
+    }
+
+    fn sqrt(self) -> Self {
+        if self < 0.0 {
+            panic!()
+        }
+        if self == 0.0 {
+            return 0.0;
+        }
+
+        let mut guess = self / 2.0;
+        let mut previous_guess = 0.0;
+
+        while (guess - previous_guess).abs() > f64::EPSILON {
+            previous_guess = guess;
+            guess = (guess + self / guess) / 2.0;
+        }
+
+        guess
+    }
+
+    fn signum(self) -> Self {
+        if self.is_nan() {
+            f64::NAN
+        } else if self == 0.0 {
+            0.0
+        } else if self > 0.0 {
+            1.0
+        } else {
+            -1.0
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::{Env, FuncInst, HostFunc, Module, Resolve, StdVectorFactory, Val};
