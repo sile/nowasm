@@ -7,7 +7,7 @@ extern "C" {
 #[cfg(target_arch = "wasm32")]
 #[no_mangle]
 pub fn hello() {
-    let msg = "Hello, world!\n";
+    let msg = "Hello, World!\n";
     unsafe {
         print(msg.as_ptr(), msg.len() as i32);
     }
