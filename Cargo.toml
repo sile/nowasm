@@ -1,8 +1,14 @@
 [package]
 name = "nowasm"
-version = "0.1.0"
+version = "0.0.1"
 edition = "2021"
-categories = ["no-std"]
+categories = ["no-std"
+authors = ["Takeru Ohta <phjgt308@gmail.com>"]
+license = "MIT"
+description = "No-std, no-unsafe and no-dependencies WebAssembly 1.0 runtime library"
+homepage = "https://github.com/sile/nowasm"
+repository = "https://github.com/sile/nowasm"
+readme = "README.md"
 
 [features]
 default = ["std", "sign_extension"]
