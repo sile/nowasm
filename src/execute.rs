@@ -159,6 +159,13 @@ impl<V: VectorFactory> Executor<V> {
         v
     }
 
+    pub fn pop_value_u64(&mut self) -> u64 {
+        let Some(Val::I64(v)) = self.values.pop() else {
+            unreachable!();
+        };
+        v as u64
+    }
+
     pub fn pop_value_u32(&mut self) -> u32 {
         let Some(Val::I32(v)) = self.values.pop() else {
             unreachable!();
@@ -633,16 +640,34 @@ impl<V: VectorFactory> Executor<V> {
                 Instr::I64Const(v) => self.push_value(Val::I64(*v)),
                 Instr::F32Const(v) => self.push_value(Val::F32(*v)),
                 Instr::F64Const(v) => self.push_value(Val::F64(*v)),
+                Instr::I32Eqz => self.apply_unop_cmp_i32(|v| v == 0),
+                Instr::I32Eq => self.apply_binop_cmp_i32(|v0, v1| v0 == v1),
+                Instr::I32Ne => self.apply_binop_cmp_i32(|v0, v1| v0 != v1),
+                Instr::I32LtS => self.apply_binop_cmp_i32(|v0, v1| v0 < v1),
+                Instr::I32LtU => self.apply_binop_cmp_u32(|v0, v1| v0 < v1),
+                Instr::I32GtS => self.apply_binop_cmp_i32(|v0, v1| v0 > v1),
+                Instr::I32GtU => self.apply_binop_cmp_u32(|v0, v1| v0 > v1),
+                Instr::I32LeS => self.apply_binop_cmp_i32(|v0, v1| v0 <= v1),
+                Instr::I32LeU => self.apply_binop_cmp_u32(|v0, v1| v0 <= v1),
+                Instr::I32GeS => self.apply_binop_cmp_i32(|v0, v1| v0 >= v1),
+                Instr::I32GeU => self.apply_binop_cmp_u32(|v0, v1| v0 >= v1),
+                Instr::I64Eqz => self.apply_unop_cmp_i64(|v| v == 0),
+                Instr::I64Eq => self.apply_binop_cmp_i64(|v0, v1| v0 == v1),
+                Instr::I64Ne => self.apply_binop_cmp_i64(|v0, v1| v0 != v1),
+                Instr::I64LtS => self.apply_binop_cmp_i64(|v0, v1| v0 < v1),
+                Instr::I64LtU => self.apply_binop_cmp_u64(|v0, v1| v0 < v1),
+                Instr::I64GtS => self.apply_binop_cmp_i64(|v0, v1| v0 > v1),
+                Instr::I64GtU => self.apply_binop_cmp_u64(|v0, v1| v0 > v1),
+                Instr::I64LeS => self.apply_binop_cmp_i64(|v0, v1| v0 <= v1),
+                Instr::I64LeU => self.apply_binop_cmp_u64(|v0, v1| v0 <= v1),
+                Instr::I64GeS => self.apply_binop_cmp_i64(|v0, v1| v0 >= v1),
+                Instr::I64GeU => self.apply_binop_cmp_u64(|v0, v1| v0 >= v1),
+
                 Instr::I32Sub => self.apply_binop_i32(|v0, v1| v0 - v1),
                 Instr::I32Add => self.apply_binop_i32(|v0, v1| v0 + v1),
                 Instr::I32Xor => self.apply_binop_i32(|v0, v1| v0 ^ v1),
                 Instr::I32And => self.apply_binop_i32(|v0, v1| v0 & v1),
-                Instr::I32Eq => self.apply_binop_i32(|v0, v1| if v0 == v1 { 1 } else { 0 }),
-                Instr::I32LtS => self.apply_binop_i32(|v0, v1| if v0 < v1 { 1 } else { 0 }),
-                Instr::I32LeS => self.apply_binop_i32(|v0, v1| if v0 <= v1 { 1 } else { 0 }),
-                Instr::I32GtS => self.apply_binop_i32(|v0, v1| if v0 > v1 { 1 } else { 0 }),
-                Instr::I32GeS => self.apply_binop_i32(|v0, v1| if v0 >= v1 { 1 } else { 0 }),
-                Instr::I32GtU => self.apply_binop_u32(|v0, v1| if v0 > v1 { 1 } else { 0 }),
+
                 Instr::I32ReinterpretF32 => {
                     let v = self.pop_value_f32();
                     self.push_value(Val::I32(v.to_bits() as i32));
@@ -689,13 +714,56 @@ impl<V: VectorFactory> Executor<V> {
         self.push_value(Val::I32(f(v1, v0)));
     }
 
-    fn apply_binop_u32<F>(&mut self, f: F)
+    fn apply_unop_cmp_i32<F>(&mut self, f: F)
     where
-        F: FnOnce(u32, u32) -> i32,
+        F: FnOnce(i32) -> bool,
+    {
+        let v = self.pop_value_i32();
+        self.push_value(Val::I32(f(v) as i32));
+    }
+
+    fn apply_binop_cmp_i32<F>(&mut self, f: F)
+    where
+        F: FnOnce(i32, i32) -> bool,
+    {
+        let v0 = self.pop_value_i32();
+        let v1 = self.pop_value_i32();
+        self.push_value(Val::I32(f(v1, v0) as i32));
+    }
+
+    fn apply_binop_cmp_u32<F>(&mut self, f: F)
+    where
+        F: FnOnce(u32, u32) -> bool,
     {
         let v0 = self.pop_value_u32();
         let v1 = self.pop_value_u32();
-        self.push_value(Val::I32(f(v1, v0)));
+        self.push_value(Val::I32(f(v1, v0) as i32));
+    }
+
+    fn apply_unop_cmp_i64<F>(&mut self, f: F)
+    where
+        F: FnOnce(i64) -> bool,
+    {
+        let v = self.pop_value_i64();
+        self.push_value(Val::I32(f(v) as i32));
+    }
+
+    fn apply_binop_cmp_i64<F>(&mut self, f: F)
+    where
+        F: FnOnce(i64, i64) -> bool,
+    {
+        let v0 = self.pop_value_i64();
+        let v1 = self.pop_value_i64();
+        self.push_value(Val::I32(f(v1, v0) as i32));
+    }
+
+    fn apply_binop_cmp_u64<F>(&mut self, f: F)
+    where
+        F: FnOnce(u64, u64) -> bool,
+    {
+        let v0 = self.pop_value_u64();
+        let v1 = self.pop_value_u64();
+        self.push_value(Val::I32(f(v1, v0) as i32));
     }
 }
 
