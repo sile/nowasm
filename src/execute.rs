@@ -662,47 +662,194 @@ impl<V: VectorFactory> Executor<V> {
                 Instr::I64LeU => self.apply_binop_cmp_u64(|v0, v1| v0 <= v1),
                 Instr::I64GeS => self.apply_binop_cmp_i64(|v0, v1| v0 >= v1),
                 Instr::I64GeU => self.apply_binop_cmp_u64(|v0, v1| v0 >= v1),
-
-                Instr::I32Sub => self.apply_binop_i32(|v0, v1| v0 - v1),
+                Instr::F32Eq => self.apply_binop_cmp_f32(|v0, v1| v0 == v1),
+                Instr::F32Ne => self.apply_binop_cmp_f32(|v0, v1| v0 != v1),
+                Instr::F32Lt => self.apply_binop_cmp_f32(|v0, v1| v0 < v1),
+                Instr::F32Gt => self.apply_binop_cmp_f32(|v0, v1| v0 > v1),
+                Instr::F32Le => self.apply_binop_cmp_f32(|v0, v1| v0 <= v1),
+                Instr::F32Ge => self.apply_binop_cmp_f32(|v0, v1| v0 >= v1),
+                Instr::F64Eq => self.apply_binop_cmp_f64(|v0, v1| v0 == v1),
+                Instr::F64Ne => self.apply_binop_cmp_f64(|v0, v1| v0 != v1),
+                Instr::F64Lt => self.apply_binop_cmp_f64(|v0, v1| v0 < v1),
+                Instr::F64Gt => self.apply_binop_cmp_f64(|v0, v1| v0 > v1),
+                Instr::F64Le => self.apply_binop_cmp_f64(|v0, v1| v0 <= v1),
+                Instr::F64Ge => self.apply_binop_cmp_f64(|v0, v1| v0 >= v1),
+                Instr::I32Clz => self.apply_unop_i32(|v| v.leading_zeros() as i32),
+                Instr::I32Ctz => self.apply_unop_i32(|v| v.trailing_zeros() as i32),
+                Instr::I32Popcnt => self.apply_unop_i32(|v| v.count_ones() as i32),
                 Instr::I32Add => self.apply_binop_i32(|v0, v1| v0 + v1),
-                Instr::I32Xor => self.apply_binop_i32(|v0, v1| v0 ^ v1),
+                Instr::I32Sub => self.apply_binop_i32(|v0, v1| v0 - v1),
+                Instr::I32Mul => self.apply_binop_i32(|v0, v1| v0 * v1),
+                Instr::I32DivS => self.apply_binop_i32(|v0, v1| v0.wrapping_div(v1)), // TODO: wrapping?
+                Instr::I32DivU => self.apply_binop_u32(|v0, v1| v0.wrapping_div(v1)), // TODO: wrapping?
+                Instr::I32RemS => self.apply_binop_i32(|v0, v1| v0.wrapping_rem(v1)), // TODO: wrapping?
+                Instr::I32RemU => self.apply_binop_u32(|v0, v1| v0.wrapping_rem(v1)), // TODO: wrapping?
                 Instr::I32And => self.apply_binop_i32(|v0, v1| v0 & v1),
+                Instr::I32Or => self.apply_binop_i32(|v0, v1| v0 | v1),
+                Instr::I32Xor => self.apply_binop_i32(|v0, v1| v0 ^ v1),
+                Instr::I32Shl => self.apply_binop_i32(|v0, v1| v0.wrapping_shl(v1 as u32)), // TODO: wrapping?
+                Instr::I32ShrS => self.apply_binop_i32(|v0, v1| v0.wrapping_shr(v1 as u32)), // TODO: wrapping?
+                Instr::I32ShrU => self.apply_binop_u32(|v0, v1| v0.wrapping_shr(v1 as u32)), // TODO: wrapping?
+                Instr::I32Rotl => self.apply_binop_i32(|v0, v1| v0.rotate_left(v1 as u32)),
+                Instr::I32Rotr => self.apply_binop_i32(|v0, v1| v0.rotate_right(v1 as u32)),
+                Instr::I64Clz => self.apply_unop_i64(|v| v.leading_zeros() as i64),
+                Instr::I64Ctz => self.apply_unop_i64(|v| v.trailing_zeros() as i64),
+                Instr::I64Popcnt => self.apply_unop_i64(|v| v.count_ones() as i64),
+                Instr::I64Add => self.apply_binop_i64(|v0, v1| v0 + v1),
+                Instr::I64Sub => self.apply_binop_i64(|v0, v1| v0 - v1),
+                Instr::I64Mul => self.apply_binop_i64(|v0, v1| v0 * v1),
+                Instr::I64DivS => self.apply_binop_i64(|v0, v1| v0.wrapping_div(v1)), // TODO: wrapping?
+                Instr::I64DivU => self.apply_binop_u64(|v0, v1| v0.wrapping_div(v1)), // TODO: wrapping?
+                Instr::I64RemS => self.apply_binop_i64(|v0, v1| v0.wrapping_rem(v1)), // TODO: wrapping?
+                Instr::I64RemU => self.apply_binop_u64(|v0, v1| v0.wrapping_rem(v1)), // TODO: wrapping?
+                Instr::I64And => self.apply_binop_i64(|v0, v1| v0 & v1),
+                Instr::I64Or => self.apply_binop_i64(|v0, v1| v0 | v1),
+                Instr::I64Xor => self.apply_binop_i64(|v0, v1| v0 ^ v1),
+                Instr::I64Shl => self.apply_binop_i64(|v0, v1| v0.wrapping_shl(v1 as u32)), // TODO: wrapping?
+                Instr::I64ShrS => self.apply_binop_i64(|v0, v1| v0.wrapping_shr(v1 as u32)), // TODO: wrapping?
+                Instr::I64ShrU => self.apply_binop_u64(|v0, v1| v0.wrapping_shr(v1 as u32)), // TODO: wrapping?
+                Instr::I64Rotl => self.apply_binop_i64(|v0, v1| v0.rotate_left(v1 as u32)),
+                Instr::I64Rotr => self.apply_binop_i64(|v0, v1| v0.rotate_right(v1 as u32)),
+                Instr::F32Abs => self.apply_unop_f32(|v| v.abs()),
+                Instr::F32Neg => self.apply_unop_f32(|v| -v),
+                Instr::F32Ceil => self.apply_unop_f32(|v| v.ceil()),
+                Instr::F32Floor => self.apply_unop_f32(|v| v.floor()),
+                Instr::F32Trunc => self.apply_unop_f32(|v| v.trunc()),
+                Instr::F32Nearest => self.apply_unop_f32(|v| v.round()), // TODO: round?
+                Instr::F32Sqrt => self.apply_unop_f32(|v| v.sqrt()),
+                Instr::F32Add => self.apply_binop_f32(|v0, v1| v0 + v1),
+                Instr::F32Sub => self.apply_binop_f32(|v0, v1| v0 - v1),
+                Instr::F32Mul => self.apply_binop_f32(|v0, v1| v0 * v1),
+                Instr::F32Div => self.apply_binop_f32(|v0, v1| v0 / v1),
+                Instr::F32Min => self.apply_binop_f32(|v0, v1| v0.min(v1)),
+                Instr::F32Max => self.apply_binop_f32(|v0, v1| v0.max(v1)),
+                Instr::F32Copysign => self.apply_binop_f32(|v0, v1| v0.copysign(v1)),
+                Instr::F64Abs => self.apply_unop_f64(|v| v.abs()),
+                Instr::F64Neg => self.apply_unop_f64(|v| -v),
+                Instr::F64Ceil => self.apply_unop_f64(|v| v.ceil()),
+                Instr::F64Floor => self.apply_unop_f64(|v| v.floor()),
+                Instr::F64Trunc => self.apply_unop_f64(|v| v.trunc()),
+                Instr::F64Nearest => self.apply_unop_f64(|v| v.round()), // TODO: round?
+                Instr::F64Sqrt => self.apply_unop_f64(|v| v.sqrt()),
+                Instr::F64Add => self.apply_binop_f64(|v0, v1| v0 + v1),
+                Instr::F64Sub => self.apply_binop_f64(|v0, v1| v0 - v1),
+                Instr::F64Mul => self.apply_binop_f64(|v0, v1| v0 * v1),
+                Instr::F64Div => self.apply_binop_f64(|v0, v1| v0 / v1),
+                Instr::F64Min => self.apply_binop_f64(|v0, v1| v0.min(v1)),
+                Instr::F64Max => self.apply_binop_f64(|v0, v1| v0.max(v1)),
+                Instr::F64Copysign => self.apply_binop_f64(|v0, v1| v0.copysign(v1)),
+                Instr::I32WrapI64 => self.convert_from_i64(|v| Val::I32(v as i32)),
+                Instr::I32TruncF32S => self.convert_from_f32(|v| Val::I32(v.trunc() as i32)), // TODO: NaN, etc
+                Instr::I32TruncF32U => self.convert_from_f32(|v| Val::I32(v.trunc() as i32)), // TODO: NaN, etc
+                Instr::I32TruncF64S => self.convert_from_f64(|v| Val::I32(v.trunc() as i32)), // TODO: NaN, etc
+                Instr::I32TruncF64U => self.convert_from_f64(|v| Val::I32(v.trunc() as i32)), // TODO: NaN, etc
+                Instr::I64ExtendI32S => self.convert_from_i32(|v| Val::I64(v as i64)),
+                Instr::I64ExtendI32U => self.convert_from_i32(|v| Val::I64(v as u32 as i64)),
+                Instr::I64TruncF32S => self.convert_from_f32(|v| Val::I64(v.trunc() as i64)), // TODO: NaN, etc
+                Instr::I64TruncF32U => self.convert_from_f32(|v| Val::I64(v.trunc() as i64)), // TODO: NaN, etc
+                Instr::I64TruncF64S => self.convert_from_f64(|v| Val::I64(v.trunc() as i64)), // TODO: NaN, etc
+                Instr::I64TruncF64U => self.convert_from_f64(|v| Val::I64(v.trunc() as i64)), // TODO: NaN, etc
+                Instr::F32ConvertI32S => self.convert_from_i32(|v| Val::F32(v as f32)), // TODO
+                Instr::F32ConvertI32U => self.convert_from_i32(|v| Val::F32(v as u32 as f32)), // TODO
+                Instr::F32ConvertI64S => self.convert_from_i64(|v| Val::F32(v as f32)), // TODO
+                Instr::F32ConvertI64U => self.convert_from_i64(|v| Val::F32(v as u64 as f32)), // TODO
+                Instr::F32DemoteF64 => self.convert_from_f64(|v| Val::F32(v as f32)), // TODO
+                Instr::F64ConvertI32S => self.convert_from_i32(|v| Val::F64(v as f64)), // TODO
+                Instr::F64ConvertI32U => self.convert_from_i32(|v| Val::F64(v as u32 as f64)), // TODO
+                Instr::F64ConvertI64S => self.convert_from_i64(|v| Val::F64(v as f64)), // TODO
+                Instr::F64ConvertI64U => self.convert_from_i64(|v| Val::F64(v as u64 as f64)), // TODO
+                Instr::F64PromoteF32 => self.convert_from_f32(|v| Val::F64(v as f64)),
+                Instr::I32ReinterpretF32 => self.convert_from_f32(|v| Val::I32(v.to_bits() as i32)),
+                Instr::I64ReinterpretF64 => self.convert_from_f64(|v| Val::I64(v.to_bits() as i64)),
+                Instr::F32ReinterpretI32 => {
+                    self.convert_from_i32(|v| Val::F32(f32::from_bits(v as u32)))
+                }
+                Instr::F64ReinterpretI64 => {
+                    self.convert_from_i64(|v| Val::F64(f64::from_bits(v as u64)))
+                }
 
-                Instr::I32ReinterpretF32 => {
-                    let v = self.pop_value_f32();
-                    self.push_value(Val::I32(v.to_bits() as i32));
+                // Sign Extension
+                #[cfg(feature = "sign_extension")]
+                Instr::SignExtension(instr) => {
+                    todo!("{instr:?}")
                 }
-                Instr::I32TruncF32S => {
-                    let v = self.pop_value_f32();
-                    self.push_value(Val::I32(v.trunc() as i32));
-                }
-                Instr::F32ConvertI32S => {
-                    let v = self.pop_value_i32();
-                    let v = v as f32; // TODO: error check
-                    self.push_value(Val::F32(v));
-                }
-                Instr::F32DemoteF64 => {
-                    let v = self.pop_value_f64();
-                    let v = v as f32; // TODO: error check
-                    self.push_value(Val::F32(v));
-                }
-                Instr::F64PromoteF32 => {
-                    let v = self.pop_value_f32() as f64;
-                    self.push_value(Val::F64(v));
-                }
-                Instr::I32WrapI64 => {
-                    let v = self.pop_value_i64();
-                    let v = v as i32; // TODO
-                    self.push_value(Val::I32(v));
-                }
-                Instr::I64ExtendI32S => {
-                    let v = self.pop_value_i32() as i64;
-                    self.push_value(Val::I64(v));
-                }
-                _ => todo!("{instr:?}"),
             }
         }
         Ok(None)
+    }
+
+    fn convert_from_i32<F>(&mut self, f: F)
+    where
+        F: FnOnce(i32) -> Val,
+    {
+        let v = self.pop_value_i32();
+        self.push_value(f(v));
+    }
+
+    fn convert_from_i64<F>(&mut self, f: F)
+    where
+        F: FnOnce(i64) -> Val,
+    {
+        let v = self.pop_value_i64();
+        self.push_value(f(v));
+    }
+
+    fn convert_from_f32<F>(&mut self, f: F)
+    where
+        F: FnOnce(f32) -> Val,
+    {
+        let v = self.pop_value_f32();
+        self.push_value(f(v));
+    }
+
+    fn convert_from_f64<F>(&mut self, f: F)
+    where
+        F: FnOnce(f64) -> Val,
+    {
+        let v = self.pop_value_f64();
+        self.push_value(f(v));
+    }
+
+    fn apply_unop_f32<F>(&mut self, f: F)
+    where
+        F: FnOnce(f32) -> f32,
+    {
+        let v = self.pop_value_f32();
+        self.push_value(Val::F32(f(v)));
+    }
+
+    fn apply_binop_f32<F>(&mut self, f: F)
+    where
+        F: FnOnce(f32, f32) -> f32,
+    {
+        let v0 = self.pop_value_f32();
+        let v1 = self.pop_value_f32();
+        self.push_value(Val::F32(f(v1, v0)));
+    }
+
+    fn apply_unop_f64<F>(&mut self, f: F)
+    where
+        F: FnOnce(f64) -> f64,
+    {
+        let v = self.pop_value_f64();
+        self.push_value(Val::F64(f(v)));
+    }
+
+    fn apply_binop_f64<F>(&mut self, f: F)
+    where
+        F: FnOnce(f64, f64) -> f64,
+    {
+        let v0 = self.pop_value_f64();
+        let v1 = self.pop_value_f64();
+        self.push_value(Val::F64(f(v1, v0)));
+    }
+
+    fn apply_unop_i32<F>(&mut self, f: F)
+    where
+        F: FnOnce(i32) -> i32,
+    {
+        let v = self.pop_value_i32();
+        self.push_value(Val::I32(f(v)));
     }
 
     fn apply_binop_i32<F>(&mut self, f: F)
@@ -712,6 +859,41 @@ impl<V: VectorFactory> Executor<V> {
         let v0 = self.pop_value_i32();
         let v1 = self.pop_value_i32();
         self.push_value(Val::I32(f(v1, v0)));
+    }
+
+    fn apply_binop_u32<F>(&mut self, f: F)
+    where
+        F: FnOnce(u32, u32) -> u32,
+    {
+        let v0 = self.pop_value_u32();
+        let v1 = self.pop_value_u32();
+        self.push_value(Val::I32(f(v1, v0) as i32));
+    }
+
+    fn apply_unop_i64<F>(&mut self, f: F)
+    where
+        F: FnOnce(i64) -> i64,
+    {
+        let v = self.pop_value_i64();
+        self.push_value(Val::I64(f(v)));
+    }
+
+    fn apply_binop_i64<F>(&mut self, f: F)
+    where
+        F: FnOnce(i64, i64) -> i64,
+    {
+        let v0 = self.pop_value_i64();
+        let v1 = self.pop_value_i64();
+        self.push_value(Val::I64(f(v1, v0)));
+    }
+
+    fn apply_binop_u64<F>(&mut self, f: F)
+    where
+        F: FnOnce(u64, u64) -> u64,
+    {
+        let v0 = self.pop_value_u64();
+        let v1 = self.pop_value_u64();
+        self.push_value(Val::I64(f(v1, v0) as i64));
     }
 
     fn apply_unop_cmp_i32<F>(&mut self, f: F)
@@ -763,6 +945,24 @@ impl<V: VectorFactory> Executor<V> {
     {
         let v0 = self.pop_value_u64();
         let v1 = self.pop_value_u64();
+        self.push_value(Val::I32(f(v1, v0) as i32));
+    }
+
+    fn apply_binop_cmp_f32<F>(&mut self, f: F)
+    where
+        F: FnOnce(f32, f32) -> bool,
+    {
+        let v0 = self.pop_value_f32();
+        let v1 = self.pop_value_f32();
+        self.push_value(Val::I32(f(v1, v0) as i32));
+    }
+
+    fn apply_binop_cmp_f64<F>(&mut self, f: F)
+    where
+        F: FnOnce(f64, f64) -> bool,
+    {
+        let v0 = self.pop_value_f64();
+        let v1 = self.pop_value_f64();
         self.push_value(Val::I32(f(v1, v0) as i32));
     }
 }
