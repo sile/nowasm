@@ -31,7 +31,7 @@ Supported Extensions
 Examples
 --------
 
-Please execute the command `$ cargo build --target wasm32-unknown-unknown --example hello` to build the following"Hello World!" printing code ([examples/wasm/hello.rs](examples/wasm/hello.rs)) into a WebAssembly binary:
+Please execute the command `$ cargo build --target wasm32-unknown-unknown --example hello` to build the following "Hello World!" printing code ([examples/wasm/hello.rs](examples/wasm/hello.rs)) into a WebAssembly binary:
 
 ```rust
 extern "C" {
