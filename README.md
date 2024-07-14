@@ -88,10 +88,10 @@ struct Print;
 
 impl HostFunc for Print {
     fn invoke(&mut self, args: &[Val], env: &mut Env) -> Option<Val> {
-        let ptr = args[0].as_i32().unwrap() as usize;
-        let len = args[1].as_i32().unwrap() as usize;
-        let string = std::str::from_utf8(&env.mem[ptr..ptr + len]).expect("Invalid utf8");
-        print!("{string}");
+        let ptr = args[0].as_i32().expect("Not a i32") as usize;
+        let len = args[1].as_i32().expect("Not a i32") as usize;
+        let msg = std::str::from_utf8(&env.mem[ptr..ptr + len]).expect("Invalid utf8");
+        print!("{msg}");
         None
     }
 }
