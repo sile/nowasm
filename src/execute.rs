@@ -1684,14 +1684,8 @@ mod tests {
     impl Resolve for Resolver {
         type HostFunc = Log;
 
-        fn resolve_func(
-            &self,
-            module: &str,
-            name: &str,
-            params: &[crate::components::Valtype],
-            result: crate::components::Resulttype,
-        ) -> Option<Self::HostFunc> {
-            if module == "console" && name == "log" && params.len() > 0 && result.len() == 0 {
+        fn resolve_func(&self, module: &str, name: &str) -> Option<Self::HostFunc> {
+            if module == "console" && name == "log" {
                 Some(Log::default())
             } else {
                 None

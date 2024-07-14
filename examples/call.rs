@@ -1,8 +1,5 @@
 use clap::Parser;
-use nowasm::{
-    components::{Resulttype, Valtype},
-    Env, HostFunc, Module, Resolve, StdVectorFactory, Val,
-};
+use nowasm::{Env, HostFunc, Module, Resolve, StdVectorFactory, Val};
 use orfail::{Failure, OrFail};
 use std::{fmt::Debug, path::PathBuf};
 
@@ -41,18 +38,8 @@ struct Resolver;
 impl Resolve for Resolver {
     type HostFunc = Print;
 
-    fn resolve_func(
-        &self,
-        module: &str,
-        name: &str,
-        params: &[Valtype],
-        result: Resulttype,
-    ) -> Option<Self::HostFunc> {
-        if module == "env"
-            && name == "print"
-            && params == [Valtype::I32, Valtype::I32]
-            && result.len() == 0
-        {
+    fn resolve_func(&self, module: &str, name: &str) -> Option<Self::HostFunc> {
+        if module == "env" && name == "print" {
             Some(Print)
         } else {
             None

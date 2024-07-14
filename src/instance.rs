@@ -1,7 +1,5 @@
 use crate::{
-    components::{
-        Exportdesc, Funcidx, Functype, Import, Importdesc, Limits, Memtype, Resulttype, Valtype,
-    },
+    components::{Exportdesc, Funcidx, Functype, Import, Importdesc, Valtype},
     execute::Executor,
     ExecuteError, Module, Vector, VectorFactory, PAGE_SIZE,
 };
@@ -14,6 +12,7 @@ pub struct Env<'a> {
     pub globals: &'a mut [GlobalVal],
 }
 
+// TODO: rename
 pub trait HostFunc {
     fn invoke(&mut self, args: &[Val], env: &mut Env) -> Option<Val>;
 }
@@ -55,33 +54,22 @@ pub trait Resolve {
     type HostFunc: HostFunc;
 
     #[allow(unused_variables)]
-    fn resolve_mem(&self, module: &str, name: &str, ty: Memtype) -> Option<&[u8]> {
+    fn resolve_mem(&self, module: &str, name: &str) -> Option<&[u8]> {
         None
     }
 
     #[allow(unused_variables)]
-    fn resolve_table(
-        &self,
-        module: &str,
-        name: &str,
-        limits: Limits,
-    ) -> Option<&[Option<Funcidx>]> {
+    fn resolve_table(&self, module: &str, name: &str) -> Option<&[Option<Funcidx>]> {
         None
     }
 
     #[allow(unused_variables)]
-    fn resolve_global(&self, module: &str, name: &str, ty: Valtype) -> Option<Val> {
+    fn resolve_global(&self, module: &str, name: &str) -> Option<Val> {
         None
     }
 
     #[allow(unused_variables)]
-    fn resolve_func(
-        &self,
-        module: &str,
-        name: &str,
-        params: &[Valtype],
-        result: Resulttype,
-    ) -> Option<Self::HostFunc> {
+    fn resolve_func(&self, module: &str, name: &str) -> Option<Self::HostFunc> {
         None
     }
 }
@@ -107,41 +95,32 @@ impl<V: VectorFactory, H: HostFunc> ModuleInstance<V, H> {
         let mut imported_funcs = V::create_vector(None);
         for (index, import) in module.imports().iter().enumerate() {
             match &import.desc {
-                Importdesc::Func(typeidx) => {
-                    let ty = module
-                        .types()
-                        .get(typeidx.get())
-                        .ok_or(ExecuteError::UnresolvedImport { index })?;
+                Importdesc::Func(_typeidx) => {
                     let host_func = resolver
-                        .resolve_func(
-                            import.module.as_str(),
-                            import.name.as_str(),
-                            &ty.params,
-                            ty.result,
-                        )
+                        .resolve_func(import.module.as_str(), import.name.as_str())
                         .ok_or(ExecuteError::UnresolvedImport { index })?;
                     imported_funcs.push(FuncInst::Imported {
                         imports_index: index,
                         host_func,
                     });
                 }
-                Importdesc::Table(ty) => {
+                Importdesc::Table(_ty) => {
                     let resolved = resolver
-                        .resolve_table(import.module.as_str(), import.name.as_str(), ty.limits)
+                        .resolve_table(import.module.as_str(), import.name.as_str())
                         .ok_or(ExecuteError::UnresolvedImport { index })?;
                     let resolved = V::clone_vector(resolved);
                     imported_table = Some(resolved);
                 }
-                Importdesc::Mem(ty) => {
+                Importdesc::Mem(_ty) => {
                     let resolved = resolver
-                        .resolve_mem(import.module.as_str(), import.name.as_str(), *ty)
+                        .resolve_mem(import.module.as_str(), import.name.as_str())
                         .ok_or(ExecuteError::UnresolvedImport { index })?;
                     let resolved = V::clone_vector(resolved);
                     imported_mem = Some(resolved);
                 }
                 Importdesc::Global(ty) => {
                     let resolved = resolver
-                        .resolve_global(import.module.as_str(), import.name.as_str(), ty.valtype())
+                        .resolve_global(import.module.as_str(), import.name.as_str())
                         .ok_or(ExecuteError::UnresolvedImport { index })?;
                     imported_globals.push(GlobalVal::new(ty.is_const(), resolved));
                 }
