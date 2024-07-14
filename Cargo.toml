@@ -2,7 +2,7 @@
 name = "nowasm"
 version = "0.0.1"
 edition = "2021"
-categories = ["no-std"
+categories = ["no-std"]
 authors = ["Takeru Ohta <phjgt308@gmail.com>"]
 license = "MIT"
 description = "No-std, no-unsafe and no-dependencies WebAssembly 1.0 runtime library"
