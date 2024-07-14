@@ -246,9 +246,7 @@ impl<V: VectorFactory> Executor<V> {
         funcs: &mut [FuncInst<H>],
         module: &Module<V>,
     ) -> Result<Option<usize>, ExecuteError> {
-        dbg!(level);
         for instr in instrs {
-            dbg!(instr);
             match instr {
                 // Control Instructions
                 Instr::Unreachable => return Err(ExecuteError::Trapped),
@@ -301,9 +299,7 @@ impl<V: VectorFactory> Executor<V> {
                 }
                 Instr::BrIf(label) => {
                     let c = self.pop_value_i32();
-                    dbg!(c);
                     if c != 0 {
-                        dbg!(level, label.get());
                         return Ok(Some(level - label.get()));
                     }
                 }
