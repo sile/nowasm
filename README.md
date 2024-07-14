@@ -48,7 +48,7 @@ pub fn hello() {
 ```
 
 
-Then, you can call the `hello()` function via the following command:
+Then, you can execute the `hello()` function via the following command:
 ```console
 $ cargo run --example call_hello
 Hello, World!
