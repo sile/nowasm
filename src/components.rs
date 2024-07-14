@@ -15,6 +15,10 @@ impl<V: VectorFactory> Name<V> {
     pub fn len(&self) -> usize {
         self.0.len()
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
 }
 
 impl<V: VectorFactory> Decode<V> for Name<V> {
@@ -67,7 +71,7 @@ impl<V: VectorFactory> Clone for Import<V> {
         Self {
             module: self.module.clone(),
             name: self.name.clone(),
-            desc: self.desc.clone(),
+            desc: self.desc,
         }
     }
 }
@@ -118,7 +122,7 @@ impl<V: VectorFactory> Clone for Export<V> {
     fn clone(&self) -> Self {
         Self {
             name: self.name.clone(),
-            desc: self.desc.clone(),
+            desc: self.desc,
         }
     }
 }
@@ -464,7 +468,7 @@ impl<V: VectorFactory> Clone for Functype<V> {
     fn clone(&self) -> Self {
         Self {
             params: V::clone_vector(&self.params),
-            result: self.result.clone(),
+            result: self.result,
         }
     }
 }
@@ -475,6 +479,10 @@ pub struct Resulttype(Option<Valtype>);
 impl Resulttype {
     pub fn len(self) -> usize {
         self.0.is_some() as usize
+    }
+
+    pub fn is_empty(self) -> bool {
+        self.0.is_none()
     }
 
     pub fn get(self) -> Option<Valtype> {
@@ -686,7 +694,7 @@ impl<V: VectorFactory> Clone for Elem<V> {
     fn clone(&self) -> Self {
         Self {
             table: self.table,
-            offset: self.offset.clone(),
+            offset: self.offset,
             init: V::clone_vector(&self.init),
         }
     }
@@ -771,7 +779,7 @@ impl<V: VectorFactory> Clone for Data<V> {
     fn clone(&self) -> Self {
         Self {
             data: self.data,
-            offset: self.offset.clone(),
+            offset: self.offset,
             init: V::clone_vector(&self.init),
         }
     }

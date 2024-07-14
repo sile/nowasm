@@ -77,8 +77,8 @@ impl<V: VectorFactory> Module<V> {
 
             if section_id < last_section_id {
                 return Err(DecodeError::InvalidSectionOrder {
-                    current_section_id: section_id as u8,
-                    last_section_id: last_section_id as u8,
+                    current_section_id: section_id,
+                    last_section_id,
                 });
             }
 
@@ -153,7 +153,7 @@ impl<V: VectorFactory> Module<V> {
 
             if !section_reader.is_empty() {
                 return Err(DecodeError::InvalidSectionByteSize {
-                    section_id: section_id as u8,
+                    section_id,
                     expected_byte_size: section_size,
                     actual_byte_size: section_reader.position(),
                 });

@@ -128,12 +128,12 @@ impl<V: VectorFactory> Executor<V> {
     }
 
     pub fn set_local(&mut self, i: Localidx, v: Val) {
-        let i = self.current_frame.locals_start + i.get() as usize;
+        let i = self.current_frame.locals_start + i.get();
         self.locals[i] = v;
     }
 
     pub fn get_local(&self, i: Localidx) -> Val {
-        let i = self.current_frame.locals_start + i.get() as usize;
+        let i = self.current_frame.locals_start + i.get();
         self.locals[i]
     }
 
@@ -572,7 +572,7 @@ impl<V: VectorFactory> Executor<V> {
                     }
 
                     let v = v.as_i32().ok_or(ExecuteError::Trapped)? as i16; // TODO:
-                    (&mut self.mem[start..end]).copy_from_slice(&v.to_le_bytes());
+                    self.mem[start..end].copy_from_slice(&v.to_le_bytes());
                 }
                 Instr::I64Store8(arg) => {
                     // TODO: handle alignment
@@ -596,7 +596,7 @@ impl<V: VectorFactory> Executor<V> {
                     }
 
                     let v = v.as_i64().ok_or(ExecuteError::Trapped)? as i16; // TODO:
-                    (&mut self.mem[start..end]).copy_from_slice(&v.to_le_bytes());
+                    self.mem[start..end].copy_from_slice(&v.to_le_bytes());
                 }
                 Instr::I64Store32(arg) => {
                     // TODO: handle alignment
@@ -609,7 +609,7 @@ impl<V: VectorFactory> Executor<V> {
                     }
 
                     let v = v.as_i64().ok_or(ExecuteError::Trapped)? as i32; // TODO:
-                    (&mut self.mem[start..end]).copy_from_slice(&v.to_le_bytes());
+                    self.mem[start..end].copy_from_slice(&v.to_le_bytes());
                 }
                 Instr::MemorySize => {
                     let size = self.mem.len() / PAGE_SIZE;
@@ -685,7 +685,7 @@ impl<V: VectorFactory> Executor<V> {
                 Instr::I32Xor => self.apply_binop_i32(|v0, v1| v0 ^ v1),
                 Instr::I32Shl => self.apply_binop_i32(|v0, v1| v0.wrapping_shl(v1 as u32)), // TODO: wrapping?
                 Instr::I32ShrS => self.apply_binop_i32(|v0, v1| v0.wrapping_shr(v1 as u32)), // TODO: wrapping?
-                Instr::I32ShrU => self.apply_binop_u32(|v0, v1| v0.wrapping_shr(v1 as u32)), // TODO: wrapping?
+                Instr::I32ShrU => self.apply_binop_u32(|v0, v1| v0.wrapping_shr(v1)), // TODO: wrapping?
                 Instr::I32Rotl => self.apply_binop_i32(|v0, v1| v0.rotate_left(v1 as u32)),
                 Instr::I32Rotr => self.apply_binop_i32(|v0, v1| v0.rotate_right(v1 as u32)),
                 Instr::I64Clz => self.apply_unop_i64(|v| v.leading_zeros() as i64),

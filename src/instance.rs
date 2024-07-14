@@ -111,7 +111,7 @@ impl<V: VectorFactory, H: HostFunc> ModuleInstance<V, H> {
                     let ty = module
                         .types()
                         .get(typeidx.get())
-                        .ok_or_else(|| ExecuteError::UnresolvedImport { index })?;
+                        .ok_or(ExecuteError::UnresolvedImport { index })?;
                     let host_func = resolver
                         .resolve_func(
                             import.module.as_str(),
@@ -119,7 +119,7 @@ impl<V: VectorFactory, H: HostFunc> ModuleInstance<V, H> {
                             &ty.params,
                             ty.result,
                         )
-                        .ok_or_else(|| ExecuteError::UnresolvedImport { index })?;
+                        .ok_or(ExecuteError::UnresolvedImport { index })?;
                     imported_funcs.push(FuncInst::Imported {
                         imports_index: index,
                         host_func,
@@ -128,21 +128,21 @@ impl<V: VectorFactory, H: HostFunc> ModuleInstance<V, H> {
                 Importdesc::Table(ty) => {
                     let resolved = resolver
                         .resolve_table(import.module.as_str(), import.name.as_str(), ty.limits)
-                        .ok_or_else(|| ExecuteError::UnresolvedImport { index })?;
+                        .ok_or(ExecuteError::UnresolvedImport { index })?;
                     let resolved = V::clone_vector(resolved);
                     imported_table = Some(resolved);
                 }
                 Importdesc::Mem(ty) => {
                     let resolved = resolver
                         .resolve_mem(import.module.as_str(), import.name.as_str(), *ty)
-                        .ok_or_else(|| ExecuteError::UnresolvedImport { index })?;
+                        .ok_or(ExecuteError::UnresolvedImport { index })?;
                     let resolved = V::clone_vector(resolved);
                     imported_mem = Some(resolved);
                 }
                 Importdesc::Global(ty) => {
                     let resolved = resolver
                         .resolve_global(import.module.as_str(), import.name.as_str(), ty.valtype())
-                        .ok_or_else(|| ExecuteError::UnresolvedImport { index })?;
+                        .ok_or(ExecuteError::UnresolvedImport { index })?;
                     imported_globals.push(GlobalVal::new(ty.is_const(), resolved));
                 }
             }
@@ -187,7 +187,7 @@ impl<V: VectorFactory, H: HostFunc> ModuleInstance<V, H> {
         for (index, global) in module.globals().iter().enumerate() {
             let v = global
                 .init(imported_globals)
-                .ok_or_else(|| ExecuteError::InvalidGlobal { index })?;
+                .ok_or(ExecuteError::InvalidGlobal { index })?;
             globals.push(v);
         }
         Ok(globals)
@@ -231,7 +231,7 @@ impl<V: VectorFactory, H: HostFunc> ModuleInstance<V, H> {
             if mem.len() < end {
                 return Err(ExecuteError::InvalidData { index });
             }
-            (&mut mem[start..end]).copy_from_slice(&data.init);
+            mem[start..end].copy_from_slice(&data.init);
         }
 
         Ok(mem)
