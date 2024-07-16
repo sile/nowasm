@@ -1,6 +1,6 @@
 [package]
 name = "nowasm"
-version = "0.0.1"
+version = "0.0.2"
 edition = "2021"
 categories = ["no-std"]
 authors = ["Takeru Ohta <phjgt308@gmail.com>"]
