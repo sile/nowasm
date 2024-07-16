@@ -345,9 +345,9 @@ impl<V: VectorFactory> Executor<V> {
                 }
                 Instr::Select => {
                     let c = self.pop_value_i32();
-                    let v0 = self.pop_value();
+                    let v2 = self.pop_value();
                     let v1 = self.pop_value();
-                    self.push_value(if c != 0 { v0 } else { v1 });
+                    self.push_value(if c != 0 { v1 } else { v2 });
                 }
 
                 // Variable Instructions
@@ -635,7 +635,7 @@ impl<V: VectorFactory> Executor<V> {
                 }
                 Instr::MemoryGrow => {
                     let delta = self.pop_value_i32();
-                    let max = module.mem().and_then(|m| m.limits.max).unwrap_or_default();
+                    let max = module.mem().and_then(|m| m.limits.max).unwrap_or(u32::MAX);
                     let current = self.mem.len() / PAGE_SIZE;
                     let new = current + delta as usize;
                     if new <= max as usize {
@@ -1321,7 +1321,7 @@ mod tests {
             .invoke("select_simple", &[])
             .expect("invoke")
             .expect("result");
-        assert_eq!(Val::I32(10), val);
+        assert_eq!(Val::I32(20), val);
     }
 
     #[test]
