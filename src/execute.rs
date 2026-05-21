@@ -1017,6 +1017,7 @@ pub struct Block {
 }
 
 #[cfg(not(feature = "std"))]
+#[allow(dead_code)]
 trait FloatExt: Sized {
     fn abs(self) -> Self;
     fn ceil(self) -> Self;
