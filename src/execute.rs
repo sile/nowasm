@@ -255,7 +255,7 @@ impl<V: VectorFactory> Executor<V> {
                     let prev_block = self.enter_block(block.blocktype);
                     let return_level =
                         self.execute_instrs(&block.instrs, level + 1, funcs, module)?;
-                    let skipped = return_level.map_or(false, |return_level| return_level <= level);
+                    let skipped = return_level.is_some_and(|return_level| return_level <= level);
                     self.exit_block(block.blocktype, skipped, prev_block);
                     if skipped {
                         return Ok(return_level);
@@ -272,7 +272,7 @@ impl<V: VectorFactory> Executor<V> {
                             continue;
                         }
                         let skipped =
-                            return_level.map_or(false, |return_level| return_level <= level);
+                            return_level.is_some_and(|return_level| return_level <= level);
                         self.exit_block(blocktype, skipped, prev_block);
                         if skipped {
                             return Ok(return_level);
@@ -288,7 +288,7 @@ impl<V: VectorFactory> Executor<V> {
                     } else {
                         self.execute_instrs(&block.else_instrs, level + 1, funcs, module)?
                     };
-                    let skipped = return_level.map_or(false, |return_level| return_level <= level);
+                    let skipped = return_level.is_some_and(|return_level| return_level <= level);
                     self.exit_block(block.blocktype, skipped, prev_block);
                     if skipped {
                         return Ok(return_level);
